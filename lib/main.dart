@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -7,45 +9,20 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Flutter Demo - Vie personnage',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Personnage & barre de vie'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
 
   final String title;
 
@@ -54,69 +31,215 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  static const int maxHealth = 100;
+  static const int damagePerClick = 10;
+  static const int regenPerDay = 5;
 
-  void _incrementCounter() {
+  int _health = maxHealth;
+  DateTime _lastUpdate = DateTime.now();
+
+  final String _kHealthKey = 'player_health';
+  final String _kLastUpdateKey = 'player_last_update';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadState();
+  }
+
+  Future<void> _loadState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedHealth = prefs.getInt(_kHealthKey);
+    final savedMillis = prefs.getInt(_kLastUpdateKey);
+
+    if (savedHealth != null && savedMillis != null) {
+      DateTime savedDate = DateTime.fromMillisecondsSinceEpoch(savedMillis);
+      final days = DateTime.now().difference(savedDate).inDays;
+      int newHealth = savedHealth + days * regenPerDay;
+      if (newHealth > maxHealth) newHealth = maxHealth;
+
+      setState(() {
+        _health = newHealth;
+        _lastUpdate = savedDate;
+      });
+
+      await _saveState();
+    } else {
+      setState(() {
+        _health = maxHealth;
+        _lastUpdate = DateTime.now();
+      });
+      await _saveState();
+    }
+  }
+
+  Future<void> _saveState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kHealthKey, _health);
+    await prefs.setInt(_kLastUpdateKey, DateTime.now().millisecondsSinceEpoch);
+    _lastUpdate = DateTime.now();
+  }
+
+  void _drinkBeer() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _health = (_health - damagePerClick).clamp(0, maxHealth);
     });
+    _saveState();
+  }
+
+  void _simulateDays(int days) {
+    setState(() {
+      _health = (_health + days * regenPerDay).clamp(0, maxHealth);
+    });
+    _saveState();
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    final double percent = _health / maxHealth;
+
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      body: SafeArea(
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blue, Colors.white],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-          ],
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // === Ligne du haut : niveau + info ===
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Niveau : ${(_health / 10).floor()}',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Tooltip(
+                        message:
+                            'Ton niveau dépend de ta vie. Clique sur bière pour perdre, attends pour regagner.',
+                        child: const Icon(Icons.info_outline),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // === Barre de vie ===
+                  Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      Container(
+                        height: 24,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.grey.shade300,
+                        ),
+                      ),
+                      FractionallySizedBox(
+                        widthFactor: percent,
+                        child: Container(
+                          height: 24,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color:
+                                percent > 0.6
+                                    ? Colors.green
+                                    : (percent > 0.3
+                                        ? Colors.orange
+                                        : Colors.red),
+                          ),
+                        ),
+                      ),
+                      Center(
+                        child: Text(
+                          '${_health} / $maxHealth',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // === Image du personnage ===
+                  Center(
+                    child: Image.asset(
+                      'assets/avatar.png',
+                      height: 200,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // === Boutons de simulation ===
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _simulateDays(1),
+                        icon: const Icon(Icons.wb_sunny),
+                        label: const Text('Simuler +1 jour'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _health = maxHealth;
+                          });
+                          _saveState();
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Remettre full'),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Règles à gauche
+                      Expanded(
+                        child: Text(
+                          'Règles :\n'
+                          '- Cliquer sur "Bière" retire $damagePerClick points de vie.\n'
+                          '- Si aucune bière pendant un jour, +$regenPerDay points.\n'
+                          '- Vie max : $maxHealth.',
+                          textAlign: TextAlign.left,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: _drinkBeer,
+                        style: ElevatedButton.styleFrom(
+                          shape: const CircleBorder(),
+                          padding: const EdgeInsets.all(16),
+                        ),
+                        child: const Icon(Icons.local_drink, size: 28),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
