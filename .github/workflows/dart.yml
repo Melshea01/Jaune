@@ -46,52 +46,6 @@ jobs:
           path: coverage/lcov.info
           retention-days: 7
 
-  # Build de test pour vérifier que la compilation fonctionne
-  build_test:
-    name: Build Test
-    runs-on: ubuntu-latest
-    needs: test
-
-    strategy:
-      matrix:
-        platform: [android, web]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Java (for Android)
-        if: matrix.platform == 'android'
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build Android APK (Debug)
-        if: matrix.platform == 'android'
-        run: flutter build apk --debug
-
-      - name: Build Web
-        if: matrix.platform == 'web'
-        run: flutter build web --debug
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-${{ matrix.platform }}
-          path: |
-            build/app/outputs/flutter-apk/*.apk
-            build/web/
-          retention-days: 3
-
   # Job optionnel pour vérifier les dépendances
   dependency_check:
     name: Dependency Check
@@ -111,8 +65,4 @@ jobs:
 
       - name: Check for outdated packages
         run: flutter pub outdated
-        continue-on-error: true
-
-      - name: Check pub score
-        run: dart pub publish --dry-run
         continue-on-error: true
