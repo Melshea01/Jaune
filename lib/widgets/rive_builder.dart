@@ -16,8 +16,6 @@ class _RiveBuilderState extends State<RiveBuilder> {
 
   Future<String?> _tryLoadAndParse() async {
     try {
-      
-
       final data = await rootBundle.load('assets/jaune.riv');
       try {
         // Ensure the Rive runtime is initialized before importing the file.
@@ -42,7 +40,7 @@ class _RiveBuilderState extends State<RiveBuilder> {
   @override
   void initState() {
     super.initState();
-    
+
     _loadError = _tryLoadAndParse();
   }
 

@@ -425,7 +425,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                               ],
                             ),
                       );
-                    }, minimumSize: Size(0, 0),
+                    },
+                    minimumSize: Size(0, 0),
                     child: Icon(
                       Icons.info_outline,
                       color: Colors.grey.shade100.withAlpha(
