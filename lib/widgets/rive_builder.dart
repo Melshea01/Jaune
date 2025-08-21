@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart' as rive;
 import 'package:flutter/services.dart' show rootBundle;
@@ -15,6 +17,15 @@ class _RiveBuilderState extends State<RiveBuilder> {
   late Future<String?> _loadError;
 
   Future<String?> _tryLoadAndParse() async {
+    // In flutter test runs the native Rive libraries (FFI) are not available.
+    // Detect the test environment and skip Rive FFI initialization/parsing.
+    if (Platform.environment['FLUTTER_TEST'] == 'true') {
+      debugPrint(
+        'RiveBuilder: running in test env, skipping Rive initialization',
+      );
+      return null;
+    }
+
     try {
       final data = await rootBundle.load('assets/jaune.riv');
       try {
@@ -88,6 +99,12 @@ class _RiveBuilderState extends State<RiveBuilder> {
         }
 
         // Parsed OK: return the Rive animation. Use a try/catch to fallback at runtime.
+        // If running inside flutter tests, provide a lightweight placeholder
+        // instead of trying to instantiate the native-backed Rive widget.
+        if (Platform.environment['FLUTTER_TEST'] == 'true') {
+          return _testPlaceholder();
+        }
+
         try {
           return rive.RiveAnimation.asset(
             'assets/jaune.riv',
@@ -100,6 +117,12 @@ class _RiveBuilderState extends State<RiveBuilder> {
           return _errorWidget(msg);
         }
       },
+    );
+  }
+
+  Widget _testPlaceholder() {
+    return Center(
+      child: Image.asset('assets/avatar.png', width: 120, height: 120),
     );
   }
 }
