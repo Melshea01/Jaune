@@ -443,17 +443,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
               const SizedBox(height: 20),
 
               // === Image / Rive du personnage (fix layout) ===
-              Center(
-                child: SizedBox(
-                  width: 320,
-                  height: 320,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      color: Colors.transparent,
-                      child: const RiveBuilder(),
-                    ),
-                  ),
+              Expanded(
+                child: Container(
+                  color: Colors.transparent,
+                  child: const RiveBuilder(),
                 ),
               ),
               const SizedBox(height: 20),
@@ -507,7 +500,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                 ],
               ),
 
-              Spacer(),
+              SizedBox(height: 20),
 
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -775,6 +768,3 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     );
   }
 }
-
-// Painter pour dessiner les demi-cercles de la jauge autour du bouton
-// ConsumptionGaugePainter extracted to lib/widgets/consumption_gauge_painter.dart
