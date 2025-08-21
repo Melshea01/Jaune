@@ -6,9 +6,7 @@ import 'dart:ui' as ui;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
 import 'dart:convert';
-
 import 'models.dart';
-
 import 'widgets/rive_builder.dart';
 import 'widgets/consumption_gauge_painter.dart';
 import 'widgets/health_bar.dart';
@@ -104,6 +102,28 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     // no risk_samples loading by design
   }
 
+  /// Retourne le numéro ISO de la semaine pour une date donnée
+  int isoWeekNumber(DateTime date) {
+    // Ajuster pour que lundi = premier jour de la semaine
+    // weekday: lundi=1 ... dimanche=7
+    int weekday = date.weekday;
+
+    // On calcule le lundi de la même semaine
+    DateTime monday = date.add(Duration(days: 1 - weekday));
+
+    // On prend le janvier de l'année du lundi
+    DateTime jan1 = DateTime(date.year, 1, 1);
+
+    // Calcul du nombre de jours à ajouter pour atteindre lundi
+    int daysToAdd = (8 - jan1.weekday) % 7;
+
+    DateTime firstMonday = jan1.add(Duration(days: daysToAdd));
+
+    // Calcul du nombre de semaines entre le premier lundi et notre lundi
+    int weekNumber = ((monday.difference(firstMonday).inDays) / 7).floor() + 1;
+    return weekNumber;
+  }
+
   // Group samples by ISO week (starting Monday) and compute average risk per week.
   // This function supports two input forms:
   //  - or provide `dailyConsos` (Map<String,int>) where keys are 'yyyy-MM-dd' and
@@ -113,28 +133,54 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     Map<String, dynamic> dailyConsos, {
     String gender = 'H',
   }) {
-    // Aggregate by ISO-week (Monday key). For each week we compute:
-    //  - total count of consumptions during recorded days
-    //  - drinking_days = number of days with count > 0 in that week
-    // Then we compute x = mean_consumption_per_day_over_7 = total / 7.0
-    // and y = drinking_days, and call quad2Predict(x, y, gender) once per week.
-    final Map<String, Map<String, int>> agg = {};
+    // Step 0: get the earliestKey dateKey from dailyConsos
+    DateTime? earliestKey;
+    dailyConsos.forEach((dateKey, val) {
+      if (earliestKey == null ||
+          DateTime.parse(dateKey).isBefore(earliestKey!)) {
+        earliestKey = DateTime.parse(dateKey);
+      }
+    });
+
+    if (earliestKey == null) return <String, double>{};
+
+    //Step 1 : generate all Weeks
+    final Map<String, Map<String, int>> agg =
+        {}; // monday -> {'sum':..., 'drinking_days':...}
+
+    int endYear = DateTime.now().year;
+    int endWeek = isoWeekNumber(DateTime.now());
+    int year = earliestKey!.year;
+    int week = isoWeekNumber(earliestKey!);
+
+    while (year < endYear || (year == endYear && week <= endWeek)) {
+      agg.putIfAbsent(
+        "$year-$week",
+        () => <String, int>{'sum': 0, 'drinking_days': 0},
+      );
+
+      week++;
+      // Vérifier si on dépasse le nombre de semaines dans l’année
+      int weeksInYear = 52;
+      if (week > weeksInYear) {
+        week = 1;
+        year++;
+      }
+    }
+
+    // Step 2: aggregate only weeks that have at least one recorded day.
 
     dailyConsos.forEach((dateKey, val) {
       try {
-        final DateTime d = DateTime.parse(dateKey);
-        final int weekday = d.weekday; // 1..7
-        final DateTime dayOnly = DateTime(d.year, d.month, d.day);
-        final DateTime monday = dayOnly.subtract(Duration(days: weekday - 1));
-        final String weekKey =
-            '${monday.year.toString().padLeft(4, '0')}-'
-            '${monday.month.toString().padLeft(2, '0')}-'
-            '${monday.day.toString().padLeft(2, '0')}';
+        final DateTime dRaw = DateTime.parse(dateKey);
+        final DateTime day = DateTime(dRaw.year, dRaw.month, dRaw.day);
+        final String weekNumber = isoWeekNumber(day).toString();
+        final String key = "${dRaw.year}-$weekNumber";
 
         final int count =
             (val is int) ? val : int.tryParse(val.toString()) ?? 0;
         final w = agg.putIfAbsent(
-          weekKey,
+          key,
           () => <String, int>{'sum': 0, 'drinking_days': 0},
         );
         w['sum'] = (w['sum'] ?? 0) + count;
@@ -145,33 +191,26 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     });
 
     final Map<String, double> weeklyRisks = {};
+
+    // Compute risk for aggregated weeks (weeks that had at least one recorded day)
     agg.forEach((weekKey, data) {
       final int total = data['sum'] ?? 0;
       final int drinkingDays = data['drinking_days'] ?? 0;
-      final double meanPerDay = total / drinkingDays; // include zero days
 
-      // Use ModelPredictor from lib/models.dart. The models expect a sheet name
-      // like 'Homme' or 'Femme' and y=drinkingDays (int), x=meanPerDay.
       double risk = 0.0;
-      if (drinkingDays == 0) {
-        // No drinking days this week -> minimal/no risk
-        risk = 0.0;
-      } else {
+      if (drinkingDays > 0) {
         final String sheet =
             gender.toUpperCase().startsWith('F') ? 'Femme' : 'Homme';
         try {
-          risk = ModelPredictor.predict(sheet, drinkingDays, meanPerDay);
+          risk = ModelPredictor.predict(sheet, drinkingDays, total);
+          print("Predicted risk for $sheet (y=$drinkingDays, x=$total): $risk");
         } catch (e) {
           debugPrint(
-            'ModelPredictor.predict error for $sheet y=$drinkingDays x=$meanPerDay: $e',
+            'ModelPredictor.predict error for $sheet y=$drinkingDays x=$total: $e',
           );
-          // fallback: assume no risk if model missing
           risk = 0.0;
         }
       }
-      debugPrint(
-        'Weekly risk for $weekKey: $risk, drinkingDays=$drinkingDays, meanPerDay=$meanPerDay',
-      );
       weeklyRisks[weekKey] = risk;
     });
 

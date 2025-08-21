@@ -33,7 +33,7 @@ class ModelPredictor {
   }
 
   /// Predict value for given sheet, y (group) and x using the loaded models JSON.
-  static double predict(String sheet, int y, double x) {
+  static double predict(String sheet, int y, int x) {
     if (modelsJson == null || modelsJson!.isEmpty) {
       throw StateError(
         'ModelPredictor not initialized or models empty. Call loadModels() first.',
