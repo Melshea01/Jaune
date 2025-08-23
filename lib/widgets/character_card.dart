@@ -99,15 +99,18 @@ class CharacterCard extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Text(
-                    message,
-                    textAlign: TextAlign.left,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 16,
-                      color: Colors.black87,
-                      fontStyle: FontStyle.italic,
-                      height: 1.35,
-                      letterSpacing: 0.2,
+                  Container(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      message,
+                      textAlign: TextAlign.left,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 16,
+                        color: Colors.black87,
+                        fontStyle: FontStyle.italic,
+                        height: 1.35,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ),
                   Container(

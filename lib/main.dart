@@ -2,20 +2,197 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:jaune/be_real_capture_page.dart';
+import 'package:jaune/widgets/rive_builder.dart';
 import 'dart:ui' as ui;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:typicons_flutter/typicons_flutter.dart';
 import 'dart:math' as math;
 import 'dart:convert';
 import 'models.dart';
-import 'widgets/rive_builder.dart';
 import 'widgets/consumption_gauge_painter.dart';
 import 'widgets/health_bar.dart';
 import 'widgets/character_card.dart';
 import 'package:floating_bubbles/floating_bubbles.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 
-void main() {
+// Simple character profile to manage XP/level and zone messages/animations.
+class CharacterProfile {
+  int xp;
+  int level;
+  String lastXpAwardDate; // 'yyyy-MM-dd'
+  int maxPv;
+  int currentPv;
+
+  static const int xpPerLevel = 100;
+
+  CharacterProfile({
+    this.xp = 0,
+    this.level = 1,
+    this.lastXpAwardDate = '',
+    this.maxPv = 100,
+    int? currentPv,
+  }) : currentPv = currentPv ?? 100;
+
+  // Asset-backed messages cache. Loaded lazily on first use.
+  static final Map<String, List<String>> _assetMessages = {};
+  static bool _assetLoadingStarted = false;
+
+  static Future<void> _loadMessagesFromAsset() async {
+    if (_assetMessages.isNotEmpty || _assetLoadingStarted) return;
+    _assetLoadingStarted = true;
+    try {
+      final String raw = await rootBundle.loadString(
+        'assets/character_messages.json',
+      );
+      final Map<String, dynamic> decoded =
+          json.decode(raw) as Map<String, dynamic>;
+      decoded.forEach((k, v) {
+        if (v is List) {
+          _assetMessages[k] = v.map((e) => e.toString()).toList();
+        }
+      });
+      debugPrint(
+        'Loaded character messages from assets: ${_assetMessages.keys.toList()}',
+      );
+    } catch (e) {
+      debugPrint('Failed to load character messages asset: $e');
+    }
+  }
+
+  void addXp(int amount) {
+    xp += amount;
+    while (xp >= xpPerLevel) {
+      xp -= xpPerLevel;
+      level += 1;
+    }
+  }
+
+  String getMessage() {
+    // Determine current zone from health percent and return a random message
+    try {
+      final String zone = zoneFromPercent();
+      final List<String> pool = messagesForZone(zone);
+      if (pool.isEmpty) return '';
+      return pool[math.Random().nextInt(pool.length)];
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // Convenience getter used by UI; delegates to getMessage()
+  String get message => getMessage();
+
+  double healthPercent() {
+    if (maxPv <= 0) return 1.0;
+    return (currentPv / maxPv).clamp(0.0, 1.0).toDouble();
+  }
+
+  void setHealthPercent(double pct) {
+    final p = pct.clamp(0.0, 1.0);
+    currentPv = (p * maxPv).round().clamp(0, maxPv);
+  }
+
+  String zoneFromPercent() {
+    // pct is 0.0..1.0
+    if (currentPv > 0.75) return 'power';
+    if (currentPv > 0.50) return 'warning';
+    if (currentPv > 0.25) return 'danger';
+    if (currentPv > 0.0)
+      return 'critical';
+    else
+      return 'dead';
+  }
+
+  List<String> messagesForZone(String zone) {
+    // If asset messages are loaded, return them
+    if (_assetMessages.containsKey(zone)) {
+      return List<String>.from(_assetMessages[zone]!);
+    }
+
+    // Trigger background load if not started
+    if (!_assetLoadingStarted) {
+      _loadMessagesFromAsset();
+    }
+
+    return [];
+  }
+
+  Map<String, String> animationsForZone(String zone) {
+    // placeholder names for future Rive animations
+    return {
+      'power': 'anim_power',
+      'warning': 'anim_warning',
+      'danger': 'anim_danger',
+      'critical': 'anim_critical',
+    };
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'xp': xp,
+      'level': level,
+      'lastXpAwardDate': lastXpAwardDate,
+      'maxPv': maxPv,
+      'currentPv': currentPv,
+    };
+  }
+
+  static CharacterProfile fromJson(Map<String, dynamic> p) {
+    return CharacterProfile(
+      xp: (p['xp'] as int?) ?? 0,
+      level: (p['level'] as int?) ?? 1,
+      lastXpAwardDate: (p['lastXpAwardDate'] as String?) ?? '',
+      maxPv: (p['maxPv'] as int?) ?? 100,
+      currentPv: (p['currentPv'] as int?) ?? 100,
+    );
+  }
+
+  static Future<CharacterProfile> loadFromPrefs(
+    SharedPreferences prefs,
+    String key,
+  ) async {
+    try {
+      final String? raw = prefs.getString(key);
+      if (raw == null || raw.isEmpty) return CharacterProfile();
+      final Map<String, dynamic> p = json.decode(raw) as Map<String, dynamic>;
+      return fromJson(p);
+    } catch (_) {
+      return CharacterProfile();
+    }
+  }
+
+  Future<void> saveToPrefs(SharedPreferences prefs, String key) async {
+    try {
+      await prefs.setString(key, json.encode(toJson()));
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  Future<void> awardDailyXpIfNeeded(
+    double healthPct,
+    SharedPreferences prefs,
+    String key,
+  ) async {
+    final String today = DateTime.now().toIso8601String().substring(0, 10);
+    if (lastXpAwardDate == today) return; // already awarded today
+    if (healthPct > 0.75) {
+      addXp(10);
+      lastXpAwardDate = today;
+      await saveToPrefs(prefs, key);
+    }
+  }
+}
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // initialize French date formatting for TableCalendar / intl
+  await initializeDateFormatting('fr_FR');
   runApp(const MyApp());
 }
 
@@ -48,9 +225,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
-  static const int maxHealth = 100;
-
-  int _health = maxHealth;
+  // health is now owned by CharacterProfile (maxPv / currentPv)
   // _lastUpdate removed — no time-based regen logic
   int _consos = 0;
   double _animatedConsos = 0.0;
@@ -60,13 +235,19 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   AudioPlayer? _audioPlayer;
   Timer? _volumeFadeTimer;
   final String _kDailyConsosKey = 'daily_consos';
+  final String _kProfileKey = 'character_profile';
+
+  CharacterProfile _profile = CharacterProfile();
+
+  // in-memory map date->consos (keys 'yyyy-MM-dd')
+  Map<String, int> _dailyMap = {};
+  DateTime? _calendarSelectedDay;
 
   // last-update persistence removed
 
   // Rive file loader
   // ...existing code...
-  final String _characterMessage =
-      "Un autre ? Bien sûr. Ta volonté, c'est de l'eau gazeuse.";
+  // character message is stored in _profile.message
 
   @override
   void initState() {
@@ -129,13 +310,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   //  - or provide `dailyConsos` (Map<String,int>) where keys are 'yyyy-MM-dd' and
   //    values are number of consumptions for that day; in that case we compute a
   //    per-day risk using quad2Predict(x=consos, y=0.0, gender) and average by week.
-  Map<String, double> computeWeeklyAverageRisk(
-    Map<String, dynamic> dailyConsos, {
-    String gender = 'H',
-  }) {
+  Map<String, double> computeWeeklyAverageRisk({String gender = 'H'}) {
     // Step 0: get the earliestKey dateKey from dailyConsos
     DateTime? earliestKey;
-    dailyConsos.forEach((dateKey, val) {
+    _dailyMap.forEach((dateKey, val) {
       if (earliestKey == null ||
           DateTime.parse(dateKey).isBefore(earliestKey!)) {
         earliestKey = DateTime.parse(dateKey);
@@ -170,15 +348,14 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
     // Step 2: aggregate only weeks that have at least one recorded day.
 
-    dailyConsos.forEach((dateKey, val) {
+    _dailyMap.forEach((dateKey, val) {
       try {
         final DateTime dRaw = DateTime.parse(dateKey);
         final DateTime day = DateTime(dRaw.year, dRaw.month, dRaw.day);
         final String weekNumber = isoWeekNumber(day).toString();
         final String key = "${dRaw.year}-$weekNumber";
 
-        final int count =
-            (val is int) ? val : int.tryParse(val.toString()) ?? 0;
+        final int count = val;
         final w = agg.putIfAbsent(
           key,
           () => <String, int>{'sum': 0, 'drinking_days': 0},
@@ -203,7 +380,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
             gender.toUpperCase().startsWith('F') ? 'Femme' : 'Homme';
         try {
           risk = ModelPredictor.predict(sheet, drinkingDays, total);
-          print("Predicted risk for $sheet (y=$drinkingDays, x=$total): $risk");
+          debugPrint(
+            "Predicted risk for $sheet (y=$drinkingDays, x=$total): $risk",
+          );
         } catch (e) {
           debugPrint(
             'ModelPredictor.predict error for $sheet y=$drinkingDays x=$total: $e',
@@ -245,38 +424,30 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   Future<void> _recomputeHealth({bool save = true}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_kDailyConsosKey);
-      Map<String, dynamic> dailyMap = {};
-      if (raw != null && raw.isNotEmpty) {
-        try {
-          dailyMap = json.decode(raw) as Map<String, dynamic>;
-        } catch (_) {
-          dailyMap = {};
-        }
-      }
-
       // Ensure today's in-memory consumption is included so recompute is
       // robust even if callers didn't save before requesting recompute.
       final String todayKey = DateTime.now().toIso8601String().substring(0, 10);
-      dailyMap[todayKey] = _consos;
+      _dailyMap[todayKey] = _consos;
 
       // Compute weekly average risk from daily map (includes today)
-      final Map<String, double> weekly = computeWeeklyAverageRisk(dailyMap);
+      final Map<String, double> weekly = computeWeeklyAverageRisk();
       if (weekly.isNotEmpty) {
         final double sumAll = weekly.values.fold(0.0, (p, e) => p + e);
         final double avgRisk = sumAll / weekly.length;
         // Map risk to percent-of-health (PV). risk >= 0.15 => 0 PV
         final double hp = riskToHealthPercent(avgRisk);
 
-        final int pvHealth = (hp * maxHealth).round().clamp(0, maxHealth);
+        final int pvHealth = (hp * _profile.maxPv).round().clamp(
+          0,
+          _profile.maxPv,
+        );
         setState(() {
-          _health = pvHealth;
+          _profile.currentPv = pvHealth;
         });
       } else {
         // No weekly risk data: do not apply damage/regen logic — default to full health
         setState(() {
-          _health = maxHealth;
+          _profile.currentPv = _profile.maxPv;
         });
       }
 
@@ -294,21 +465,56 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     int savedConsos = 0;
     if (savedDaily != null && savedDaily.isNotEmpty) {
       try {
-        final Map<String, dynamic> m =
+        final Map<String, dynamic> decoded =
             json.decode(savedDaily) as Map<String, dynamic>;
+        _dailyMap = decoded.map<String, int>((k, v) {
+          if (v is int) return MapEntry(k, v);
+          return MapEntry(k, int.tryParse(v.toString()) ?? 0);
+        });
         final todayKey = DateTime.now().toIso8601String().substring(0, 10);
-        savedConsos = (m[todayKey] as int?) ?? 0;
-      } catch (_) {
+        savedConsos = _dailyMap[todayKey] ?? 0;
+        debugPrint(todayKey);
+      } catch (e) {
+        debugPrint('Error parsing savedDaily map: $e');
+
         savedConsos = 0;
       }
     }
 
-    // initialize in-memory state from saved daily consumptions
+    // load profile (xp / level, PV)
+    try {
+      final String? rawProfile = prefs.getString(_kProfileKey);
+      if (rawProfile != null && rawProfile.isNotEmpty) {
+        final Map<String, dynamic> p =
+            json.decode(rawProfile) as Map<String, dynamic>;
+        _profile = CharacterProfile(
+          xp: (p['xp'] as int?) ?? 0,
+          level: (p['level'] as int?) ?? 1,
+          lastXpAwardDate: (p['lastXpAwardDate'] as String?) ?? '',
+          maxPv: (p['maxPv'] as int?) ?? 100,
+          currentPv: (p['currentPv'] as int?) ?? 100,
+        );
+      } else {
+        _profile = CharacterProfile(maxPv: 100, currentPv: 100);
+      }
+    } catch (_) {
+      _profile = CharacterProfile(maxPv: 100, currentPv: 100);
+    }
+
+    // initialize in-memory state from saved daily consumptions and profile
     setState(() {
       _consos = savedConsos;
       _animatedConsos = savedConsos.toDouble();
+      _profile.currentPv = _profile.currentPv.clamp(0, _profile.maxPv);
     });
+
+    // award daily XP if not yet awarded today (run after health initialized)
     await _recomputeHealth();
+    await _profile.awardDailyXpIfNeeded(
+      _profile.currentPv / _profile.maxPv,
+      prefs,
+      _kProfileKey,
+    );
   }
 
   Future<void> _saveState() async {
@@ -316,19 +522,21 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     _isSaving = true;
     try {
       final prefs = await SharedPreferences.getInstance();
-      // save daily consumptions map (update today's value)
-      final String? raw = prefs.getString(_kDailyConsosKey);
-      Map<String, dynamic> m = {};
-      if (raw != null && raw.isNotEmpty) {
-        try {
-          m = json.decode(raw) as Map<String, dynamic>;
-        } catch (_) {
-          m = {};
-        }
-      }
+
       final todayKey = DateTime.now().toIso8601String().substring(0, 10);
-      m[todayKey] = _consos;
-      await prefs.setString(_kDailyConsosKey, json.encode(m));
+
+      _dailyMap[todayKey] = _consos;
+
+      await prefs.setString(_kDailyConsosKey, json.encode(_dailyMap));
+      // also persist profile
+      final Map<String, dynamic> p = {
+        'xp': _profile.xp,
+        'level': _profile.level,
+        'lastXpAwardDate': _profile.lastXpAwardDate,
+        'maxPv': _profile.maxPv,
+        'currentPv': _profile.currentPv,
+      };
+      await prefs.setString(_kProfileKey, json.encode(p));
     } catch (e) {
       debugPrint('Error saving daily consos: $e');
     } finally {
@@ -340,6 +548,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     setState(() {
       _consos += 1;
     });
+
     _gaugeController.forward(from: 0.0);
     _bubbleController.reset();
     // Ensure any previous fade timer is cancelled
@@ -352,7 +561,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       // Single player: set to full volume and loop during animation
       await _audioPlayer?.stop();
       await _audioPlayer?.setVolume(1.0);
-      await _audioPlayer?.setReleaseMode(ReleaseMode.loop);
+      //await _audioPlayer?.setReleaseMode(ReleaseMode.loop);
       await _audioPlayer?.setSource(AssetSource('beer_sound.mp3'));
       await _audioPlayer?.resume();
     } catch (e) {
@@ -415,11 +624,479 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     _recomputeHealth();
   }
 
+  void _showCalendarDialog() {
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (ctx) {
+        return Positioned.fill(
+          child: Stack(
+            children: [
+              // Transparent layer to catch taps outside the panel and dismiss
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () {
+                  entry.remove();
+                },
+              ),
+              // Bottom-left positioned panel
+              Positioned(
+                left: 16,
+                bottom: -6,
+                child: SafeArea(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: 520,
+                      maxHeight: 560,
+                      minWidth: 280,
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        width: 360,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFF7D83F), Color(0xFFF6C84A)],
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(
+                                (0.10 * 255).round(),
+                              ),
+                              offset: const Offset(0, 6),
+                              blurRadius: 16,
+                            ),
+                          ],
+                          border: Border.all(
+                            color: Colors.white.withAlpha((0.22 * 255).round()),
+                            width: 1.0,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(CupertinoIcons.calendar, size: 20),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Calendrier',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const Spacer(),
+                                IconButton(
+                                  onPressed: () => entry.remove(),
+                                  icon: Icon(
+                                    Icons.close,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: EdgeInsets.only(
+                                bottom: 8,
+                                left: 8,
+                                right: 8,
+                                top: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+
+                                color: Colors.white.withAlpha(
+                                  (0.95 * 255).round(),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(
+                                      (0.08 * 255).round(),
+                                    ),
+                                    offset: const Offset(0, 3),
+                                    blurRadius: 6,
+                                  ),
+                                ],
+                              ),
+
+                              child: TableCalendar(
+                                locale: 'fr_FR',
+                                firstDay: DateTime.utc(2000, 1, 1),
+                                lastDay: DateTime.utc(2100, 12, 31),
+                                focusedDay: DateTime.now(),
+                                startingDayOfWeek: StartingDayOfWeek.monday,
+                                // indique au TableCalendar quel jour est "sélectionné"
+                                selectedDayPredicate:
+                                    (day) =>
+                                        _calendarSelectedDay != null &&
+                                        isSameDay(day, _calendarSelectedDay),
+                                // quand on sélectionne, on met à jour l'état et on force le rebuild de l'OverlayEntry
+                                onDaySelected: (selectedDay, focusedDay) {
+                                  setState(() {
+                                    _calendarSelectedDay = selectedDay;
+                                  });
+                                  // 'entry' est la variable locale de l'overlay ; rebuild pour afficher le selectedBuilder
+                                  entry.markNeedsBuild();
+                                  // Ne pas appeler entry.remove() immédiatement si tu veux voir la sélection.
+                                },
+                                daysOfWeekHeight: 24,
+                                headerStyle: HeaderStyle(
+                                  formatButtonVisible: false,
+                                  titleCentered: true,
+                                  leftChevronIcon: const Icon(
+                                    CupertinoIcons.chevron_left,
+                                  ),
+                                  rightChevronIcon: const Icon(
+                                    CupertinoIcons.chevron_right,
+                                  ),
+                                  headerPadding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                ),
+                                calendarStyle: CalendarStyle(
+                                  // keep native todayDecoration disabled because we handle it in builders
+                                  todayDecoration: const BoxDecoration(),
+                                  defaultDecoration: const BoxDecoration(),
+                                  outsideDecoration: const BoxDecoration(),
+                                ),
+                                calendarBuilders: CalendarBuilders(
+                                  dowBuilder: (context, day) {
+                                    const labels = [
+                                      'L',
+                                      'M',
+                                      'M',
+                                      'J',
+                                      'V',
+                                      'S',
+                                      'D',
+                                    ];
+                                    final idx = (day.weekday - 1) % 7;
+                                    return Center(
+                                      child: Text(
+                                        labels[idx],
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall?.copyWith(
+                                          color: Colors.grey.shade700,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  defaultBuilder: (context, day, focusedDay) {
+                                    final DateTime d = DateTime(
+                                      day.year,
+                                      day.month,
+                                      day.day,
+                                    );
+                                    final DateTime now = DateTime.now();
+                                    final DateTime today = DateTime(
+                                      now.year,
+                                      now.month,
+                                      now.day,
+                                    );
+                                    final String dayKey = d
+                                        .toIso8601String()
+                                        .substring(0, 10);
+
+                                    final int count = _dailyMap[dayKey] ?? 0;
+
+                                    final bool isPast = d.isBefore(today);
+                                    final bool isToday =
+                                        d.year == today.year &&
+                                        d.month == today.month &&
+                                        d.day == today.day;
+
+                                    final textStyle = Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w600,
+                                    );
+
+                                    // If user drank that day -> colored background + beer icon
+                                    if (count > 0) {
+                                      Color bg;
+                                      if (count <= 2) {
+                                        bg = Colors.green.shade600;
+                                      } else if (count <= 4) {
+                                        bg = Colors.yellow.shade700;
+                                      } else if (count <= 6) {
+                                        bg = Colors.deepOrange.shade600;
+                                      } else {
+                                        bg = Colors.redAccent.shade700;
+                                      }
+                                      return Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: bg,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment: Alignment.center,
+                                        // allow a bit more vertical space for the count label
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Typicons.beer,
+                                              color: Colors.white,
+                                              size: 24,
+                                            ),
+                                            Text(
+                                              '$count',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 8,
+                                                height: 0.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }
+                                    if (isPast) {
+                                      return Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          '${day.day}',
+                                          style: textStyle,
+                                        ),
+                                      );
+                                    } else if (isToday) {
+                                      return Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.black,
+                                            width: 1.6,
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          '${day.day}',
+                                          style: textStyle,
+                                        ),
+                                      );
+                                    } else {
+                                      // future or current month not past
+                                      return Container(
+                                        width: 36,
+                                        height: 36,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.grey.shade300,
+                                            width: 1.0,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${day.day}',
+                                          style: textStyle,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  todayBuilder: (context, day, focusedDay) {
+                                    final String dayKey = day
+                                        .toIso8601String()
+                                        .substring(0, 10);
+                                    final int count = _dailyMap[dayKey] ?? 0;
+
+                                    if (count > 0) {
+                                      Color bg;
+                                      if (count <= 2) {
+                                        bg = Colors.green.shade600;
+                                      } else if (count <= 4) {
+                                        bg = Colors.yellow.shade700;
+                                      } else if (count <= 6) {
+                                        bg = Colors.deepOrange.shade600;
+                                      } else {
+                                        bg = Colors.redAccent.shade700;
+                                      }
+                                      return Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: bg,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment: Alignment.center,
+                                        // allow a bit more vertical space for the count label
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Typicons.beer,
+                                              color: Colors.white,
+                                              size: 24,
+                                            ),
+                                            Text(
+                                              '$count',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 8,
+                                                height: 0.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }
+                                    // keep same as isToday case
+                                    return Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.black,
+                                          width: 1.6,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '${day.day}',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodyMedium?.copyWith(
+                                          color: Colors.black87,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  selectedBuilder: (context, day, focusedDay) {
+                                    final DateTime d = DateTime(
+                                      day.year,
+                                      day.month,
+                                      day.day,
+                                    );
+                                    final String dayKey = d
+                                        .toIso8601String()
+                                        .substring(0, 10);
+
+                                    final int count = _dailyMap[dayKey] ?? 0;
+
+                                    if (count > 0) {
+                                      Color bg;
+                                      if (count <= 2) {
+                                        bg = Colors.green.shade600;
+                                      } else if (count <= 4) {
+                                        bg = Colors.yellow.shade700;
+                                      } else if (count <= 6) {
+                                        bg = Colors.deepOrange.shade600;
+                                      } else {
+                                        bg = Colors.redAccent.shade700;
+                                      }
+                                      return Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: bg,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          '$count',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    // fallback : style sélection par défaut (cercle blanc avec bord noir)
+                                    return Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.yellow,
+                                          width: 1.6,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '${day.day}',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodyMedium?.copyWith(
+                                          color: Colors.black87,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  outsideBuilder: (context, day, focusedDay) {
+                                    // show outside days with subtle style
+                                    return Container(
+                                      width: 36,
+                                      height: 36,
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '${day.day}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(color: Colors.grey),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+  }
+
   // ...existing code...
 
   @override
   Widget build(BuildContext context) {
-    final double percent = _health / maxHealth;
+    final double percent = _profile.currentPv / _profile.maxPv;
 
     return Scaffold(
       body: SafeArea(
@@ -442,7 +1119,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                 children: [
                   Text(
                     "",
-                    //'Niveau : ${(_health / 10).floor()}',
+                    //'Niveau : ${(_profile.currentPv / 10).floor()}',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   CupertinoButton(
@@ -452,9 +1129,65 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                         context: context,
                         builder:
                             (context) => CupertinoAlertDialog(
-                              title: const Text('Information'),
-                              content: const Text(
-                                'Ton niveau dépend de ta vie. Clique sur bière pour perdre, attends pour regagner.',
+                              title: const Text('Comment ça marche ?'),
+                              content: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    "Chaque fois que tu bois, appuie sur le bouton « 🍻 »",
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    "1 verre standard = 1 clic (ex : une pinte = 2 clics).",
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    "Ton 🍋 a des points de vie qui montent ou descendent selon ta consommation.",
+                                  ),
+                                  const SizedBox(height: 8),
+                                  RichText(
+                                    textAlign: TextAlign.center,
+                                    text: TextSpan(
+                                      style: TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 13,
+                                      ),
+                                      children: [
+                                        const TextSpan(
+                                          text:
+                                              "Les règles de calcul viennent d’un ",
+                                        ),
+                                        TextSpan(
+                                          text: 'rapport officiel',
+                                          style: const TextStyle(
+                                            color: Colors.blue,
+                                            decoration:
+                                                TextDecoration.underline,
+                                          ),
+                                          recognizer:
+                                              TapGestureRecognizer()
+                                                ..onTap = () async {
+                                                  final uri = Uri.parse(
+                                                    'https://www.santepubliquefrance.fr/content/download/8230/file/avis-alcool-040517.pdf',
+                                                  );
+                                                  if (await canLaunchUrl(uri)) {
+                                                    await launchUrl(uri);
+                                                  } else {
+                                                    debugPrint(
+                                                      'Could not launch $uri',
+                                                    );
+                                                  }
+                                                },
+                                        ),
+                                        const TextSpan(
+                                          text:
+                                              ' de Santé Publique France, basé sur des données de chercheurs britanniques.',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                               actions: [
                                 CupertinoDialogAction(
@@ -477,22 +1210,56 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                 ],
               ),
 
-              HealthBar(percent: percent),
+              HealthBar(percent: percent, level: _profile.level),
 
               const SizedBox(height: 20),
 
               // === Image / Rive du personnage (fix layout) ===
               Expanded(
-                child: Container(
-                  color: Colors.transparent,
-                  child: const RiveBuilder(),
+                child: Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Positioned(
+                        bottom: 0,
+                        child: Container(
+                          width: math.min(
+                            MediaQuery.of(context).size.width * 0.50,
+                            260,
+                          ),
+                          height: math.min(
+                            MediaQuery.of(context).size.width * 0.25,
+                            260,
+                          ),
+                          decoration: BoxDecoration(
+                            // ovale avec fondu progressif (centre sombre -> bords transparents)
+                            //
+                            //color: Colors.red,
+                            borderRadius: BorderRadius.circular(100),
+
+                            // légère ombre pour renforcer l'effet de surélévation
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.20),
+                                blurRadius: 20,
+                                spreadRadius: -8,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Personnage (Rive) au-dessus de l'ombre
+                      const RiveBuilder(),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
 
               CharacterCard(
                 name: 'Jaune',
-                message: _characterMessage,
+                message: _profile.message,
                 healthPercent: percent,
                 onTap: () async {
                   await Navigator.of(context).push(
@@ -500,7 +1267,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                       builder:
                           (_) => BeRealCapturePage(
                             avatarAsset: 'assets/avatar.png',
-                            message: _characterMessage,
+                            message: _profile.message,
                             healthPercent: percent,
                           ),
                     ),
@@ -508,10 +1275,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                 },
               ),
 
-              const SizedBox(height: 20),
-
               // === Boutons de simulation ===
-              Wrap(
+              /* Wrap(
                 alignment: WrapAlignment.center,
                 spacing: 12,
                 runSpacing: 12,
@@ -537,9 +1302,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                     label: const Text('Remettre full'),
                   ),
                 ],
-              ),
-
-              SizedBox(height: 20),
+              ),*/
+              SizedBox(height: 80),
 
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -573,8 +1337,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
                       onTap: () {
-                        // placeholder : ouvrir calendrier ou dialogue
-                        // Navigator.of(context).push(...);
+                        // open a centered calendar dialog (not full screen)
+                        _showCalendarDialog();
                       },
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

@@ -3,8 +3,9 @@ import 'dart:ui';
 
 class HealthBar extends StatelessWidget {
   final double percent;
+  final int level;
 
-  const HealthBar({super.key, required this.percent});
+  const HealthBar({super.key, required this.percent, required this.level});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +15,7 @@ class HealthBar extends StatelessWidget {
         Row(
           children: [
             Text(
-              'Niveau ${((percent * 100) / 10).floor()}',
+              'Niveau $level',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -46,9 +47,9 @@ class HealthBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   gradient: LinearGradient(
                     colors:
-                        percent > 0.6
+                        percent > 0.75
                             ? [Color(0xFF43e97b), Color(0xFF38f9d7)]
-                            : (percent > 0.3
+                            : (percent > 0.25
                                 ? [Color(0xFFf7971e), Color(0xFFffd200)]
                                 : [Color(0xFFf85757), Color(0xFFf857a6)]),
                   ),
