@@ -40,12 +40,12 @@ dependencies:
   camera: ^0.10.0
   path_provider: ^2.0.0
   url_launcher: ^6.1.10
-  social_share: ^2.3.1
-  audioplayers: ^1.1.1
-  table_calendar: 3.2.0
-  intl: ^0.20.2
+  appinio_social_share: ^0.3.2
+  audioplayers: ^6.0.0
+  table_calendar: ^3.1.2
+  intl: ^0.19.0
   typicons_flutter: ^0.5.0
-  flutter_launcher_icons: ^0.14.4
+  flutter_launcher_icons: ^0.13.1
 
 dev_dependencies:
   flutter_test:

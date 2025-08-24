@@ -36,6 +36,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <!-- FileProvider required by social_share to grant URI access to Instagram -->
+        <!--
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.com.shekarmudaliyar.social_share"
@@ -45,7 +46,7 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/filepaths" />
-        </provider>
+        </provider> -->
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -53,6 +54,8 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+    <package android:name="com.instagram.android" />
+    
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
