@@ -5,12 +5,12 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:appinio_social_share/appinio_social_share.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:social_share/social_share.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class BeRealCapturePage extends StatefulWidget {
@@ -37,6 +37,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
   XFile? _frontPhoto;
   bool _busy = false;
   String _cameraDiagnostic = '';
+  AppinioSocialShare appinioSocialShare = AppinioSocialShare();
 
   @override
   void initState() {
@@ -983,13 +984,22 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
           ).writeAsBytes(transBytes.buffer.asUint8List());
 
           try {
-            await SocialShare.shareInstagramStory(
-              imagePath: transparentPath,
-              backgroundResourcePath: outPath,
-              appId: 'com.instagram.android',
-            );
+            // Partage multi-plateforme pour les stories Instagram
+            if (Platform.isAndroid) {
+              await appinioSocialShare.android.shareToInstagramStory(
+                'com.instagram.android',
+                stickerImage: transparentPath,
+                backgroundImage: outPath,
+              );
+            } else if (Platform.isIOS) {
+              await appinioSocialShare.iOS.shareToInstagramStory(
+                'instagram-stories://share',
+                stickerImage: transparentPath,
+                backgroundImage: outPath,
+              );
+            }
           } catch (e) {
-            debugPrint('social_share failed: $e');
+            debugPrint('appinio_social_share (Instagram Story) failed: $e');
           }
         }
       } catch (e) {
