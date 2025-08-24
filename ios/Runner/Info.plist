@@ -45,5 +45,18 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- Schemes required for social_share to query and open apps like Instagram -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram-stories</string>
+		<string>instagram</string>
+	</array>
+	
+	<!-- Permissions for camera and photo saving used by the BeReal capture flow -->
+	<key>NSCameraUsageDescription</key>
+	<string>Cette application utilise la caméra pour prendre une photo BeReal pour partager votre personnage.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>La photo composée sera sauvegardée temporairement et partagée via les applications installées.</string>
 </dict>
 </plist>

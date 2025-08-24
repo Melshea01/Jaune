@@ -1,0 +1,236 @@
+{
+  "Homme": {
+    "sheet": "Homme",
+    "per_y_best": {
+      "1": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.0019116296983092069
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.004517796597184124,
+            3.777026853480578e-05
+          ],
+          "intercept": -0.04789888217097946
+        }
+      },
+      "2": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.0015951974531491903
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.003589374672602787,
+            4.747356016394699e-05
+          ],
+          "intercept": -0.0476122940792604
+        }
+      },
+      "3": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.0016769792960604657
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.00330873948086975,
+            5.009241842937621e-05
+          ],
+          "intercept": -0.04789241838228453
+        }
+      },
+      "4": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.0017158991121973236
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.003176035981681358,
+            5.1197451545599425e-05
+          ],
+          "intercept": -0.04804536714462261
+        }
+      },
+      "5": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.0017187233652586464
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.0030816542308387085,
+            5.219164854563794e-05
+          ],
+          "intercept": -0.048076991181066134
+        }
+      },
+      "6": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.0017997464016412763
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.0030277695878127516,
+            5.2662593137404886e-05
+          ],
+          "intercept": -0.04815831830484242
+        }
+      },
+      "7": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.0017439624041015774
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.002990619294101069,
+            5.2943821704488134e-05
+          ],
+          "intercept": -0.048207999790942604
+        }
+      }
+    }
+  },
+  "Femme": {
+    "sheet": "Femme",
+    "per_y_best": {
+      "1": {
+        "chosen": "power_law",
+        "metrics": {
+          "rmse_loocv": 0.0005511274999414259
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.004482814812695461,
+            1.2566316927440795e-05
+          ],
+          "intercept": -0.01799094820150776
+        }
+      },
+      "2": {
+        "chosen": "power_law",
+        "metrics": {
+          "rmse_loocv": 0.000486466730512181
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.002745955215003215,
+            2.6831313642760653e-05
+          ],
+          "intercept": -0.017981433389995444
+        }
+      },
+      "3": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.0004990424968441006
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.0021553993817075043,
+            3.116197221100058e-05
+          ],
+          "intercept": -0.017989915454590694
+        }
+      },
+      "4": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.0002564762744139711
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.0017544441618503812,
+            3.4937892619994623e-05
+          ],
+          "intercept": -0.01673499987083396
+        }
+      },
+      "5": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.00027642196259052254
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.001570198769596021,
+            3.6271567697634614e-05
+          ],
+          "intercept": -0.016725987606656223
+        }
+      },
+      "6": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.00020317198812368288
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.0014512173874598447,
+            3.7040276538650985e-05
+          ],
+          "intercept": -0.016733557856753616
+        }
+      },
+      "7": {
+        "chosen": "poly3",
+        "metrics": {
+          "rmse_loocv": 0.00035379673131833984
+        },
+        "model_export": {
+          "poly_degree": 2,
+          "include_bias": false,
+          "regressor": "Ridge",
+          "coef": [
+            0.0013576722704461547,
+            3.771886678307775e-05
+          ],
+          "intercept": -0.016622170162765675
+        }
+      }
+    }
+  }
+}
