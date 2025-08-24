@@ -12,22 +12,56 @@ class HealthBar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              'Niveau $level',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.amber.shade300,
+                Colors.amber.shade200,
+              ], // Dégradé plus doux
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.amber.withOpacity(0.3), // Ombre plus subtile
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.star,
+                color: Colors.black.withOpacity(
+                  0.5,
+                ), // Couleur de l'icône adoucie
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Niveau $level',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: Colors.black.withOpacity(
+                    0.6,
+                  ), // Couleur du texte adoucie
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Stack(
           alignment: Alignment.centerLeft,
           children: [
             Container(
-              height: 20,
+              height: 24,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
@@ -42,7 +76,7 @@ class HealthBar extends StatelessWidget {
             FractionallySizedBox(
               widthFactor: percent,
               child: Container(
-                height: 16,
+                height: 20,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   gradient: LinearGradient(
@@ -68,7 +102,7 @@ class HealthBar extends StatelessWidget {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
                 child: Container(
-                  height: 16,
+                  height: 20,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
                     gradient: LinearGradient(
