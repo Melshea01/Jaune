@@ -80,6 +80,3 @@ class ModelPredictor {
   }
 }
 
-// Example quick test (uncomment to run in a Dart REPL):
-//
-// print(ModelPredictor.predict(parsed, 'Homme', 1, 10.0));
