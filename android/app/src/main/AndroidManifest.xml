@@ -67,8 +67,6 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
-        <!-- Explicit apps you know in advance about: -->
-
         <package android:name="com.instagram.android" />
         <package android:name="com.zhiliaoapp.musically" />
         <package android:name="com.facebook.katana" />
@@ -76,9 +74,18 @@
         <package android:name="org.telegram.messenger" />
         <package android:name="com.whatsapp" />
         <package android:name="com.twitter.android" />
+        <package android:name="com.instagram.stories.android" />
 
         <provider android:authorities="com.facebook.katana.provider.PlatformProvider" /> <!-- allows app to access Facebook app features -->
         <provider android:authorities="com.facebook.orca.provider.PlatformProvider" /> <!-- allows sharing to Messenger app -->
+    </queries>
+
+    <queries>
+        <package android:name="com.instagram.android" />
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="image/*" />
+        </intent>
     </queries>
 
 </manifest>

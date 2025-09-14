@@ -3,11 +3,14 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
 import 'package:appinio_social_share/appinio_social_share.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ImageComposer {
   final AppinioSocialShare _appinioSocialShare = AppinioSocialShare();
@@ -457,8 +460,7 @@ class ImageComposer {
   Future<void> _shareToInstagram(String imagePath, int width, int height) async {
     try {
       if (Platform.isAndroid) {
-        // Essaie plusieurs méthodes pour Android
-        await _shareToInstagramAndroid(imagePath, width, height);
+        await _shareToInstagramAndroid(imagePath);
       } else if (Platform.isIOS) {
         await _shareToInstagramIOS(imagePath, width, height);
       }
@@ -467,25 +469,62 @@ class ImageComposer {
     }
   }
 
-  Future<void> _shareToInstagramAndroid(String imagePath, int width, int height) async {
+
+// Méthode corrigée pour Android
+  Future<void> _shareToInstagramAndroid(String imagePath) async {
     try {
-      // Charger l'image depuis assets
-      final byteData = await rootBundle.load('assets/avatar.png');
+      if (!await File(imagePath).exists()) {
+        throw Exception('Le fichier image n\'existe pas: $imagePath');
+      }
 
-      // Sauvegarder l'image dans le cache temporaire
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/avatar.png');
-      await file.writeAsBytes(byteData.buffer.asUint8List());
+      try {
+        await Share.shareXFiles(
+          [XFile(imagePath)],
+          text: 'Partagé depuis Jaune!',
+        );
+        debugPrint('Partage réussi avec Share Plus');
+        return;
+      } catch (e) {
+        debugPrint('Erreur Share Plus: $e');
+      }
 
-      // Partager sur Instagram Stories
-      await AppinioSocialShare().android.shareToInstagramStory(
-        'com.instagram.android',
-        backgroundImage: file.path,
+    } catch (e, stack) {
+      debugPrint('=== ERREUR PARTAGE INSTAGRAM ===');
+      debugPrint('Error: $e');
+      debugPrint('Stack: $stack');
+      // Fallback: ouvrir Instagram sans partage
+      await _launchInstagramAndroid();
+    }
+  }
+
+  Future<void> _launchInstagramAndroid() async {
+    try {
+      // Intent Android natif pour ouvrir Instagram
+      final AndroidIntent intent = AndroidIntent(
+        action: 'android.intent.action.MAIN',
+        package: 'com.instagram.android',
+        flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
       );
 
-      debugPrint('Instagram share attempted with avatar.png');
-    } catch (e, stack) {
-      debugPrint('Failed to share avatar.png: $e\n$stack');
+      await intent.launch();
+      debugPrint('Instagram ouvert avec succès');
+    } catch (e) {
+      debugPrint('Erreur Intent Instagram: $e');
+      // Fallback vers Play Store
+      await _openPlayStore();
+    }
+  }
+
+  Future<void> _openPlayStore() async {
+    try {
+      final AndroidIntent playStoreIntent = AndroidIntent(
+        action: 'android.intent.action.VIEW',
+        data: 'market://details?id=com.instagram.android',
+        flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+      );
+      await playStoreIntent.launch();
+    } catch (e) {
+      debugPrint('Erreur Play Store: $e');
     }
   }
 
