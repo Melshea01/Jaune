@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:jaune/be_real_capture_page.dart';
+import 'package:jaune/widgets/character_card.dart';
 import 'package:jaune/widgets/rive_builder.dart';
 import 'dart:ui' as ui;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:typicons_flutter/typicons_flutter.dart';
 import 'dart:math' as math;
 import 'dart:convert';
-import 'models.dart';
+import 'model.dart';
 import 'widgets/consumption_gauge_painter.dart';
 import 'widgets/health_bar.dart';
 import 'package:floating_bubbles/floating_bubbles.dart';
@@ -179,10 +181,71 @@ class CharacterProfile {
   ) async {
     final String today = DateTime.now().toIso8601String().substring(0, 10);
     if (lastXpAwardDate == today) return; // already awarded today
-    if (healthPct > 0.75) {
-      addXp(10);
+    try {
+      // Load daily consumptions map from prefs. Key name is fixed.
+      const String dailyKey = 'daily_consos';
+      final String? rawDaily = prefs.getString(dailyKey);
+      Map<String, int> dailyMap = {};
+      if (rawDaily != null && rawDaily.isNotEmpty) {
+        try {
+          final Map<String, dynamic> decoded =
+              json.decode(rawDaily) as Map<String, dynamic>;
+          dailyMap = decoded.map<String, int>((k, v) {
+            if (v is int) return MapEntry(k, v);
+            return MapEntry(k, int.tryParse(v.toString()) ?? 0);
+          });
+        } catch (_) {
+          dailyMap = {};
+        }
+      }
+
+      // We check the week containing yesterday
+      final DateTime yesterdayDt = DateTime.now().subtract(
+        const Duration(days: 1),
+      );
+      final DateTime yesterday = DateTime(
+        yesterdayDt.year,
+        yesterdayDt.month,
+        yesterdayDt.day,
+      );
+
+      // Find Monday of that week (ISO-like, Monday = 1)
+      final int weekday = yesterday.weekday; // 1..7
+      final DateTime weekStart = DateTime(
+        yesterday.year,
+        yesterday.month,
+        yesterday.day,
+      ).subtract(Duration(days: weekday - 1));
+
+      // Gather counts for the week (default 0 when missing)
+      int weeklyTotal = 0;
+      int nbZeroDay = 0;
+      int maxDailyCount = 0;
+      for (int i = 0; i < weekday; i++) {
+        final DateTime d = weekStart.add(Duration(days: i));
+        final String k = d.toIso8601String().substring(0, 10);
+        final int cnt = dailyMap[k] ?? 0;
+        weeklyTotal += cnt;
+        if (cnt == 0) nbZeroDay += 1;
+        maxDailyCount = math.max(maxDailyCount, cnt);
+      }
+
+      // Rules:
+      // - weeklyTotal <= 10
+      // - yesterday <= 2
+      // - at least one zero-consumption day in the week
+      final bool ruleWeekly = weeklyTotal <= 10;
+      final bool ruleDaily = maxDailyCount <= 2;
+      final bool ruleZeroDay = nbZeroDay >= 2;
+
+      if (ruleWeekly && ruleDaily && ruleZeroDay) {
+        // Optional: also keep healthPct threshold if desired
+        addXp(10);
+        await saveToPrefs(prefs, key);
+      }
       lastXpAwardDate = today;
-      await saveToPrefs(prefs, key);
+    } catch (e) {
+      debugPrint('awardDailyXpIfNeeded error: $e');
     }
   }
 }
@@ -295,136 +358,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     // init Rive FileLoader
     // debug load removed: use onInit in RiveAnimation.asset to inspect/play animations
 
-    // Load predictive models from assets; non-fatal if it fails but required for risk predictions.
-    ModelPredictor.loadModels()
-        .catchError((e) {
-          debugPrint('Warning: failed to load risk models: $e');
-        })
-        .whenComplete(() {
-          _loadState();
-        });
+    _loadState();
     // no risk_samples loading by design
-  }
-
-  /// Retourne le numéro ISO de la semaine pour une date donnée
-  int isoWeekNumber(DateTime date) {
-    // Ajuster pour que lundi = premier jour de la semaine
-    // weekday: lundi=1 ... dimanche=7
-    int weekday = date.weekday;
-
-    // On calcule le lundi de la même semaine
-    DateTime monday = date.add(Duration(days: 1 - weekday));
-
-    // On prend le janvier de l'année du lundi
-    DateTime jan1 = DateTime(date.year, 1, 1);
-
-    // Calcul du nombre de jours à ajouter pour atteindre lundi
-    int daysToAdd = (8 - jan1.weekday) % 7;
-
-    DateTime firstMonday = jan1.add(Duration(days: daysToAdd));
-
-    // Calcul du nombre de semaines entre le premier lundi et notre lundi
-    int weekNumber = ((monday.difference(firstMonday).inDays) / 7).floor() + 1;
-    return weekNumber;
-  }
-
-  // Group samples by ISO week (starting Monday) and compute average risk per week.
-  // This function supports two input forms:
-  //  - or provide `dailyConsos` (Map<String,int>) where keys are 'yyyy-MM-dd' and
-  //    values are number of consumptions for that day; in that case we compute a
-  //    per-day risk using quad2Predict(x=consos, y=0.0, gender) and average by week.
-  Map<String, double> computeWeeklyAverageRisk({String gender = 'H'}) {
-    // Step 0: get the earliestKey dateKey from dailyConsos
-    DateTime? earliestKey;
-    _dailyMap.forEach((dateKey, val) {
-      if (earliestKey == null ||
-          DateTime.parse(dateKey).isBefore(earliestKey!)) {
-        earliestKey = DateTime.parse(dateKey);
-      }
-    });
-
-    if (earliestKey == null) return <String, double>{};
-
-    //Step 1 : generate all Weeks
-    final Map<String, Map<String, int>> agg =
-        {}; // monday -> {'sum':..., 'drinking_days':...}
-
-    int endYear = DateTime.now().year;
-    int endWeek = isoWeekNumber(DateTime.now());
-    int year = earliestKey!.year;
-    int week = isoWeekNumber(earliestKey!);
-
-    while (year < endYear || (year == endYear && week <= endWeek)) {
-      agg.putIfAbsent(
-        "$year-$week",
-        () => <String, int>{'sum': 0, 'drinking_days': 0},
-      );
-
-      week++;
-      // Vérifier si on dépasse le nombre de semaines dans l’année
-      int weeksInYear = 52;
-      if (week > weeksInYear) {
-        week = 1;
-        year++;
-      }
-    }
-
-    // Step 2: aggregate only weeks that have at least one recorded day.
-
-    _dailyMap.forEach((dateKey, val) {
-      try {
-        final DateTime dRaw = DateTime.parse(dateKey);
-        final DateTime day = DateTime(dRaw.year, dRaw.month, dRaw.day);
-        final String weekNumber = isoWeekNumber(day).toString();
-        final String key = "${dRaw.year}-$weekNumber";
-
-        final int count = val;
-        final w = agg.putIfAbsent(
-          key,
-          () => <String, int>{'sum': 0, 'drinking_days': 0},
-        );
-        w['sum'] = (w['sum'] ?? 0) + count;
-        if (count > 0) w['drinking_days'] = (w['drinking_days'] ?? 0) + 1;
-      } catch (_) {
-        // ignore malformed date keys
-      }
-    });
-
-    final Map<String, double> weeklyRisks = {};
-
-    // Compute risk for aggregated weeks (weeks that had at least one recorded day)
-    agg.forEach((weekKey, data) {
-      final int total = data['sum'] ?? 0;
-      final int drinkingDays = data['drinking_days'] ?? 0;
-
-      double risk = 0.0;
-      if (drinkingDays > 0) {
-        final String sheet =
-            gender.toUpperCase().startsWith('F') ? 'Femme' : 'Homme';
-        try {
-          risk = ModelPredictor.predict(sheet, drinkingDays, total);
-          debugPrint(
-            "Predicted risk for $sheet (y=$drinkingDays, x=$total): $risk",
-          );
-        } catch (e) {
-          debugPrint(
-            'ModelPredictor.predict error for $sheet y=$drinkingDays x=$total: $e',
-          );
-          risk = 0.0;
-        }
-      }
-      weeklyRisks[weekKey] = risk;
-    });
-
-    return weeklyRisks;
-  }
-
-  // Map risk Z to health percent (0..1). Rule: risk >= 0.15 => 0 PV. Otherwise linear inverse mapping.
-  double riskToHealthPercent(double risk) {
-    if (risk.isNaN) return 1.0;
-    if (risk >= 0.15) return 0.0;
-    final double v = 1.0 - (risk / 0.15);
-    return v.clamp(0.0, 1.0);
   }
 
   // risk_samples loading intentionally removed
@@ -454,27 +389,75 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       final String todayKey = DateTime.now().toIso8601String().substring(0, 10);
       _dailyMap[todayKey] = _consos;
 
-      // Compute weekly average risk from daily map (includes today)
-      final Map<String, double> weekly = computeWeeklyAverageRisk();
-      if (weekly.isNotEmpty) {
-        final double sumAll = weekly.values.fold(0.0, (p, e) => p + e);
-        final double avgRisk = sumAll / weekly.length;
-        // Map risk to percent-of-health (PV). risk >= 0.15 => 0 PV
-        final double hp = riskToHealthPercent(avgRisk);
-
-        final int pvHealth = (hp * _profile.maxPv).round().clamp(
-          0,
-          _profile.maxPv,
-        );
-        setState(() {
-          _profile.currentPv = pvHealth;
-        });
-      } else {
-        // No weekly risk data: do not apply damage/regen logic — default to full health
+      if (_dailyMap.isEmpty) {
         setState(() {
           _profile.currentPv = _profile.maxPv;
         });
+        if (save) await _saveState();
+        return;
       }
+
+      // Determine earliest recorded day in the map
+      DateTime? earliest;
+      for (var k in _dailyMap.keys) {
+        try {
+          final d = DateTime.parse(k);
+          final day = DateTime(d.year, d.month, d.day);
+          if (earliest == null || day.isBefore(earliest!)) earliest = day;
+        } catch (_) {}
+      }
+
+      final DateTime now = DateTime.now();
+      final DateTime monthAgo = now.subtract(const Duration(days: 30));
+
+      // Window start is either the earliest recorded day or 30 days ago, whichever is later
+      final DateTime windowStart =
+          (earliest != null && earliest!.isAfter(monthAgo))
+              ? earliest!
+              : DateTime(monthAgo.year, monthAgo.month, monthAgo.day);
+
+      final DateTime startDate = DateTime(
+        windowStart.year,
+        windowStart.month,
+        windowStart.day,
+      );
+      final DateTime endDate = DateTime(now.year, now.month, now.day);
+      int daysInWindow = endDate.difference(startDate).inDays + 1;
+      if (daysInWindow <= 0) daysInWindow = 1;
+
+      // Sum consumptions inside window
+      int totalConsos = 0;
+      _dailyMap.forEach((k, v) {
+        try {
+          final d = DateTime.parse(k);
+          final day = DateTime(d.year, d.month, d.day);
+          if (!day.isBefore(startDate) && !day.isAfter(endDate)) {
+            totalConsos += v;
+          }
+        } catch (_) {}
+      });
+
+      // Average daily consumption over the window
+
+      final double avgDaily = totalConsos / daysInWindow;
+
+      // Multiply by 10 as requested and evaluate model to get PV value
+      final double x = avgDaily * 10.0;
+      double pvRaw = 0.0;
+      try {
+        pvRaw = _profile.maxPv.toDouble() - evalModel(x);
+      } catch (e) {
+        debugPrint('evalModel error: $e');
+        pvRaw = _profile.maxPv.toDouble();
+      }
+
+      int pv = pvRaw.isNaN ? _profile.maxPv : pvRaw.round();
+      // Clamp to valid range
+      pv = pv.clamp(0, _profile.maxPv).toInt();
+
+      setState(() {
+        _profile.currentPv = pv;
+      });
 
       if (save) await _saveState();
     } catch (e) {
@@ -985,7 +968,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           color: bg,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.yellow, width: 1.5),
+          border:
+              (isToday) ? Border.all(color: Colors.black54, width: 1.5) : null,
         ),
         alignment: Alignment.center,
         child: Text(
@@ -1002,7 +986,12 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     return Container(
       width: 38,
       height: 38,
-      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: bg,
+        shape: BoxShape.circle,
+        border:
+            (isToday) ? Border.all(color: Colors.black54, width: 1.5) : null,
+      ),
       alignment: Alignment.center,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1032,13 +1021,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       color: (isPast && !isToday ? Colors.grey.shade200 : Colors.transparent),
       shape: BoxShape.circle,
       border:
-          isToday && !isSelected
+          isToday
               ? Border.all(color: Colors.black54, width: 1.5)
-              : (isSelected
-                  ? Border.all(color: Colors.yellow, width: 1.5)
-                  : (!isPast && !isToday
-                      ? Border.all(color: Colors.grey.shade300, width: 1.0)
-                      : null)),
+              : (!isPast && !isToday
+                  ? Border.all(color: Colors.grey.shade300, width: 1.0)
+                  : null),
     );
 
     return Container(
@@ -1151,8 +1138,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                                 },
                                         ),
                                         const TextSpan(
-                                          text:
-                                              ' de Santé Publique France, basé sur des données de chercheurs britanniques.',
+                                          text: ' de Santé Publique France.',
                                         ),
                                       ],
                                     ),
@@ -1225,8 +1211,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                 ),
               ),
               const SizedBox(height: 20),
-
-              /*CharacterCard(
+              /*
+              CharacterCard(
                 name: 'Jaune',
                 message: _profile.message,
                 healthPercent: percent,
@@ -1236,7 +1222,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                       builder:
                           (_) => BeRealCapturePage(
                             avatarAsset: 'assets/avatar.png',
-                            message: _profile.message,
+                            message: _profile.getMessage(),
                             healthPercent: percent,
                           ),
                     ),
