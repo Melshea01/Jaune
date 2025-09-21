@@ -184,12 +184,24 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     _gaugeController.forward(from: 0.0);
     _bubbleController.reset();
 
-    // Audio
-    await _audioService.playConsumptionSound();
+    // Audio: play special 'jaune' sound on 8th glass, otherwise normal beer sound
+    bool playedJaune = false;
+    if (_consos == 8) {
+      playedJaune = true;
+      await _audioService.playJauneSound();
+    } else {
+      await _audioService.playConsumptionSound();
+    }
 
     // Fade out audio when animation completes
+    // Make the fade much longer when the jaune sound was played so it lasts more
+    final Duration fadeDuration =
+        playedJaune
+            ? const Duration(seconds: 30)
+            : const Duration(milliseconds: 800);
+
     _bubbleController.forward().whenComplete(() {
-      _audioService.fadeOutAudio(const Duration(milliseconds: 800));
+      _audioService.fadeOutAudio(fadeDuration);
     });
 
     await _saveState();

@@ -26,6 +26,19 @@ class AudioService {
     }
   }
 
+  Future<void> playJauneSound() async {
+    try {
+      _volumeFadeTimer?.cancel();
+
+      await _audioPlayer?.stop();
+      await _audioPlayer?.setVolume(1.0);
+      await _audioPlayer?.setSource(AssetSource('jaune_sound.mp3'));
+      await _audioPlayer?.resume();
+    } catch (e) {
+      debugPrint('Error playing jaune sound: $e');
+    }
+  }
+
   void fadeOutAudio(Duration fadeDuration) {
     // Cancel any existing fade
     _volumeFadeTimer?.cancel();
@@ -39,7 +52,9 @@ class AudioService {
     }
 
     int currentStep = 0;
-    _volumeFadeTimer = Timer.periodic(Duration(milliseconds: stepMs), (timer) async {
+    _volumeFadeTimer = Timer.periodic(Duration(milliseconds: stepMs), (
+      timer,
+    ) async {
       currentStep += 1;
       final double remaining = (steps - currentStep) / steps;
       final double vol = remaining.clamp(0.0, 1.0);
