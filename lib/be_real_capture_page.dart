@@ -190,6 +190,25 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
     }
   }
 
+  /// Switch the preview camera between front and back by starting the
+  /// appropriate controller. If only one camera type exists, this is a no-op.
+  Future<void> _switchPreviewCamera() async {
+    if (_cameras.isEmpty) return;
+    try {
+      final current = _controller;
+      final currentDir = current?.description.lensDirection;
+      final CameraLensDirection target =
+          (currentDir == CameraLensDirection.back)
+              ? CameraLensDirection.front
+              : CameraLensDirection.back;
+
+      await _startControllerFor(target);
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('Error switching camera: $e');
+    }
+  }
+
   // Try to initialize a controller using multiple presets, returning the
   // first one that successfully initializes, or null.
   Future<CameraController?> _initControllerWithFallback(
@@ -1040,7 +1059,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
           tooltip: 'Retour',
         ),
         title: const Text(
-          'JAUNE',
+          'BEJAUNE',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w800,
@@ -1097,14 +1116,30 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
                       children: [
                         LayoutBuilder(
                           builder: (context, constraints) {
-                            return Center(
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: double.infinity,
-                                child: CameraPreview(controller),
-                              ),
+                            final size = constraints.biggest;
+                            final scale =
+                                size.aspectRatio * controller.value.aspectRatio;
+
+                            return Transform.scale(
+                              scale: scale < 1 ? 1 / scale : scale,
+                              child: Center(child: CameraPreview(controller)),
                             );
                           },
+                        ),
+                        // Camera switch button (bottom-right) — small white circular icon
+                        Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: GestureDetector(
+                            onTap: () async {
+                              await _switchPreviewCamera();
+                            },
+                            child: const Icon(
+                              CupertinoIcons.switch_camera,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
                         ),
 
                         // iOS-style frosted busy overlay during capture/composition
