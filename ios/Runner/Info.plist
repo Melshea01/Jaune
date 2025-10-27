@@ -58,5 +58,9 @@
 	<string>Cette application utilise la caméra pour prendre une photo BeReal pour partager votre personnage.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>La photo composée sera sauvegardée temporairement et partagée via les applications installées.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>L'application a besoin d'accéder à votre photothèque pour sélectionner ou afficher des photos lors du partage.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Le micro peut être utilisé si une fonctionnalité nécessite l'enregistrement audio (par ex. vidéos). Il n'est pas utilisé sans votre permission explicite.</string>
 </dict>
 </plist>
