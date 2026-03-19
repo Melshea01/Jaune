@@ -15,6 +15,13 @@
 
 ---
 
+## 📱 Screenshots
+
+<img src="assets/Screenshot_1.png" width="1080" alt="Home screen" />
+<img src="assets/Screenshot_2.png" width="1080" alt="Calendar" />
+
+---
+
 ## ✨ Fonctionnalités / Features
 
 | FR | EN |
@@ -35,7 +42,6 @@
 ---
 
 ## 🚀 Installation
-
 ```bash
 # Cloner le dépôt / Clone the repository
 git clone https://github.com/Melshea01/Jaune.git
@@ -51,6 +57,7 @@ flutter run
 > Prérequis / Requirements: Flutter SDK ≥ 3.x — [flutter.dev](https://flutter.dev)
 
 ---
+
 ## 🗺 Roadmap
 
 - [x] Historique et statistiques visuelles / Visual history & statistics
@@ -60,8 +67,10 @@ flutter run
 ---
 
 ## 👤 Auteur / Author
-[@Melshea01](https://github.com/Melshea01)
+
+[@Melshea01](https://github.com/Melshea01)  
 [@Sacha123](https://github.com/Sacha213)
+
 ---
 
 *Projet personnel — non affilié à une organisation médicale.*  
