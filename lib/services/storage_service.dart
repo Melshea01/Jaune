@@ -6,10 +6,7 @@ class AppState {
   final int todayConsos;
   final Map<String, int> dailyMap;
 
-  AppState({
-    required this.todayConsos,
-    required this.dailyMap,
-  });
+  AppState({required this.todayConsos, required this.dailyMap});
 }
 
 class StorageService {
@@ -29,7 +26,7 @@ class StorageService {
       if (savedDaily != null && savedDaily.isNotEmpty) {
         try {
           final Map<String, dynamic> decoded =
-          json.decode(savedDaily) as Map<String, dynamic>;
+              json.decode(savedDaily) as Map<String, dynamic>;
           _dailyMap = decoded.map<String, int>((k, v) {
             if (v is int) return MapEntry(k, v);
             return MapEntry(k, int.tryParse(v.toString()) ?? 0);
@@ -44,10 +41,7 @@ class StorageService {
         }
       }
 
-      return AppState(
-        todayConsos: todayConsos,
-        dailyMap: _dailyMap,
-      );
+      return AppState(todayConsos: todayConsos, dailyMap: _dailyMap);
     } catch (e) {
       debugPrint('Error loading app state: $e');
       return AppState(todayConsos: 0, dailyMap: {});
@@ -114,9 +108,7 @@ class StorageService {
 
     _dailyMap.forEach((dateKey, consos) {
       final date = DateTime.tryParse(dateKey);
-      if (date != null &&
-          !date.isBefore(start) &&
-          !date.isAfter(end)) {
+      if (date != null && !date.isBefore(start) && !date.isAfter(end)) {
         result[dateKey] = consos;
       }
     });
@@ -125,7 +117,10 @@ class StorageService {
   }
 
   int getTotalConsosInRange(DateTime start, DateTime end) {
-    return getConsosInRange(start, end).values.fold(0, (sum, consos) => sum + consos);
+    return getConsosInRange(
+      start,
+      end,
+    ).values.fold(0, (sum, consos) => sum + consos);
   }
 
   double getAverageConsosPerDay(DateTime start, DateTime end) {

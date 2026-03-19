@@ -49,35 +49,38 @@ class GroundShadowPainter extends CustomPainter {
     canvas.translate(-size.width / 2, -size.height / 2);
 
     // Halo large (très doux)
-    final Paint halo = Paint()
-      ..color = color.withOpacity(0.26)
-      ..maskFilter = ui.MaskFilter.blur(
-        ui.BlurStyle.normal,
-        blurSigma + extraBlur,
-      );
+    final Paint halo =
+        Paint()
+          ..color = color.withOpacity(0.26)
+          ..maskFilter = ui.MaskFilter.blur(
+            ui.BlurStyle.normal,
+            blurSigma + extraBlur,
+          );
     canvas.drawOval(full, halo);
 
     // Cœur de contact (plus sombre, un peu plus petit)
     final double deflateDy = size.height * (1 - coreFactor);
     final Rect core = full.deflate(deflateDy);
-    final Paint corePaint = Paint()
-      ..color = color.withOpacity(0.42)
-      ..maskFilter = ui.MaskFilter.blur(
-        ui.BlurStyle.normal,
-        (blurSigma * 0.6) + (extraBlur * 0.5),
-      );
+    final Paint corePaint =
+        Paint()
+          ..color = color.withOpacity(0.42)
+          ..maskFilter = ui.MaskFilter.blur(
+            ui.BlurStyle.normal,
+            (blurSigma * 0.6) + (extraBlur * 0.5),
+          );
     canvas.drawOval(core, corePaint);
 
     // Traîne asymétrique pour naturel
     final Rect tail = full
         .inflate(size.height * 0.08)
         .shift(const Offset(0, 2));
-    final Paint tailPaint = Paint()
-      ..color = color.withOpacity(0.16)
-      ..maskFilter = ui.MaskFilter.blur(
-        ui.BlurStyle.normal,
-        (blurSigma * 1.2) + (extraBlur * 0.3),
-      );
+    final Paint tailPaint =
+        Paint()
+          ..color = color.withOpacity(0.16)
+          ..maskFilter = ui.MaskFilter.blur(
+            ui.BlurStyle.normal,
+            (blurSigma * 1.2) + (extraBlur * 0.3),
+          );
     canvas.drawOval(tail, tailPaint);
 
     canvas.restore();

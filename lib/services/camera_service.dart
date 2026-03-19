@@ -32,7 +32,7 @@ class CameraService {
 
       // Initialise la caméra arrière par défaut
       final backCam = _cameras.firstWhere(
-            (c) => c.lensDirection == CameraLensDirection.back,
+        (c) => c.lensDirection == CameraLensDirection.back,
         orElse: () => _cameras.first,
       );
 
@@ -58,8 +58,8 @@ class CameraService {
 
   /// Initialise un contrôleur avec fallback sur différentes résolutions
   Future<CameraController?> _initControllerWithFallback(
-      CameraDescription cam,
-      ) async {
+    CameraDescription cam,
+  ) async {
     final presets = [
       ResolutionPreset.high,
       ResolutionPreset.max,
@@ -110,7 +110,7 @@ class CameraService {
     if (_cameras.isEmpty) return;
 
     final cam = _cameras.firstWhere(
-          (c) => c.lensDirection == dir,
+      (c) => c.lensDirection == dir,
       orElse: () => _cameras.first,
     );
 
@@ -154,7 +154,7 @@ class CameraService {
 
     try {
       backDesc = _cameras.firstWhere(
-            (c) => c.lensDirection == CameraLensDirection.back,
+        (c) => c.lensDirection == CameraLensDirection.back,
       );
     } catch (_) {
       backDesc = null;
@@ -162,7 +162,7 @@ class CameraService {
 
     try {
       frontDesc = _cameras.firstWhere(
-            (c) => c.lensDirection == CameraLensDirection.front,
+        (c) => c.lensDirection == CameraLensDirection.front,
       );
     } catch (_) {
       frontDesc = null;
@@ -177,8 +177,13 @@ class CameraService {
         // Vérifie si les images sont identiques (même taille = même capteur)
         if (rearFile != null && frontFile != null) {
           if (await _arePhotosIdentical(rearFile, frontFile)) {
-            debugPrint('Detected duplicate images, retrying with controller switching');
-            final retryResults = await _retryWithControllerSwitching(backDesc, frontDesc);
+            debugPrint(
+              'Detected duplicate images, retrying with controller switching',
+            );
+            final retryResults = await _retryWithControllerSwitching(
+              backDesc,
+              frontDesc,
+            );
             rearFile = retryResults['rear'] ?? rearFile;
             frontFile = retryResults['front'] ?? frontFile;
           }
@@ -258,9 +263,8 @@ class CameraService {
 
   /// Capture en mode fallback
   Future<XFile?> _captureFallback(CameraLensDirection direction) async {
-    final controller = direction == CameraLensDirection.back
-        ? _controller
-        : _frontController;
+    final controller =
+        direction == CameraLensDirection.back ? _controller : _frontController;
 
     if (controller != null &&
         controller.value.isInitialized &&
@@ -275,7 +279,9 @@ class CameraService {
       for (int attempt = 1; attempt <= 2; attempt++) {
         try {
           final photo = await controller.takePicture();
-          debugPrint('${direction.name} captured (fallback attempt $attempt): ${photo.path}');
+          debugPrint(
+            '${direction.name} captured (fallback attempt $attempt): ${photo.path}',
+          );
           return photo;
         } catch (e) {
           debugPrint('${direction.name} capture attempt $attempt failed: $e');
@@ -303,9 +309,9 @@ class CameraService {
 
   /// Retry avec changement de contrôleur pour forcer l'utilisation de capteurs différents
   Future<Map<String, XFile?>> _retryWithControllerSwitching(
-      CameraDescription backDesc,
-      CameraDescription frontDesc
-      ) async {
+    CameraDescription backDesc,
+    CameraDescription frontDesc,
+  ) async {
     XFile? rear2;
     XFile? front2;
 

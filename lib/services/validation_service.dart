@@ -63,10 +63,7 @@ class ValidationService {
   }
 
   /// Validation complète d'une entrée de consommation
-  static ValidationResult validateConsumptionEntry(
-      String dateKey,
-      int consos,
-      ) {
+  static ValidationResult validateConsumptionEntry(String dateKey, int consos) {
     final List<String> errors = [];
 
     if (!isValidDateKey(dateKey)) {
@@ -85,10 +82,7 @@ class ValidationService {
       errors.add('Nombre de consommations invalide: $consos');
     }
 
-    return ValidationResult(
-      isValid: errors.isEmpty,
-      errors: errors,
-    );
+    return ValidationResult(isValid: errors.isEmpty, errors: errors);
   }
 
   /// Calcule des statistiques de santé des données
@@ -140,10 +134,7 @@ class ValidationResult {
   final bool isValid;
   final List<String> errors;
 
-  ValidationResult({
-    required this.isValid,
-    required this.errors,
-  });
+  ValidationResult({required this.isValid, required this.errors});
 }
 
 class DataHealthStats {

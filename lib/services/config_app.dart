@@ -68,10 +68,22 @@ class ThemeConfig {
   };
 
   static const Map<String, List<Color>> consumptionLevelColors = {
-    'low': [Color(0xFF4CAF50), Color(0xFF66BB6A)], // Green gradient for 0-2 drinks
-    'moderate': [Color(0xFFFFB74D), Color(0xFFFFA726)], // Orange gradient for 3-4 drinks
-    'high': [Color(0xFFFF7043), Color(0xFFFF5722)], // Deep orange for 5-6 drinks
-    'excessive': [Color(0xFFE53935), Color(0xFFD32F2F)], // Red gradient for 7+ drinks
+    'low': [
+      Color(0xFF4CAF50),
+      Color(0xFF66BB6A),
+    ], // Green gradient for 0-2 drinks
+    'moderate': [
+      Color(0xFFFFB74D),
+      Color(0xFFFFA726),
+    ], // Orange gradient for 3-4 drinks
+    'high': [
+      Color(0xFFFF7043),
+      Color(0xFFFF5722),
+    ], // Deep orange for 5-6 drinks
+    'excessive': [
+      Color(0xFFE53935),
+      Color(0xFFD32F2F),
+    ], // Red gradient for 7+ drinks
   };
 
   static const Map<String, Color> calendarDayColors = {
@@ -188,7 +200,11 @@ class ThemeConfig {
 
   // Border radius presets
   static const BorderRadius smallRadius = BorderRadius.all(Radius.circular(8));
-  static const BorderRadius mediumRadius = BorderRadius.all(Radius.circular(16));
+  static const BorderRadius mediumRadius = BorderRadius.all(
+    Radius.circular(16),
+  );
   static const BorderRadius largeRadius = BorderRadius.all(Radius.circular(24));
-  static const BorderRadius circularRadius = BorderRadius.all(Radius.circular(50));
+  static const BorderRadius circularRadius = BorderRadius.all(
+    Radius.circular(50),
+  );
 }

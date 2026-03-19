@@ -1,28 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
-enum NotificationType {
-  success,
-  warning,
-  danger,
-  info,
-}
+enum NotificationType { success, warning, danger, info }
 
-enum MessageTone {
-  encouraging,
-  warning,
-  critical,
-  neutral,
-}
+enum MessageTone { encouraging, warning, critical, neutral }
 
 class NotificationService {
   /// Affiche une notification toast en bas de l'écran
   static void showToast(
-      BuildContext context,
-      String message, {
-        NotificationType type = NotificationType.info,
-        Duration duration = const Duration(seconds: 3),
-      }) {
+    BuildContext context,
+    String message, {
+    NotificationType type = NotificationType.info,
+    Duration duration = const Duration(seconds: 3),
+  }) {
     final color = _getColorForType(type);
     final icon = _getIconForType(type);
 
@@ -46,9 +36,7 @@ class NotificationService {
         backgroundColor: color,
         duration: duration,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -56,31 +44,32 @@ class NotificationService {
 
   /// Affiche une alerte modale
   static Future<bool?> showAlert(
-      BuildContext context, {
-        required String title,
-        required String message,
-        String confirmText = 'OK',
-        String? cancelText,
-        bool isDestructive = false,
-      }) {
+    BuildContext context, {
+    required String title,
+    required String message,
+    String confirmText = 'OK',
+    String? cancelText,
+    bool isDestructive = false,
+  }) {
     return showCupertinoDialog<bool>(
       context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          if (cancelText != null)
-            CupertinoDialogAction(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(cancelText),
-            ),
-          CupertinoDialogAction(
-            isDestructiveAction: isDestructive,
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(confirmText),
+      builder:
+          (context) => CupertinoAlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              if (cancelText != null)
+                CupertinoDialogAction(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(cancelText),
+                ),
+              CupertinoDialogAction(
+                isDestructiveAction: isDestructive,
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(confirmText),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
