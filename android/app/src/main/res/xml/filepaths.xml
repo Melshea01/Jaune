@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths >
+    <!-- Pour partager des fichiers dans getCacheDirectory() -->
+    <cache-path name="cache_files" path="." />
+
+    <!-- Pour partager des fichiers dans getExternalCacheDirectory() -->
+    <external-cache-path name="external_cache_files" path="." />
+</paths>
