@@ -365,7 +365,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                     .clamp(0, 70),
                               ),
                               painter: GroundShadowPainter(
-                                color: Colors.grey.shade800.withValues(alpha:0.35),
+                                color: Colors.grey.shade800.withValues(
+                                  alpha: 0.35,
+                                ),
                                 blurSigma: 32,
                                 coreFactor: 0.55,
                                 t: _shadowController.value,

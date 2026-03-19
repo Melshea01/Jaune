@@ -115,7 +115,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
                 opacity: widget.animation.value,
                 child: BackdropFilter(
                   filter: ui.ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-                  child: Container(color: Colors.black.withValues(alpha:0.3)),
+                  child: Container(color: Colors.black.withValues(alpha: 0.3)),
                 ),
               ),
             ),
@@ -141,16 +141,16 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
                     borderRadius: borderRadius,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha:
-                          0.2 * widget.animation.value,
+                        color: Colors.black.withValues(
+                          alpha: 0.2 * widget.animation.value,
                         ),
                         offset: const Offset(0, 8),
                         blurRadius: 20,
                       ),
                     ],
                     border: Border.all(
-                      color: Colors.white.withValues(alpha:
-                        0.3 * widget.animation.value,
+                      color: Colors.white.withValues(
+                        alpha: 0.3 * widget.animation.value,
                       ),
                       width: 1.0,
                     ),
@@ -196,7 +196,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
         TextButton(
           onPressed: widget.onClose,
           style: TextButton.styleFrom(
-            backgroundColor: Colors.black.withValues(alpha:0.1),
+            backgroundColor: Colors.black.withValues(alpha: 0.1),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -226,10 +226,10 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: Colors.white.withValues(alpha:0.85),
+        color: Colors.white.withValues(alpha: 0.85),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha:0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             offset: const Offset(0, 4),
             blurRadius: 8,
           ),
