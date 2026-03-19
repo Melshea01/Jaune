@@ -17,8 +17,16 @@
 
 ## 📱 Screenshots
 
-<img src="assets/Screenshot_1.png" width="1080" alt="Home screen" />
-<img src="assets/Screenshot_2.png" width="1080" alt="Calendar" />
+<table>
+  <tr>
+    <td><img src="assets/Screenshot_1.png" width="250" alt="Home screen" /></td>
+    <td><img src="assets/Screenshot_2.png" width="250" alt="Calendar" /></td>
+  </tr>
+  <tr>
+    <td>Home</td>
+    <td >Calendar</td>
+  </tr>
+</table>
 
 ---
 
