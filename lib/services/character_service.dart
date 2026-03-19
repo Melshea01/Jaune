@@ -263,7 +263,7 @@ class CharacterService {
         try {
           final d = DateTime.parse(k);
           final day = DateTime(d.year, d.month, d.day);
-          if (earliest == null || day.isBefore(earliest!)) earliest = day;
+          if (earliest == null || day.isBefore(earliest)) earliest = day;
         } catch (_) {}
       }
 
@@ -272,8 +272,8 @@ class CharacterService {
 
       // Window start is either the earliest recorded day or 30 days ago, whichever is later
       final DateTime windowStart =
-          (earliest != null && earliest!.isAfter(monthAgo))
-              ? earliest!
+          (earliest != null && earliest.isAfter(monthAgo))
+              ? earliest
               : DateTime(monthAgo.year, monthAgo.month, monthAgo.day);
 
       final DateTime startDate = DateTime(

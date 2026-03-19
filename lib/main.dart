@@ -1,22 +1,22 @@
 import 'dart:async';
+import 'dart:ui' as ui;
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'services/audio_service.dart';
 import 'services/character_service.dart';
 import 'services/storage_service.dart';
-import 'services/audio_service.dart';
 import 'widgets/calendar_dialog.dart';
 import 'widgets/consumption_gauge_painter.dart';
-import 'widgets/health_bar.dart';
-import 'widgets/character_card.dart';
-import 'widgets/rive_builder.dart';
 import 'widgets/ground_shadow_painter.dart';
+import 'widgets/health_bar.dart';
 import 'widgets/reset_confirm_dialog.dart';
-import 'be_real_capture_page.dart';
-import 'dart:ui' as ui;
+import 'widgets/rive_builder.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -365,7 +365,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                     .clamp(0, 70),
                               ),
                               painter: GroundShadowPainter(
-                                color: Colors.grey.shade800.withOpacity(0.35),
+                                color: Colors.grey.shade800.withValues(alpha:0.35),
                                 blurSigma: 32,
                                 coreFactor: 0.55,
                                 t: _shadowController.value,
@@ -520,6 +520,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                   (context) => ResetConfirmDialog(
                     onConfirm: () async {
                       await _resetTodayConsos();
+                      if (!context.mounted) return;
                       Navigator.of(context).pop();
                     },
                   ),
