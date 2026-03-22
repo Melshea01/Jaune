@@ -27,7 +27,8 @@ class CharacterProfile {
   static bool _assetLoadingStarted = false;
 
   static Future<void> _loadMessagesFromAsset() async {
-    if (_assetMessages.isNotEmpty || _assetLoadingStarted) return;
+    if (_assetMessages.isNotEmpty) return;
+    if (_assetLoadingStarted) return;
     _assetLoadingStarted = true;
     try {
       final String raw = await rootBundle.loadString(
@@ -46,6 +47,11 @@ class CharacterProfile {
     } catch (e) {
       debugPrint('Failed to load character messages asset: $e');
     }
+  }
+
+  /// Ensures messages are loaded before use - FIX FOR RACE CONDITION
+  static Future<void> ensureMessagesLoaded() async {
+    await _loadMessagesFromAsset();
   }
 
   void addXp(int amount) {
@@ -93,10 +99,8 @@ class CharacterProfile {
       return List<String>.from(_assetMessages[zone]!);
     }
 
-    if (!_assetLoadingStarted) {
-      _loadMessagesFromAsset();
-    }
-
+    // Messages not loaded yet - return empty to prevent UI breaking
+    // ensureMessagesLoaded() should have been called in app initialization
     return [];
   }
 
@@ -207,6 +211,8 @@ class CharacterProfile {
 class CharacterService {
   static const String _kProfileKey = 'character_profile';
   CharacterProfile _profile = CharacterProfile();
+  // FIX: Add lock for SharedPreferences synchronization
+  bool _isSavingProfile = false;
 
   CharacterProfile get profile => _profile;
   int get level => _profile.level;
@@ -235,11 +241,17 @@ class CharacterService {
   }
 
   Future<void> saveProfile() async {
+    // FIX: Prevent concurrent saves with flag lock
+    if (_isSavingProfile) return;
+    _isSavingProfile = true;
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_kProfileKey, json.encode(_profile.toJson()));
     } catch (e) {
       debugPrint('Error saving character profile: $e');
+    } finally {
+      _isSavingProfile = false;
     }
   }
 
@@ -268,13 +280,14 @@ class CharacterService {
       }
 
       final DateTime now = DateTime.now();
-      final DateTime monthAgo = now.subtract(const Duration(days: 30));
+      const int maxWindowDays = 90; // FIX: Limit window to 90 days max
+      final DateTime windowLimit = now.subtract(Duration(days: maxWindowDays));
 
-      // Window start is either the earliest recorded day or 30 days ago, whichever is later
+      // Window start is either the earliest recorded day or 90 days ago, whichever is later
       final DateTime windowStart =
-          (earliest != null && earliest.isAfter(monthAgo))
+          (earliest != null && earliest.isAfter(windowLimit))
               ? earliest
-              : DateTime(monthAgo.year, monthAgo.month, monthAgo.day);
+              : DateTime(windowLimit.year, windowLimit.month, windowLimit.day);
 
       final DateTime startDate = DateTime(
         windowStart.year,
@@ -298,11 +311,11 @@ class CharacterService {
       });
 
       // Average daily consumption over the window
-
       final double avgDaily = totalConsos / daysInWindow;
 
       // Multiply by 10 as requested and evaluate model to get PV value
-      final double x = avgDaily * 10.0;
+      // FIX: Clamp input to prevent extreme values and NaN from evalModel
+      final double x = (avgDaily * 10.0).clamp(0.0, 100.0);
       double pvRaw = 0.0;
       try {
         pvRaw = _profile.maxPv.toDouble() - evalModel(x);
@@ -312,8 +325,8 @@ class CharacterService {
       }
 
       double pv = pvRaw.isNaN ? _profile.maxPv.toDouble() : pvRaw;
-      // Clamp to valid range
-      pv = pv.clamp(0, _profile.maxPv).toDouble() / 100;
+      // FIX: Normalize to 0-1 range properly (divide by maxPv, not 100)
+      pv = (pv / _profile.maxPv).clamp(0.0, 1.0);
 
       return pv;
     } catch (e) {

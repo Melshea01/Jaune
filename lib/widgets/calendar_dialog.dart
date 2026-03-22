@@ -91,12 +91,13 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
     return AnimatedBuilder(
       animation: widget.animation,
       builder: (context, child) {
+        // FIX: Handle potential null from Rect.lerp during animation edge cases
         final currentRect =
             Rect.lerp(
               widget.beginRect,
               widget.finalRect,
-              widget.animation.value,
-            )!;
+              widget.animation.value.clamp(0.0, 1.0),
+            ) ?? widget.finalRect;
 
         final borderRadius =
             BorderRadius.lerp(

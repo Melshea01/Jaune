@@ -125,6 +125,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   Future<void> _loadState() async {
     try {
+      // FIX: Ensure messages are loaded before app starts
+      await CharacterProfile.ensureMessagesLoaded();
+
       final data = await _storageService.loadAppState();
       final profile = await _characterService.loadProfile();
 
@@ -624,7 +627,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                   ),
                 ),
                 child: const Center(
-                  child: Text('🍻', style: TextStyle(fontSize: 40)),
+                  // FIX: Replace emoji with flutter icon for better compatibility
+                  child: Icon(Icons.local_bar, size: 32, color: Colors.amber),
                 ),
               ),
             ),
