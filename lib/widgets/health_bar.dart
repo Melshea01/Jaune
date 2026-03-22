@@ -26,7 +26,9 @@ class HealthBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.amber.withOpacity(0.3), // Ombre plus subtile
+                color: Colors.amber.withValues(
+                  alpha: 0.3,
+                ), // Ombre plus subtile
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -37,8 +39,8 @@ class HealthBar extends StatelessWidget {
             children: [
               Icon(
                 Icons.star,
-                color: Colors.black.withOpacity(
-                  0.5,
+                color: Colors.black.withValues(
+                  alpha: 0.5,
                 ), // Couleur de l'icône adoucie
                 size: 18,
               ),
@@ -47,8 +49,8 @@ class HealthBar extends StatelessWidget {
                 'Niveau $level',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w900,
-                  color: Colors.black.withOpacity(
-                    0.6,
+                  color: Colors.black.withValues(
+                    alpha: 0.6,
                   ), // Couleur du texte adoucie
                   letterSpacing: 0.5,
                 ),

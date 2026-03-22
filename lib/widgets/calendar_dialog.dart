@@ -13,7 +13,7 @@ class CalendarDialog {
     required Map<String, int> dailyMap,
   }) {
     final RenderBox buttonBox =
-    buttonKey.currentContext!.findRenderObject() as RenderBox;
+        buttonKey.currentContext!.findRenderObject() as RenderBox;
     final buttonSize = buttonBox.size;
     final buttonPosition = buttonBox.localToGlobal(Offset.zero);
 
@@ -46,16 +46,17 @@ class CalendarDialog {
     );
 
     entry = OverlayEntry(
-      builder: (ctx) => _CalendarOverlay(
-        animation: animation,
-        beginRect: beginRect,
-        finalRect: finalRect,
-        dailyMap: dailyMap,
-        onClose: () async {
-          await animationController.reverse();
-          entry.remove();
-        },
-      ),
+      builder:
+          (ctx) => _CalendarOverlay(
+            animation: animation,
+            beginRect: beginRect,
+            finalRect: finalRect,
+            dailyMap: dailyMap,
+            onClose: () async {
+              await animationController.reverse();
+              entry.remove();
+            },
+          ),
     );
 
     overlay.insert(entry);
@@ -90,17 +91,19 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
     return AnimatedBuilder(
       animation: widget.animation,
       builder: (context, child) {
-        final currentRect = Rect.lerp(
-          widget.beginRect,
-          widget.finalRect,
-          widget.animation.value,
-        )!;
+        final currentRect =
+            Rect.lerp(
+              widget.beginRect,
+              widget.finalRect,
+              widget.animation.value,
+            )!;
 
-        final borderRadius = BorderRadius.lerp(
-          BorderRadius.circular(24),
-          BorderRadius.circular(24),
-          widget.animation.value,
-        )!;
+        final borderRadius =
+            BorderRadius.lerp(
+              BorderRadius.circular(24),
+              BorderRadius.circular(24),
+              widget.animation.value,
+            )!;
 
         return Stack(
           children: [
@@ -112,7 +115,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
                 opacity: widget.animation.value,
                 child: BackdropFilter(
                   filter: ui.ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-                  child: Container(color: Colors.black.withOpacity(0.3)),
+                  child: Container(color: Colors.black.withValues(alpha: 0.3)),
                 ),
               ),
             ),
@@ -138,13 +141,17 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
                     borderRadius: borderRadius,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2 * widget.animation.value),
+                        color: Colors.black.withValues(
+                          alpha: 0.2 * widget.animation.value,
+                        ),
                         offset: const Offset(0, 8),
                         blurRadius: 20,
                       ),
                     ],
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.3 * widget.animation.value),
+                      color: Colors.white.withValues(
+                        alpha: 0.3 * widget.animation.value,
+                      ),
                       width: 1.0,
                     ),
                   ),
@@ -170,14 +177,11 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
         const SizedBox(height: 8),
         Flexible(
           fit: FlexFit.loose,
-          child: SingleChildScrollView(
-            child: _buildCalendar(),
-          ),
+          child: SingleChildScrollView(child: _buildCalendar()),
         ),
       ],
     );
   }
-
 
   Widget _buildHeader() {
     return Row(
@@ -192,7 +196,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
         TextButton(
           onPressed: widget.onClose,
           style: TextButton.styleFrom(
-            backgroundColor: Colors.black.withOpacity(0.1),
+            backgroundColor: Colors.black.withValues(alpha: 0.1),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -222,10 +226,10 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: Colors.white.withOpacity(0.85),
+        color: Colors.white.withValues(alpha: 0.85),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             offset: const Offset(0, 4),
             blurRadius: 8,
           ),
@@ -237,8 +241,8 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
         lastDay: DateTime.utc(2100, 12, 31),
         focusedDay: _selectedDay ?? DateTime.now(),
         startingDayOfWeek: StartingDayOfWeek.monday,
-        selectedDayPredicate: (day) =>
-        _selectedDay != null && isSameDay(day, _selectedDay),
+        selectedDayPredicate:
+            (day) => _selectedDay != null && isSameDay(day, _selectedDay),
         onDaySelected: (selectedDay, focusedDay) {
           setState(() {
             _selectedDay = selectedDay;
@@ -251,10 +255,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
           leftChevronIcon: Icon(CupertinoIcons.chevron_left),
           rightChevronIcon: Icon(CupertinoIcons.chevron_right),
           headerPadding: EdgeInsets.symmetric(vertical: 8),
-          titleTextStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         calendarStyle: const CalendarStyle(
           todayDecoration: BoxDecoration(),
@@ -279,19 +280,22 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
               ),
             );
           },
-          defaultBuilder: (context, day, focusedDay) =>
-              _buildCalendarCell(day, false, false),
-          todayBuilder: (context, day, focusedDay) =>
-              _buildCalendarCell(day, false, true),
-          selectedBuilder: (context, day, focusedDay) =>
-              _buildCalendarCell(day, true, isSameDay(day, DateTime.now())),
+          defaultBuilder:
+              (context, day, focusedDay) =>
+                  _buildCalendarCell(day, false, false),
+          todayBuilder:
+              (context, day, focusedDay) =>
+                  _buildCalendarCell(day, false, true),
+          selectedBuilder:
+              (context, day, focusedDay) =>
+                  _buildCalendarCell(day, true, isSameDay(day, DateTime.now())),
           outsideBuilder: (context, day, focusedDay) {
             return Center(
               child: Text(
                 '${day.day}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade400,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade400),
               ),
             );
           },
@@ -355,7 +359,8 @@ class CalendarConsumptionCell extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           shape: BoxShape.circle,
-          border: (isToday) ? Border.all(color: Colors.black54, width: 1.5) : null,
+          border:
+              (isToday) ? Border.all(color: Colors.black54, width: 1.5) : null,
         ),
         alignment: Alignment.center,
         child: Text(
@@ -372,12 +377,13 @@ class CalendarConsumptionCell extends StatelessWidget {
     return Container(
       width: 38,
       height: 38,
-decoration: BoxDecoration(
+      decoration: BoxDecoration(
         color: bg,
         shape: BoxShape.circle,
         border:
             (isToday) ? Border.all(color: Colors.black54, width: 1.5) : null,
-      ),      alignment: Alignment.center,
+      ),
+      alignment: Alignment.center,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -419,11 +425,12 @@ class CalendarEmptyCell extends StatelessWidget {
     BoxDecoration decoration = BoxDecoration(
       color: (isPast && !isToday ? Colors.grey.shade200 : Colors.transparent),
       shape: BoxShape.circle,
-      border: isToday
-          ? Border.all(color: Colors.black54, width: 1.5)
-          : (!isPast && !isToday
-          ? Border.all(color: Colors.grey.shade300, width: 1.0)
-          : null),
+      border:
+          isToday
+              ? Border.all(color: Colors.black54, width: 1.5)
+              : (!isPast && !isToday
+                  ? Border.all(color: Colors.grey.shade300, width: 1.0)
+                  : null),
     );
 
     return Container(
@@ -434,11 +441,12 @@ class CalendarEmptyCell extends StatelessWidget {
       child: Text(
         '${day.day}',
         style: TextStyle(
-          color: isSelected
-              ? Colors.black
-              : (isPast && !isToday
-              ? Colors.grey.shade600
-              : Colors.black87),
+          color:
+              isSelected
+                  ? Colors.black
+                  : (isPast && !isToday
+                      ? Colors.grey.shade600
+                      : Colors.black87),
           fontWeight: isSelected || isToday ? FontWeight.bold : FontWeight.w600,
         ),
       ),

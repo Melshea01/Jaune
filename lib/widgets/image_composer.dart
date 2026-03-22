@@ -6,7 +6,6 @@ import 'dart:ui' as ui;
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
 import 'package:appinio_social_share/appinio_social_share.dart';
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -26,17 +25,25 @@ class ImageComposer {
     if (rearPhoto == null && frontPhoto == null) return null;
 
     try {
-      debugPrint('[compose] rearPath=${rearPhoto?.path} frontPath=${frontPhoto?.path}');
+      debugPrint(
+        '[compose] rearPath=${rearPhoto?.path} frontPath=${frontPhoto?.path}',
+      );
 
       // Charge les images
-      final rearBytes = rearPhoto != null ? await File(rearPhoto.path).readAsBytes() : null;
-      final frontBytes = frontPhoto != null ? await File(frontPhoto.path).readAsBytes() : null;
+      final rearBytes =
+          rearPhoto != null ? await File(rearPhoto.path).readAsBytes() : null;
+      final frontBytes =
+          frontPhoto != null ? await File(frontPhoto.path).readAsBytes() : null;
 
-      final rearImg = rearBytes != null ? await _decodeImageFromList(rearBytes) : null;
-      final frontImg = frontBytes != null ? await _decodeImageFromList(frontBytes) : null;
+      final rearImg =
+          rearBytes != null ? await _decodeImageFromList(rearBytes) : null;
+      final frontImg =
+          frontBytes != null ? await _decodeImageFromList(frontBytes) : null;
 
       final avatarData = await rootBundle.load(avatarAsset);
-      final avatarImg = await _decodeImageFromList(avatarData.buffer.asUint8List());
+      final avatarImg = await _decodeImageFromList(
+        avatarData.buffer.asUint8List(),
+      );
 
       // Dimensions de l'image finale
       final int width = (rearImg ?? frontImg)!.width;
@@ -65,13 +72,16 @@ class ImageComposer {
       // Finalise l'image
       final picture = recorder.endRecording();
       final ui.Image finalImg = await picture.toImage(width, height);
-      final ByteData? pngBytes = await finalImg.toByteData(format: ui.ImageByteFormat.png);
+      final ByteData? pngBytes = await finalImg.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
 
       if (pngBytes == null) throw Exception('Failed to encode image');
 
       // Sauvegarde le fichier final
       final tempDir = await getTemporaryDirectory();
-      final outPath = '${tempDir.path}/jaune_share_${DateTime.now().millisecondsSinceEpoch}.png';
+      final outPath =
+          '${tempDir.path}/jaune_share_${DateTime.now().millisecondsSinceEpoch}.png';
       await File(outPath).writeAsBytes(pngBytes.buffer.asUint8List());
 
       // Partage sur Instagram
@@ -92,21 +102,37 @@ class ImageComposer {
   }
 
   /// Dessine l'image de fond
-  Future<void> _drawBackground(Canvas canvas, ui.Image? rearImg, ui.Image? frontImg, int width, int height) async {
+  Future<void> _drawBackground(
+    Canvas canvas,
+    ui.Image? rearImg,
+    ui.Image? frontImg,
+    int width,
+    int height,
+  ) async {
     final paint = Paint();
 
     if (rearImg != null) {
       canvas.drawImage(rearImg, Offset.zero, paint);
     } else if (frontImg != null) {
       // Utilise l'image avant comme fond si pas d'arrière
-      final src = Rect.fromLTWH(0, 0, frontImg.width.toDouble(), frontImg.height.toDouble());
+      final src = Rect.fromLTWH(
+        0,
+        0,
+        frontImg.width.toDouble(),
+        frontImg.height.toDouble(),
+      );
       final dst = Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble());
       canvas.drawImageRect(frontImg, src, dst, paint);
     }
   }
 
   /// Dessine le selfie en cercle arrondi
-  Future<void> _drawSelfieCircle(Canvas canvas, ui.Image frontImg, int width, int height) async {
+  Future<void> _drawSelfieCircle(
+    Canvas canvas,
+    ui.Image frontImg,
+    int width,
+    int height,
+  ) async {
     const double targetAspect = 9.0 / 12.0;
     final double srcW = frontImg.width.toDouble();
     final double srcH = frontImg.height.toDouble();
@@ -143,21 +169,32 @@ class ImageComposer {
     canvas.drawImageRect(frontImg, srcRect, dstRect, Paint());
 
     // Bordure noire
-    final borderPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = Colors.black.withAlpha((0.95 * 255).round())
-      ..strokeWidth = 6.0
-      ..isAntiAlias = true;
+    final borderPaint =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..color = Colors.black.withAlpha((0.95 * 255).round())
+          ..strokeWidth = 6.0
+          ..isAntiAlias = true;
     canvas.drawRRect(clipR, borderPaint);
     canvas.restore();
   }
 
   /// Dessine l'avatar en bas à gauche
-  Future<void> _drawAvatar(Canvas canvas, ui.Image avatarImg, int width, int height) async {
+  Future<void> _drawAvatar(
+    Canvas canvas,
+    ui.Image avatarImg,
+    int width,
+    int height,
+  ) async {
     final double avatarSize = width * 0.20;
     final double avatarLeft = 16;
     final double avatarTop = height - avatarSize - 32 - 8 - 16;
-    final Rect avatarDst = Rect.fromLTWH(avatarLeft, avatarTop, avatarSize, avatarSize);
+    final Rect avatarDst = Rect.fromLTWH(
+      avatarLeft,
+      avatarTop,
+      avatarSize,
+      avatarSize,
+    );
 
     canvas.save();
     final RRect avatarR = RRect.fromRectAndRadius(
@@ -167,7 +204,12 @@ class ImageComposer {
     canvas.clipRRect(avatarR);
     canvas.drawImageRect(
       avatarImg,
-      Rect.fromLTWH(0, 0, avatarImg.width.toDouble(), avatarImg.height.toDouble()),
+      Rect.fromLTWH(
+        0,
+        0,
+        avatarImg.width.toDouble(),
+        avatarImg.height.toDouble(),
+      ),
       avatarDst,
       Paint(),
     );
@@ -175,7 +217,12 @@ class ImageComposer {
   }
 
   /// Dessine la barre de santé/PV
-  Future<void> _drawHealthBar(Canvas canvas, int width, int height, double healthPercent) async {
+  Future<void> _drawHealthBar(
+    Canvas canvas,
+    int width,
+    int height,
+    double healthPercent,
+  ) async {
     final double avatarSize = width * 0.20;
     final double barWidth = avatarSize;
     final double barHeight = 16.0;
@@ -199,22 +246,24 @@ class ImageComposer {
       Rect.fromLTWH(barLeft, barTop, barWidth, barHeight),
       Radius.circular(14),
     );
-    final Paint bgPaint = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(barLeft, barTop),
-        Offset(barLeft, barTop + barHeight),
-        [
-          Colors.white.withAlpha((0.28 * 255).round()),
-          Colors.white.withAlpha((0.10 * 255).round()),
-        ],
-      );
+    final Paint bgPaint =
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(barLeft, barTop),
+            Offset(barLeft, barTop + barHeight),
+            [
+              Colors.white.withAlpha((0.28 * 255).round()),
+              Colors.white.withAlpha((0.10 * 255).round()),
+            ],
+          );
     canvas.drawRRect(bgR, bgPaint);
 
     // Bordure
-    final Paint borderPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = Colors.white.withAlpha((0.35 * 255).round());
+    final Paint borderPaint =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5
+          ..color = Colors.white.withAlpha((0.35 * 255).round());
     canvas.drawRRect(bgR, borderPaint);
 
     // Remplissage selon le pourcentage
@@ -237,31 +286,31 @@ class ImageComposer {
         fillColors = [const Color(0xFFf85757), const Color(0xFFf857a6)];
       }
 
-      final Paint fillPaint = Paint()
-        ..shader = ui.Gradient.linear(
-          Offset(barLeft, barTop),
-          Offset(barLeft + barWidth, barTop),
-          fillColors,
-        );
+      final Paint fillPaint =
+          Paint()
+            ..shader = ui.Gradient.linear(
+              Offset(barLeft, barTop),
+              Offset(barLeft + barWidth, barTop),
+              fillColors,
+            );
       canvas.drawRRect(fillR, fillPaint);
 
       // Halo subtil
-      final Paint halo = Paint()
-        ..color = Colors.black.withAlpha((0.06 * 255).round())
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 2.0);
+      final Paint halo =
+          Paint()
+            ..color = Colors.black.withAlpha((0.06 * 255).round())
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 2.0);
       canvas.drawRRect(fillR.shift(const Offset(0, 1.0)), halo);
     }
 
     // Surbrillance du haut
-    final Paint highlight = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(barLeft, barTop),
-        Offset(barLeft, barTop + barHeight),
-        [
-          Colors.white.withAlpha((0.02 * 255).round()),
-          Colors.transparent,
-        ],
-      );
+    final Paint highlight =
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(barLeft, barTop),
+            Offset(barLeft, barTop + barHeight),
+            [Colors.white.withAlpha((0.02 * 255).round()), Colors.transparent],
+          );
     canvas.drawRRect(bgR, highlight);
 
     // Texte du pourcentage
@@ -297,7 +346,12 @@ class ImageComposer {
   }
 
   /// Dessine la carte de message
-  Future<void> _drawMessageCard(Canvas canvas, int width, int height, String message) async {
+  Future<void> _drawMessageCard(
+    Canvas canvas,
+    int width,
+    int height,
+    String message,
+  ) async {
     final double avatarSize = width * 0.20;
     final double cardW = width - avatarSize - 32 - 8;
     final double cardH = avatarSize + 16 + 8 - 36;
@@ -321,12 +375,13 @@ class ImageComposer {
     );
 
     // Fond extérieur jaune
-    final Paint cardOuterPaint = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(cardOuterRect.left, cardOuterRect.top),
-        Offset(cardOuterRect.left, cardOuterRect.bottom),
-        [const Color(0xFFF7D83F), const Color(0xFFEFB192)],
-      );
+    final Paint cardOuterPaint =
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(cardOuterRect.left, cardOuterRect.top),
+            Offset(cardOuterRect.left, cardOuterRect.bottom),
+            [const Color(0xFFF7D83F), const Color(0xFFEFB192)],
+          );
     canvas.drawRRect(cardOuter, cardOuterPaint);
 
     // Panneau intérieur blanc
@@ -348,15 +403,13 @@ class ImageComposer {
     _drawCardShadows(canvas, cardInner);
 
     // Fond blanc du panneau intérieur
-    final Paint cardInnerPaint = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(cardInnerRect.left, cardInnerRect.top),
-        Offset(cardInnerRect.left, cardInnerRect.bottom),
-        [
-          Colors.white.withAlpha((0.98 * 255).round()),
-          Colors.grey.shade50,
-        ],
-      );
+    final Paint cardInnerPaint =
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(cardInnerRect.left, cardInnerRect.top),
+            Offset(cardInnerRect.left, cardInnerRect.bottom),
+            [Colors.white.withAlpha((0.98 * 255).round()), Colors.grey.shade50],
+          );
     canvas.drawRRect(cardInner, cardInnerPaint);
 
     // Header "Jaune"
@@ -369,15 +422,17 @@ class ImageComposer {
   /// Dessine les ombres de la carte
   void _drawCardShadows(Canvas canvas, RRect cardInner) {
     // Grande ombre
-    final Paint innerShadowLarge = Paint()
-      ..color = Colors.black.withAlpha((0.12 * 255).round())
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 18.0 / 2.0);
+    final Paint innerShadowLarge =
+        Paint()
+          ..color = Colors.black.withAlpha((0.12 * 255).round())
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 18.0 / 2.0);
     canvas.drawRRect(cardInner.shift(const Offset(0, 8)), innerShadowLarge);
 
     // Petite ombre
-    final Paint innerShadowSmall = Paint()
-      ..color = Colors.black.withAlpha((0.06 * 255).round())
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 8.0 / 2.0);
+    final Paint innerShadowSmall =
+        Paint()
+          ..color = Colors.black.withAlpha((0.06 * 255).round())
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 8.0 / 2.0);
     canvas.drawRRect(cardInner.shift(const Offset(0, 4)), innerShadowSmall);
 
     // Surbrillance blanche du haut
@@ -389,9 +444,10 @@ class ImageComposer {
       bottomLeft: const Radius.circular(28),
       bottomRight: const Radius.circular(12),
     );
-    final Paint highlightPaint = Paint()
-      ..color = Colors.white.withAlpha((0.90 * 255).round())
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 6.0 / 2.0);
+    final Paint highlightPaint =
+        Paint()
+          ..color = Colors.white.withAlpha((0.90 * 255).round())
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 6.0 / 2.0);
     canvas.drawRRect(highlightR.shift(const Offset(0, -2)), highlightPaint);
   }
 
@@ -457,7 +513,11 @@ class ImageComposer {
   }
 
   /// Partage sur Instagram pour debugguer
-  Future<void> _shareToInstagram(String imagePath, int width, int height) async {
+  Future<void> _shareToInstagram(
+    String imagePath,
+    int width,
+    int height,
+  ) async {
     try {
       if (Platform.isAndroid) {
         await _shareToInstagramAndroid(imagePath);
@@ -469,8 +529,7 @@ class ImageComposer {
     }
   }
 
-
-// Méthode corrigée pour Android
+  // Méthode corrigée pour Android
   Future<void> _shareToInstagramAndroid(String imagePath) async {
     try {
       if (!await File(imagePath).exists()) {
@@ -478,16 +537,14 @@ class ImageComposer {
       }
 
       try {
-        await Share.shareXFiles(
-          [XFile(imagePath)],
-          text: 'Partagé depuis Jaune!',
-        );
+        await Share.shareXFiles([
+          XFile(imagePath),
+        ], text: 'Partagé depuis Jaune!');
         debugPrint('Partage réussi avec Share Plus');
         return;
       } catch (e) {
         debugPrint('Erreur Share Plus: $e');
       }
-
     } catch (e, stack) {
       debugPrint('=== ERREUR PARTAGE INSTAGRAM ===');
       debugPrint('Error: $e');
@@ -528,22 +585,34 @@ class ImageComposer {
     }
   }
 
-  Future<void> _shareToInstagramIOS(String imagePath, int width, int height) async {
+  Future<void> _shareToInstagramIOS(
+    String imagePath,
+    int width,
+    int height,
+  ) async {
     final tempDir = await getTemporaryDirectory();
 
-      final transparentPath = await _createTransparentSticker(tempDir, width, height);
+    final transparentPath = await _createTransparentSticker(
+      tempDir,
+      width,
+      height,
+    );
 
-      if (transparentPath != null) {
-        await _appinioSocialShare.iOS.shareToInstagramStory(
-          'instagram-stories://share',
-          stickerImage: transparentPath,
-          backgroundImage: imagePath,
-        );
-      }
+    if (transparentPath != null) {
+      await _appinioSocialShare.iOS.shareToInstagramStory(
+        'instagram-stories://share',
+        stickerImage: transparentPath,
+        backgroundImage: imagePath,
+      );
+    }
   }
 
   /// Crée un sticker transparent pour Instagram Stories
-  Future<String?> _createTransparentSticker(Directory tempDir, int width, int height) async {
+  Future<String?> _createTransparentSticker(
+    Directory tempDir,
+    int width,
+    int height,
+  ) async {
     try {
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
@@ -555,11 +624,16 @@ class ImageComposer {
 
       final picture = recorder.endRecording();
       final ui.Image transImg = await picture.toImage(width, height);
-      final ByteData? transBytes = await transImg.toByteData(format: ui.ImageByteFormat.png);
+      final ByteData? transBytes = await transImg.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
 
       if (transBytes != null) {
-        final transparentPath = '${tempDir.path}/jaune_transparent_${DateTime.now().millisecondsSinceEpoch}.png';
-        await File(transparentPath).writeAsBytes(transBytes.buffer.asUint8List());
+        final transparentPath =
+            '${tempDir.path}/jaune_transparent_${DateTime.now().millisecondsSinceEpoch}.png';
+        await File(
+          transparentPath,
+        ).writeAsBytes(transBytes.buffer.asUint8List());
         return transparentPath;
       }
     } catch (e) {

@@ -1,5 +1,3 @@
-import "dart:math" as math;
-
 // Generated model for Flutter
 double evalModel(double x) {
   const List<double> p = [
@@ -8,6 +6,9 @@ double evalModel(double x) {
     0.16395916165224575,
     -0.9371576673902607,
   ];
-  final a = p[0]; final b = p[1]; final c = p[2]; final d = p[3];
+  final a = p[0];
+  final b = p[1];
+  final c = p[2];
+  final d = p[3];
   return a * x * x * x + b * x * x + c * x + d;
 }

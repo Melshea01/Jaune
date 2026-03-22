@@ -34,7 +34,7 @@ class CharacterProfile {
         'assets/character_messages.json',
       );
       final Map<String, dynamic> decoded =
-      json.decode(raw) as Map<String, dynamic>;
+          json.decode(raw) as Map<String, dynamic>;
       decoded.forEach((k, v) {
         if (v is List) {
           _assetMessages[k] = v.map((e) => e.toString()).toList();
@@ -195,7 +195,6 @@ class CharacterProfile {
     }
   }
 
-
   Future<void> _saveToPrefs(SharedPreferences prefs, String key) async {
     try {
       await prefs.setString(key, json.encode(toJson()));
@@ -221,7 +220,7 @@ class CharacterService {
 
       if (rawProfile != null && rawProfile.isNotEmpty) {
         final Map<String, dynamic> p =
-        json.decode(rawProfile) as Map<String, dynamic>;
+            json.decode(rawProfile) as Map<String, dynamic>;
         _profile = CharacterProfile.fromJson(p);
       } else {
         _profile = CharacterProfile(maxPv: 100, currentPv: 100);
@@ -254,11 +253,8 @@ class CharacterService {
 
   double computeHealthFromRisk(Map<String, int> dailyMap) {
     try {
-
       if (dailyMap.isEmpty) {
-
         return 1.0;
-        
       }
 
       // Determine earliest recorded day in the map
@@ -267,7 +263,7 @@ class CharacterService {
         try {
           final d = DateTime.parse(k);
           final day = DateTime(d.year, d.month, d.day);
-          if (earliest == null || day.isBefore(earliest!)) earliest = day;
+          if (earliest == null || day.isBefore(earliest)) earliest = day;
         } catch (_) {}
       }
 
@@ -276,8 +272,8 @@ class CharacterService {
 
       // Window start is either the earliest recorded day or 30 days ago, whichever is later
       final DateTime windowStart =
-          (earliest != null && earliest!.isAfter(monthAgo))
-              ? earliest!
+          (earliest != null && earliest.isAfter(monthAgo))
+              ? earliest
               : DateTime(monthAgo.year, monthAgo.month, monthAgo.day);
 
       final DateTime startDate = DateTime(
@@ -317,18 +313,14 @@ class CharacterService {
 
       double pv = pvRaw.isNaN ? _profile.maxPv.toDouble() : pvRaw;
       // Clamp to valid range
-      pv = pv.clamp(0, _profile.maxPv).toDouble() /100;
+      pv = pv.clamp(0, _profile.maxPv).toDouble() / 100;
 
       return pv;
-
     } catch (e) {
       debugPrint('Error in _recomputeHealth: $e');
     }
     return 1.0;
   }
-
-
-
 
   Future<void> awardDailyXpIfNeeded() async {
     try {
