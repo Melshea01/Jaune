@@ -313,6 +313,274 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     );
   }
 
+  void _showLevelDialog() {
+    final level = _characterService.level;
+    final phase = _characterService.levelPhase;
+    final xp = _characterService.profile.xp;
+    final xpToNext = _characterService.xpToNextLevel;
+    final progress = _characterService.levelProgress;
+    final unlocks = _characterService.acquiredUnlocks;
+
+    // Feature #1: Phase progression percentage
+    final phaseLevels = switch (phase) {
+      'discovery' => 5,
+      'engagement' => 10,
+      _ => 20,
+    };
+    final levelInPhase = (level - 1) % phaseLevels + 1;
+    final phasePercentage = ((levelInPhase / phaseLevels) * 100)
+        .toStringAsFixed(0);
+
+    String phaseLabel = switch (phase) {
+      'discovery' => '🌱 Découverte',
+      'engagement' => '⚡ Engagement',
+      _ => '🏆 Maîtrise',
+    };
+
+    Color phaseColor = switch (phase) {
+      'discovery' => Colors.green,
+      'engagement' => Colors.purple,
+      _ => Colors.amber,
+    };
+
+    // Feature #2: Dynamic rank titles
+    String rankTitle = switch (level) {
+      <= 5 => 'Apprenti 🌱',
+      <= 15 => 'Explorateur 🗺️',
+      <= 30 => 'Maître 🏆',
+      _ => 'Légende ⭐',
+    };
+
+    final currentLevelUnlocks = unlocks.where((u) => u.level == level).toList();
+    final nextUnlocks = unlocks.where((u) => u.level > level).take(3).toList();
+
+    // Feature #3: Highlight next key unlock
+    final nextUnlock = nextUnlocks.isNotEmpty ? nextUnlocks.first : null;
+    final xpToNextKeyUnlock =
+        nextUnlock != null ? ((nextUnlock.level - level) * xpToNext) - xp : 0;
+
+    showCupertinoDialog(
+      context: context,
+      builder:
+          (context) => CupertinoAlertDialog(
+            title: Column(
+              children: [
+                Text('🎮 Niveau $level'),
+                const SizedBox(height: 8),
+                Text(
+                  rankTitle,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: phaseColor,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$phaseLabel • $levelInPhase/$phaseLevels ($phasePercentage%)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 12),
+                  // XP Progress
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('XP'),
+                                Text(
+                                  '$xp/$xpToNext',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                minHeight: 10,
+                                backgroundColor: Colors.grey.shade300,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  phaseColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Déblocables actuels
+                  if (currentLevelUnlocks.isNotEmpty) ...[
+                    const Text(
+                      '✨ Déblocables ce niveau',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...currentLevelUnlocks.map((unlock) {
+                      final icon = switch (unlock.type) {
+                        UnlockType.citronState => '🎨',
+                        UnlockType.feature => '⭐',
+                        UnlockType.badge => '🏅',
+                        UnlockType.message => '💬',
+                      };
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$icon ${unlock.title}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              unlock.description,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 12),
+                  ],
+                  // Next key unlock highlighted
+                  if (nextUnlock != null) ...[
+                    Container(
+                      decoration: BoxDecoration(
+                        color: phaseColor.withValues(alpha: 0.1),
+                        border: Border.all(color: phaseColor, width: 1.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '🎯 Prochain défi',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Niveau ${nextUnlock.level}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${nextUnlock.title}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: phaseColor,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                child: Text(
+                                  '+$xpToNextKeyUnlock XP',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  // Prochains déblocables
+                  if (nextUnlocks.isNotEmpty) ...[
+                    const Text(
+                      '🎯 Autres déblocables',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...nextUnlocks.skip(1).map((unlock) {
+                      final icon = switch (unlock.type) {
+                        UnlockType.citronState => '🎨',
+                        UnlockType.feature => '⭐',
+                        UnlockType.badge => '🏅',
+                        UnlockType.message => '💬',
+                      };
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          'Niv. ${unlock.level} - $icon ${unlock.title}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('Fermer'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+    );
+  }
+
   void _showInfoDialog() {
     showCupertinoDialog(
       context: context,
@@ -333,38 +601,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                 const SizedBox(height: 8),
                 const Text(
                   "Ton 🍋 a des points de vie qui montent ou descendent selon ta consommation.",
-                ),
-                const SizedBox(height: 8),
-                RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    style: TextStyle(color: Colors.black87, fontSize: 13),
-                    children: [
-                      const TextSpan(
-                        text: "Les règles de calcul viennent d’un ",
-                      ),
-                      TextSpan(
-                        text: 'rapport officiel',
-                        style: const TextStyle(
-                          color: Colors.blue,
-                          decoration: TextDecoration.underline,
-                        ),
-                        recognizer:
-                            TapGestureRecognizer()
-                              ..onTap = () async {
-                                final uri = Uri.parse(
-                                  'https://www.santepubliquefrance.fr/content/download/8230/file/avis-alcool-040517.pdf',
-                                );
-                                if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri);
-                                } else {
-                                  debugPrint('Could not launch $uri');
-                                }
-                              },
-                      ),
-                      const TextSpan(text: ' de Santé Publique France.'),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -423,7 +659,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
               const SizedBox(height: 16),
 
               // Health bar
-              HealthBar(percent: percent, level: _characterService.level),
+              HealthBar(
+                percent: percent,
+                level: _characterService.level,
+                onTap: _showLevelDialog,
+              ),
 
               const SizedBox(height: 24),
 
