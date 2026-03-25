@@ -138,7 +138,15 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       });
 
       await _recomputeHealth();
-      await _characterService.awardDailyXpIfNeeded();
+
+      // À l'ouverture de l'app — attribuer +3 XP
+      final xpEvent = await _characterService.awardAppOpenXp();
+      if (xpEvent != null) {
+        _showXpToast(xpEvent);
+      }
+
+      // Mettre à jour l'état Rive basé sur la santé et les déblocables
+      _updateRiveState();
     } catch (e) {
       debugPrint('Error loading state: $e');
     }
@@ -171,6 +179,24 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       setState(() {
         _characterService.updateHealth(newHealth);
       });
+
+      // Quand l'user enregistre sa conso — vérifier les bonus de comportement
+      final result = await _characterService.awardDailyLogXp(
+        _storageService.dailyMap,
+      );
+
+      // Afficher les toasts XP gagnés
+      for (final event in result.xpEvents) {
+        _showXpToast(event);
+      }
+
+      // Afficher les modales de déblocage
+      for (final unlock in result.newUnlocks) {
+        _showUnlockModal(unlock);
+      }
+
+      // Mettre à jour l'état Rive si la santé a changé
+      _updateRiveState();
 
       if (save) await _saveState();
     } catch (e) {
@@ -224,6 +250,58 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     } catch (e) {
       debugPrint('Error in _resetTodayConsos: $e');
     }
+  }
+
+  // ==================== XP & Unlock UI Integration ====================
+
+  /// Affiche un toast avec un événement XP (ex: "+3 XP")
+  void _showXpToast(XpEvent event) {
+    debugPrint('XP Toast: +${event.amount} XP (${event.reason})');
+    // TODO: Implémenter l'affichage du toast avec animation
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(
+    //     content: Text('+${event.amount} XP — ${event.reason}'),
+    //     duration: const Duration(seconds: 2),
+    //   ),
+    // );
+  }
+
+  /// Affiche une modal pour un déblocage (nouvel état Rive, badge, message, etc.)
+  void _showUnlockModal(LevelUnlock unlock) {
+    debugPrint('🎉 Unlock: ${unlock.title} (${unlock.key})');
+    // TODO: Implémenter la modal avec animation Rive si state
+    // showCupertinoDialog(
+    //   context: context,
+    //   builder: (context) => CupertinoAlertDialog(
+    //     title: Text('🎉 ${unlock.title}'),
+    //     content: Text(unlock.description),
+    //     actions: [
+    //       CupertinoDialogAction(
+    //         child: const Text('OK'),
+    //         onPressed: () => Navigator.pop(context),
+    //       ),
+    //     ],
+    //   ),
+    // );
+  }
+
+  /// Met à jour l'état Rive basé sur les déblocables et la santé
+  void _updateRiveState() {
+    final hp = _characterService.healthPercent;
+    final hasHappyState = _characterService.hasUnlock('state_happy');
+    final hasSadState = _characterService.hasUnlock('state_sad');
+
+    String riveState = 'state_neutral'; // État par défaut
+    if (hasHappyState && hp > 0.75) {
+      riveState = 'state_happy';
+    } else if (hasSadState && hp < 0.25) {
+      riveState = 'state_sad';
+    }
+
+    debugPrint(
+      '🎨 Rive State: $riveState (HP: ${(hp * 100).toStringAsFixed(1)}%)',
+    );
+    // TODO: appliquer à riveController.setInput('state', riveState);
   }
 
   void _showCalendarDialog() {
@@ -628,7 +706,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                 ),
                 child: const Center(
                   // FIX: Replace emoji with flutter icon for better compatibility
-                  child: Icon(Icons.local_bar, size: 32, color: Colors.amber),
+                  child: Text(
+                    '🍻',
+                    style: TextStyle(fontSize: 32, color: Colors.amber),
+                  ),
                 ),
               ),
             ),
