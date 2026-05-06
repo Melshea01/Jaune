@@ -2,24 +2,36 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 import 'services/audio_service.dart';
 import 'services/character_service.dart';
 import 'services/storage_service.dart';
+import 'services/notification_service.dart';
+import 'services/deterministic_scheduler.dart';
+import 'controllers/citron_animation_controller.dart';
+import 'models/health_animation_map.dart';
+import 'be_real_capture_page.dart';
 import 'widgets/calendar_dialog.dart';
 import 'widgets/consumption_gauge_painter.dart';
 import 'widgets/ground_shadow_painter.dart';
 import 'widgets/health_bar.dart';
 import 'widgets/reset_confirm_dialog.dart';
-import 'widgets/rive_builder.dart';
+import 'widgets/citron_character.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize timezone data
+  tz.initializeTimeZones();
+
+  // Initialize notifications
+  await NotificationService.initialize();
 
   // Appliquer le style à la barre de statut
   SystemChrome.setSystemUIOverlayStyle(
@@ -41,6 +53,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Flutter Demo - Vie personnage',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
@@ -75,6 +88,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   late AnimationController _bubbleController;
   late AnimationController _calendarAnimationController;
   late AnimationController _shadowController;
+  late AnimationController _shineController;
+  late CitronAnimationController _citronController;
 
   // Calendar state
   final GlobalKey _calendarButtonKey = GlobalKey();
@@ -85,6 +100,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     super.initState();
     _initializeServices();
     _initializeAnimations();
+    _initializeShineAnimation();
     _loadState();
   }
 
@@ -92,6 +108,27 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     _characterService = CharacterService();
     _storageService = StorageService();
     _audioService = AudioService();
+    _citronController = CitronAnimationController();
+
+    NotificationService.onNotificationTap = (payload) async {
+      if (payload == 'be_real_capture') {
+        final health = _characterService.healthPercent;
+        final message = 'Score citron: ${(health * 100).toStringAsFixed(0)}%';
+
+        if (navigatorKey.currentState != null) {
+          navigatorKey.currentState!.push(
+            MaterialPageRoute(
+              builder:
+                  (context) => BeRealCapturePage(
+                    avatarAsset: 'assets/avatar.png',
+                    message: message,
+                    healthPercent: health,
+                  ),
+            ),
+          );
+        }
+      }
+    };
   }
 
   void _initializeAnimations() {
@@ -123,6 +160,13 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     )..repeat();
   }
 
+  void _initializeShineAnimation() {
+    _shineController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
   Future<void> _loadState() async {
     try {
       // FIX: Ensure messages are loaded before app starts
@@ -138,6 +182,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       });
 
       await _recomputeHealth();
+
+      // Programmer la notification BeReal du jour si pas encore envoyée
+      await _scheduleDailyNotification();
 
       // À l'ouverture de l'app — attribuer +3 XP
       final xpEvent = await _characterService.awardAppOpenXp();
@@ -252,6 +299,31 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     }
   }
 
+  Future<void> _scheduleDailyNotification() async {
+    try {
+      final scheduledTime =
+          DeterministicNotificationScheduler.getNextNotificationTime();
+      final lastSent = await _storageService.getLastNotificationSent();
+
+      if (!DeterministicNotificationScheduler.isNotificationSentToday(
+        lastSent,
+      )) {
+        await NotificationService.scheduleNotification(
+          scheduledTime: scheduledTime,
+          title: '🍋 Moment apéro avec Jaune !',
+          body:
+              'C\'est l\'heure de capturer ton moment à l\'apéro. Montre-nous ton verre !',
+          payload: 'be_real_capture',
+        );
+
+        // Marquer comme programmée
+        await _storageService.setLastNotificationSent(DateTime.now());
+      }
+    } catch (e) {
+      debugPrint('Error scheduling notification: $e');
+    }
+  }
+
   // ==================== XP & Unlock UI Integration ====================
 
   /// Affiche un toast avec un événement XP (ex: "+3 XP")
@@ -288,20 +360,14 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   /// Met à jour l'état Rive basé sur les déblocables et la santé
   void _updateRiveState() {
     final hp = _characterService.healthPercent;
-    final hasHappyState = _characterService.hasUnlock('state_happy');
-    final hasSadState = _characterService.hasUnlock('state_sad');
 
-    String riveState = 'state_neutral'; // État par défaut
-    if (hasHappyState && hp > 0.75) {
-      riveState = 'state_happy';
-    } else if (hasSadState && hp < 0.25) {
-      riveState = 'state_sad';
-    }
+    // Map health to animation presets
+    final animationConfig = HealthAnimationMap.getPreset((hp * 100).toInt());
+    _citronController.setAnimation(animationConfig);
 
     debugPrint(
-      '🎨 Rive State: $riveState (HP: ${(hp * 100).toStringAsFixed(1)}%)',
+      '🎨 Citron Animation: HP: ${(hp * 100).toStringAsFixed(1)}% → ${animationConfig['bouche']}',
     );
-    // TODO: appliquer à riveController.setInput('state', riveState);
   }
 
   void _showCalendarDialog() {
@@ -505,7 +571,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                       ),
                                     ),
                                     Text(
-                                      '${nextUnlock.title}',
+                                      nextUnlock.title,
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: Colors.grey.shade700,
@@ -614,6 +680,53 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     );
   }
 
+  Future<void> _navigateToBeRealCapture() async {
+    final health = _characterService.healthPercent;
+    final message = 'Score citron: ${(health * 100).toStringAsFixed(0)}%';
+
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => BeRealCapturePage(
+              avatarAsset: 'assets/avatar.png',
+              message: message,
+              healthPercent: health,
+            ),
+      ),
+    );
+  }
+
+  Widget _buildShineEffect() {
+    const buttonWidth = 200.0; // approximate width
+
+    final shinePosition = (_shineController.value * (buttonWidth + 60)) - 60;
+
+    return Positioned.fill(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Transform.translate(
+          offset: Offset(shinePosition, 0),
+          child: Container(
+            width: 60,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Colors.white.withAlpha(0),
+                  Colors.white.withAlpha((0.4 * 255).round()),
+                  Colors.white.withAlpha(0),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final double percent = _characterService.healthPercent;
@@ -699,7 +812,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                           },
                         ),
                       ),
-                      const RiveBuilder(),
+                      CitronCharacter(controller: _citronController),
                     ],
                   ),
                 ),
@@ -724,7 +837,60 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                   );
                 },
               ),*/
-              const SizedBox(height: 80),
+              const SizedBox(height: 20),
+              // Capture button with shine effect
+              GestureDetector(
+                onTap: _navigateToBeRealCapture,
+                child: Stack(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF95C6F4), Color(0xFF5E9FD5)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(
+                              0xFF95C6F4,
+                            ).withAlpha((0.5 * 255).round()),
+                            offset: const Offset(0, 4),
+                            blurRadius: 12,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Poste un JAUNE',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Shine effect overlay
+                    AnimatedBuilder(
+                      animation: _shineController,
+                      builder: (context, _) {
+                        return _buildShineEffect();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
 
               // Bottom controls
               _buildBottomControls(),
@@ -996,7 +1162,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     _bubbleController.dispose();
     _calendarAnimationController.dispose();
     _shadowController.dispose();
+    _shineController.dispose();
     _audioService.dispose();
+    _citronController.dispose();
     super.dispose();
   }
 }

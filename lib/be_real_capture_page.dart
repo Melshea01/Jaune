@@ -27,6 +27,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
   late final CameraService _cameraService;
   late final ImageComposer _imageComposer;
   bool _busy = false;
+  bool _debugMode = false; // Mode preview pour déboguer sans caméra
 
   @override
   void initState() {
@@ -85,6 +86,47 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Mode debug: affiche directement la prévisualisation du montage
+    if (_debugMode) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: _buildAppBar(),
+        body: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _buildCompositionPreview(),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => setState(() => _debugMode = false),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Retour à la caméra'),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '📱 Aperçu du montage final',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: _buildAppBar(),
@@ -106,6 +148,197 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
     );
   }
 
+  Widget _buildCompositionPreview() {
+    final screenWidth = (MediaQuery.of(context).size.width - 32).clamp(
+      0.0,
+      400.0,
+    );
+    final aspectRatio = 9 / 12;
+    final previewHeight = screenWidth / aspectRatio;
+
+    final healthPercent = widget.healthPercent.clamp(0.0, 1.0);
+    final healthValue = (healthPercent * 100).round();
+
+    // Dimensions pour la zone PV
+    final pvBoxWidth = screenWidth * 0.32; //(format 9:12)
+    final pvBoxHeight = screenWidth * 0.42; //(format 9:12)
+    final barWidth = screenWidth * 0.28;
+    final barHeight = 8.0;
+
+    return Container(
+      width: screenWidth,
+      height: previewHeight,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white24, width: 2),
+      ),
+      child: Stack(
+        alignment: Alignment.topLeft,
+        children: [
+          // Fond
+          Container(
+            width: screenWidth,
+            height: previewHeight,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.amber.shade700, Colors.orange.shade900],
+              ),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.camera_alt,
+                size: 48,
+                color: Colors.white.withAlpha((0.2 * 255).round()),
+              ),
+            ),
+          ),
+
+          // Zone PV en haut à droite (PV + nombre + avatar sur une ligne)
+          Positioned(
+            right: 16,
+            top: 16,
+            child: Container(
+              width: pvBoxWidth,
+              height: pvBoxHeight,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.black.withAlpha((0.95 * 255).round()),
+                  width: 3.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha((0.3 * 255).round()),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.blue.shade300, Colors.blue.shade600],
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    'PV',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withAlpha((0.7 * 255).round()),
+                    ),
+                  ),
+                  Text(
+                    '$healthValue',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 2),
+                  Text('🍋', style: TextStyle(fontSize: screenWidth * 0.06)),
+                  SizedBox(width: 2),
+                ],
+              ),
+            ),
+          ),
+
+          // Barre de santé (juste au-dessus de JAUNE, petit écart)
+          Positioned(
+            bottom: 36,
+            left: (screenWidth - barWidth) / 2,
+            child: Container(
+              width: barWidth,
+              height: barHeight,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withAlpha((0.35 * 255).round()),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha((0.18 * 255).round()),
+                    blurRadius: 6.0,
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  // Fond givré
+                  Container(
+                    width: barWidth,
+                    height: barHeight,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white.withAlpha((0.28 * 255).round()),
+                          Colors.white.withAlpha((0.10 * 255).round()),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Remplissage coloré
+                  Container(
+                    width: barWidth * healthPercent,
+                    height: barHeight,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: _getHealthGradientColors(healthPercent),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // JAUNE en bas centré (discret et petit)
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                'JAUNE',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Color> _getHealthGradientColors(double healthPercent) {
+    if (healthPercent > 0.6) {
+      return [const Color(0xFF43e97b), const Color(0xFF38f9d7)];
+    } else if (healthPercent > 0.3) {
+      return [const Color(0xFFf7971e), const Color(0xFFffd200)];
+    } else {
+      return [const Color(0xFFf85757), const Color(0xFFf857a6)];
+    }
+  }
+
   AppBar _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.black,
@@ -119,12 +352,25 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
         onPressed: () => Navigator.of(context).pop(),
         tooltip: 'Retour',
       ),
-      title: const Text(
-        'BEJAUNE',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.2,
+      title: GestureDetector(
+        onLongPress: () {
+          setState(() => _debugMode = !_debugMode);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _debugMode ? '🐛 Mode debug activé' : '📸 Mode normal',
+              ),
+              duration: const Duration(milliseconds: 800),
+            ),
+          );
+        },
+        child: const Text(
+          'BEJAUNE',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+          ),
         ),
       ),
       centerTitle: true,

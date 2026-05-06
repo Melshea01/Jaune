@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 enum NotificationType { success, warning, danger, info }
 
@@ -195,6 +197,117 @@ class NotificationService {
       case NotificationType.info:
         return CupertinoIcons.info_circle;
     }
+  }
+
+  // ==================== NOTIFICATIONS LOCALES ====================
+
+  static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  static Future<void> Function(String payload)? onNotificationTap;
+
+  /// Initialise les notifications locales
+  static Future<void> initialize() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
+
+    const InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
+    );
+
+    await _flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        // Gérer le clic sur la notification via le callback du widget
+        if (response.payload != null && onNotificationTap != null) {
+          await onNotificationTap!(response.payload!);
+          return;
+        }
+
+        if (response.payload == 'be_real_capture') {
+          debugPrint('Notification cliquée: ouvrir BeReal capture (callback non configuré)');
+        }
+      },
+    );
+  }
+
+  /// Envoie une notification locale immédiatement
+  static Future<void> showNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'be_real_channel',
+          'BeReal Notifications',
+          channelDescription: 'Notifications pour les moments BeReal',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: false,
+        );
+
+    const DarwinNotificationDetails iosPlatformChannelSpecifics =
+        DarwinNotificationDetails();
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iosPlatformChannelSpecifics,
+    );
+
+    await _flutterLocalNotificationsPlugin.show(
+      0,
+      title,
+      body,
+      platformChannelSpecifics,
+      payload: payload,
+    );
+  }
+
+  /// Programme une notification à une heure spécifique
+  static Future<void> scheduleNotification({
+    required DateTime scheduledTime,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'be_real_channel',
+          'BeReal Notifications',
+          channelDescription: 'Notifications pour les moments BeReal',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: false,
+        );
+
+    const DarwinNotificationDetails iosPlatformChannelSpecifics =
+        DarwinNotificationDetails();
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iosPlatformChannelSpecifics,
+    );
+
+    await _flutterLocalNotificationsPlugin.zonedSchedule(
+      1,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledTime, tz.local),
+      platformChannelSpecifics,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
+    );
   }
 }
 

@@ -46,6 +46,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 
+	<!-- Permissions for local notifications -->
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Notifications pour te rappeler de capturer tes moments apéro</string>
+
 	<!-- Schemes required for social_share to query and open apps like Instagram -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>

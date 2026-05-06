@@ -324,7 +324,7 @@ class CharacterProfile {
       // Streak tous les 3 jours sobres
       if (soberStreakDays > 0 && soberStreakDays % 3 == 0) {
         addXp(8);
-        events.add(XpEvent(8, '${soberStreakDays} jours sobres d\'affilée'));
+        events.add(XpEvent(8, '$soberStreakDays jours sobres d\'affilée'));
       }
 
       // Semaine parfaite (1x/semaine)

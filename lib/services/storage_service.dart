@@ -132,4 +132,28 @@ class StorageService {
 
     return totalConsos / totalDays;
   }
+
+  // ==================== NOTIFICATION TRACKING ====================
+
+  static const String _kLastNotificationSentKey = 'last_notification_sent';
+
+  Future<DateTime?> getLastNotificationSent() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final timestamp = prefs.getInt(_kLastNotificationSentKey);
+      return timestamp != null ? DateTime.fromMillisecondsSinceEpoch(timestamp) : null;
+    } catch (e) {
+      debugPrint('Error getting last notification sent: $e');
+      return null;
+    }
+  }
+
+  Future<void> setLastNotificationSent(DateTime dateTime) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_kLastNotificationSentKey, dateTime.millisecondsSinceEpoch);
+    } catch (e) {
+      debugPrint('Error setting last notification sent: $e');
+    }
+  }
 }
