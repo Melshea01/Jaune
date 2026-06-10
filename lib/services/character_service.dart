@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import '../utils/date_keys.dart';
+
 // ---------------------------------------------------------------------------
 // XP curve — coût en XP pour passer au niveau suivant
 // ---------------------------------------------------------------------------
@@ -360,6 +362,9 @@ class CharacterService {
     );
   }
 
+  /// [includeLogBonus] : ne donner le bonus « Enregistrement du jour » que
+  /// lors d'une vraie action de log de l'utilisateur — pas au simple
+  /// recalcul de santé à l'ouverture de l'app (sinon +3 XP gratuits/jour).
   Future<
     ({
       List<XpEvent> xpEvents,
@@ -367,7 +372,10 @@ class CharacterService {
       List<LevelUnlock> newUnlocks,
     })
   >
-  awardDailyLogXp(Map<String, int> dailyMap) async {
+  awardDailyLogXp(
+    Map<String, int> dailyMap, {
+    bool includeLogBonus = true,
+  }) async {
     final List<XpEvent> events = [];
     List<int> newLevels = [];
     List<LevelUnlock> newUnlocks = [];
@@ -377,7 +385,7 @@ class CharacterService {
 
       // Bonus pour l'enregistrement quotidien
       final String today = _dateKey(DateTime.now());
-      if (_profile.lastLogDate != today) {
+      if (includeLogBonus && _profile.lastLogDate != today) {
         _profile.lastLogDate = today;
         _addXp(3);
         events.add(const XpEvent(3, 'Enregistrement du jour'));
@@ -410,6 +418,10 @@ class CharacterService {
     return (xpEvents: events, newLevels: newLevels, newUnlocks: newUnlocks);
   }
 
+  /// Les bonus de comportement évaluent la journée d'HIER (terminée).
+  /// Avant : « aujourd'hui » était jugé à l'ouverture matinale — l'utilisateur
+  /// gagnait +5 XP « journée sobre » à 9h puis pouvait boire le soir en
+  /// gardant l'XP et le streak (évalués une seule fois par jour).
   List<XpEvent> _awardBehaviorXp(Map<String, int> dailyMap) {
     final List<XpEvent> events = [];
     final DateTime now = DateTime.now();
@@ -420,21 +432,21 @@ class CharacterService {
       return dailyMap[k] ?? 0;
     }
 
-    final int todayDrinks = drinksAt(0);
+    final int yesterdayDrinks = drinksAt(1);
 
-    // Journée sobre
-    if (todayDrinks == 0) {
+    // Journée sobre (hier, journée close)
+    if (yesterdayDrinks == 0) {
       _profile.soberStreakDays++;
       _addXp(5);
-      events.add(const XpEvent(5, 'Journée sobre'));
+      events.add(const XpEvent(5, 'Journée d\'hier sobre'));
     } else {
       _profile.soberStreakDays = 0;
     }
 
-    // Journée verte
-    if (todayDrinks > 0 && todayDrinks <= 2) {
+    // Journée verte (hier : 1-2 verres + un jour sobre dans la semaine d'avant)
+    if (yesterdayDrinks > 0 && yesterdayDrinks <= 2) {
       bool hasSoberDayInWeek = false;
-      for (int i = 1; i <= 7; i++) {
+      for (int i = 2; i <= 8; i++) {
         if (drinksAt(i) == 0) {
           hasSoberDayInWeek = true;
           break;
@@ -454,13 +466,14 @@ class CharacterService {
       );
     }
 
-    // Semaine parfaite (1x/semaine)
+    // Semaine parfaite (1x/semaine) — jugée sur les jours clos de la semaine
+    // (aujourd'hui exclu : la journée peut encore basculer)
     final String isoWeek = _isoWeekKey(todayDt);
     if (_profile.lastPerfectWeekDate != isoWeek) {
       int weekTotal = 0;
       int soberDays = 0;
       final int dayOfWeek = todayDt.weekday; // 1 = lundi
-      for (int i = 0; i < dayOfWeek; i++) {
+      for (int i = 1; i < dayOfWeek; i++) {
         final int v = drinksAt(i);
         weekTotal += v;
         if (v == 0) soberDays++;
@@ -551,10 +564,7 @@ class CharacterService {
   }
 
   // --- Helpers date ---
-  static String _dateKey(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-'
-      '${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
+  static String _dateKey(DateTime d) => dateKey(d);
 
   static String _isoWeekKey(DateTime d) {
     final DateTime thu = d.add(Duration(days: 4 - d.weekday));

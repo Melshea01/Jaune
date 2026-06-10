@@ -30,6 +30,7 @@ import 'widgets/level_sheet.dart';
 import 'widgets/info_sheet.dart';
 import 'widgets/pressable.dart';
 import 'theme/jaune_design.dart';
+import 'utils/date_keys.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -91,7 +92,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   // State variables
   int _consos = 0;
   double _animatedConsos = 0.0;
-  bool _isSaving = false;
   DateTime? _lastBejaunePost;
 
   // Animation controllers
@@ -127,31 +127,35 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
     NotificationService.onNotificationTap = (payload) async {
       if (payload == 'be_real_capture') {
-        final health = _characterService.healthPercent;
-        final message = 'Score citron: ${(health * 100).toStringAsFixed(0)}%';
-
-        if (navigatorKey.currentState != null) {
-          navigatorKey.currentState!
-              .push(
-                MaterialPageRoute(
-                  builder:
-                      (context) => BeRealCapturePage(
-                        avatarAsset: 'assets/avatar.png',
-                        message: message,
-                        healthPercent: health,
-                        level: _characterService.level,
-                        streakDays: _characterService.soberStreakDays,
-                      ),
-                ),
-              )
-              .then((result) async {
-                if (result != null) {
-                  await _markBejaunePosted();
-                }
-              });
-        }
+        await _openBeRealCapture();
       }
     };
+  }
+
+  /// Ouvre la page de capture BeJaune et marque le post si une photo
+  /// a été partagée. Point d'entrée unique (notification + bouton CTA).
+  Future<void> _openBeRealCapture() async {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) return;
+
+    final health = _characterService.healthPercent;
+    final message = 'Score citron: ${(health * 100).toStringAsFixed(0)}%';
+
+    final result = await navigator.push(
+      MaterialPageRoute(
+        builder:
+            (context) => BeRealCapturePage(
+              avatarAsset: 'assets/avatar.png',
+              message: message,
+              healthPercent: health,
+              level: _characterService.level,
+              streakDays: _characterService.soberStreakDays,
+            ),
+      ),
+    );
+    if (result != null) {
+      await _markBejaunePosted();
+    }
   }
 
   void _initializeAnimations() {
@@ -209,7 +213,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         _lastBejaunePost = lastBejaunePost;
       });
 
-      await _recomputeHealth();
+      // Recalcul à l'ouverture : pas une action de log de l'utilisateur
+      await _recomputeHealth(isUserLog: false);
 
       // Programmer la notification BeReal du jour si pas encore envoyée
       await _scheduleDailyNotification();
@@ -233,14 +238,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     }
   }
 
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
   bool get _hasPostedBejauneToday {
     final last = _lastBejaunePost;
     if (last == null) return false;
-    return _isSameDay(last, DateTime.now());
+    return isSameCalendarDay(last, DateTime.now());
   }
 
   bool get _isWithinAperoWindow {
@@ -259,23 +260,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _saveState() async {
-    if (_isSaving) return;
-    _isSaving = true;
-
+  /// [isUserLog] : true quand le recalcul vient d'une vraie action de log
+  /// (bouton conso / reset) — conditionne le bonus « Enregistrement du jour »
+  Future<void> _recomputeHealth({bool save = true, bool isUserLog = true}) async {
     try {
       await _storageService.updateTodayConsos(_consos);
-      await _characterService.saveProfile();
-    } catch (e) {
-      debugPrint('Error saving state: $e');
-    } finally {
-      _isSaving = false;
-    }
-  }
-
-  Future<void> _recomputeHealth({bool save = true}) async {
-    try {
-      _storageService.updateTodayConsos(_consos);
       final newHealth = _characterService.computeHealthFromRisk(
         _storageService.dailyMap,
       );
@@ -287,6 +276,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       // Quand l'user enregistre sa conso — vérifier les bonus de comportement
       final result = await _characterService.awardDailyLogXp(
         _storageService.dailyMap,
+        includeLogBonus: isUserLog,
       );
 
       // Afficher les toasts XP gagnés + saut de joie du citron
@@ -305,7 +295,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       // Mettre à jour l'état Rive si la santé a changé
       _updateRiveState();
 
-      if (save) await _saveState();
+      // Les consos sont déjà persistées en tête de méthode ; il ne reste
+      // que le profil (XP/PV) à sauvegarder
+      if (save) await _characterService.saveProfile();
     } catch (e) {
       debugPrint('Error in _recomputeHealth: $e');
     }
@@ -344,7 +336,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       _audioService.fadeOutAudio(fadeDuration);
     });
 
-    await _saveState();
+    // _recomputeHealth persiste consos + profil : pas de double save
     await _recomputeHealth();
 
     // Réaction visuelle du citron au verre loggé (tipsy puis drunk à partir de 5)
@@ -359,7 +351,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         _animatedConsos = 0.0;
       });
 
-      await _saveState();
+      // _recomputeHealth persiste consos + profil : pas de double save
       await _recomputeHealth();
     } catch (e) {
       debugPrint('Error in _resetTodayConsos: $e');
@@ -508,25 +500,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   Future<void> _navigateToBeRealCapture() async {
     if (!_canPostBejaune) return;
-    final health = _characterService.healthPercent;
-    final message = 'Score citron: ${(health * 100).toStringAsFixed(0)}%';
-
-    if (!mounted) return;
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder:
-            (context) => BeRealCapturePage(
-              avatarAsset: 'assets/avatar.png',
-              message: message,
-              healthPercent: health,
-              level: _characterService.level,
-              streakDays: _characterService.soberStreakDays,
-            ),
-      ),
-    );
-    if (result != null) {
-      await _markBejaunePosted();
-    }
+    await _openBeRealCapture();
   }
 
   Widget _buildShineEffect() {
@@ -1055,6 +1029,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
             child: Center(
               child: Text(
                 '$_consos',
+                key: const Key('conso-count'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 10,
@@ -1092,7 +1067,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     _shineController.dispose();
     _citronReactionTimer?.cancel();
     _audioService.dispose();
-    // _citronController.dispose();
+    _citronController.dispose();
     super.dispose();
   }
 }

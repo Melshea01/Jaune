@@ -5,7 +5,10 @@ import 'dart:math';
 class AnimationEvent {
   final String name;
   final Duration duration;
-  final Function(double progress) update; // progress: 0.0 to 1.0
+
+  /// progress: 0.0 to 1.0 → transformations additives
+  /// (clés : hopY, scaleX, scaleY, swayRad)
+  final Map<String, num> Function(double progress) update;
 
   const AnimationEvent({
     required this.name,

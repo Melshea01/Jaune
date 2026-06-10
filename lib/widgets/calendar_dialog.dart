@@ -7,6 +7,8 @@ import 'package:typicons_flutter/typicons_flutter.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 
+import '../utils/date_keys.dart';
+
 class CalendarDialog {
   static void show({
     required BuildContext context,
@@ -220,7 +222,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
   }
 
   Widget _buildDayDetailContent(DateTime day) {
-    final dayKey = day.toIso8601String().substring(0, 10);
+    final dayKey = dateKey(day);
     final count = widget.dailyMap[dayKey] ?? 0;
     final label = DateFormat('EEEE d MMMM', 'fr_FR').format(day);
     final capitalized = label[0].toUpperCase() + label.substring(1);
@@ -385,7 +387,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
   }
 
   Widget _buildCalendarCell(DateTime day, bool isSelected, bool isToday) {
-    final dayKey = day.toIso8601String().substring(0, 10);
+    final dayKey = dateKey(day);
     final count = widget.dailyMap[dayKey] ?? 0;
 
     if (count > 0) {

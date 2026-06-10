@@ -2,6 +2,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
+import '../utils/date_keys.dart';
+
 class StorageService {
   static const String _kDailyConsosKey = 'daily_consos';
   static const String _kLastNotificationSentKey = 'last_notification_sent';
@@ -11,9 +13,7 @@ class StorageService {
 
   Map<String, int> get dailyMap => Map.unmodifiable(_dailyMap);
 
-  static String _dateToKey(DateTime date) {
-    return date.toIso8601String().substring(0, 10);
-  }
+  static String _dateToKey(DateTime date) => dateKey(date);
 
   Future<AppState> loadAppState() async {
     try {
@@ -31,7 +31,7 @@ class StorageService {
             return MapEntry(k, int.tryParse(v.toString()) ?? 0);
           });
 
-          final todayKey = DateTime.now().toIso8601String().substring(0, 10);
+          final todayKey = dateKey(DateTime.now());
           todayConsos = _dailyMap[todayKey] ?? 0;
         } catch (e) {
           debugPrint('Error parsing saved daily map: $e');

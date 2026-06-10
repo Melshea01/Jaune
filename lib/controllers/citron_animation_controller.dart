@@ -38,7 +38,6 @@ class CitronAnimationController extends ChangeNotifier {
 
   CitronAnimationController() {
     _initializeLayers();
-    _initializeBlinking();
   }
 
   /// Global speed factor applied to all animation phases.
@@ -80,7 +79,6 @@ class CitronAnimationController extends ChangeNotifier {
   // Clignement fluide : la paupière suit une courbe sinus (fermeture/ouverture
   // douce) au lieu d'un aller-retour binaire, avec un double-clin occasionnel
   // — un détail qui rend le regard vivant.
-  late DateTime blinkTimer;
   bool blinkActive = false;
   double blinkElapsed = 0;
 
@@ -88,10 +86,6 @@ class CitronAnimationController extends ChangeNotifier {
   double blinkAmount = 0;
 
   final math.Random _rng = math.Random();
-
-  void _initializeBlinking() {
-    blinkTimer = DateTime.now();
-  }
 
   // ==================== Eye Saccades (regard vivant) ====================
   // Les yeux dardent vers un point aléatoire toutes les 2,5 à 7,5 s puis
@@ -271,10 +265,8 @@ class CitronAnimationController extends ChangeNotifier {
       return const {};
     }
 
-    final raw = event.update(progress.clamp(0.0, 1.0)) as Map;
-    return raw.map(
-      (key, value) => MapEntry(key.toString(), (value as num).toDouble()),
-    );
+    final raw = event.update(progress.clamp(0.0, 1.0));
+    return raw.map((key, value) => MapEntry(key, value.toDouble()));
   }
 
   // ==================== Idle Life ====================

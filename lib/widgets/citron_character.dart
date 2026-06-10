@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter_svg/flutter_svg.dart' as svg;
 import 'dart:math' as math;
 import '../controllers/citron_animation_controller.dart';
@@ -22,6 +23,7 @@ class CitronCharacter extends StatefulWidget {
 class _CitronCharacterState extends State<CitronCharacter>
     with SingleTickerProviderStateMixin {
   Duration _lastFrameTime = Duration.zero;
+  late final Ticker _ticker;
 
   @override
   void initState() {
@@ -31,7 +33,7 @@ class _CitronCharacterState extends State<CitronCharacter>
   }
 
   void _setupTicker() {
-    createTicker((elapsed) {
+    _ticker = createTicker((elapsed) {
       // Update blinking + idle micro-behaviors
       final deltaTime = elapsed - _lastFrameTime;
       widget.controller.updateBlinking(deltaTime);
@@ -40,7 +42,8 @@ class _CitronCharacterState extends State<CitronCharacter>
 
       // Request rebuild for next frame (60 FPS loop)
       setState(() {});
-    }).start();
+    });
+    _ticker.start();
   }
 
   void _onControllerChanged() {
@@ -52,6 +55,7 @@ class _CitronCharacterState extends State<CitronCharacter>
 
   @override
   void dispose() {
+    _ticker.dispose();
     widget.controller.removeListener(_onControllerChanged);
     super.dispose();
   }

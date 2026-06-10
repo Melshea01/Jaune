@@ -1,6 +1,10 @@
 // Smoke tests adaptés à l'application Jaune.
-// Ces tests n'utilisent pas le compteur par défaut de Flutter.
-// Ils mockent les SharedPreferences et vérifient quelques interactions UI basiques.
+//
+// NB : le citron est animé en continu (Ticker 60 fps + AnimationControllers
+// en repeat) — `pumpAndSettle` ne converge donc jamais. On utilise pump()
+// avec des durées explicites, et chaque test se termine par un long pump
+// pour purger les timers en attente (réactions du citron, toasts XP,
+// fondu audio après le son de conso).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,66 +12,47 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:jaune/main.dart';
 
+/// Purge les timers différés (toasts ~4s, réaction citron 3s, bulle audio 8s)
+Future<void> flushPendingTimers(WidgetTester tester) async {
+  await tester.pump(const Duration(seconds: 15));
+}
+
 void main() {
-  // Ensure Flutter bindings are initialized for widget tests.
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
-    // Provide an empty/mock SharedPreferences to avoid platform channels during tests.
+    // SharedPreferences mockées : pas de canaux de plateforme en test
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('App smoke: affiche éléments principaux', (
+  testWidgets('App smoke : affiche les éléments principaux', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const MyApp());
+    await tester.pump(const Duration(milliseconds: 900));
 
-    // Attendre que l'arbre se stabilise (loadModels() peut être appelé en initState).
-    await tester.pumpAndSettle();
-
-    // Vérifier la présence d'éléments clés de l'UI.
     expect(find.text('Calendrier'), findsOneWidget);
-    expect(find.text('Simuler +1 jour'), findsOneWidget);
-    // Le bouton central affiche un emoji bière
     expect(find.text('🍻'), findsOneWidget);
-    // L'icône d'info haut droite doit être présente
     expect(find.byIcon(Icons.info_outline), findsOneWidget);
+
+    await flushPendingTimers(tester);
   });
 
-  testWidgets('Taper sur la bière incrémente le nombre de conso', (
+  testWidgets('Taper sur la bière incrémente la conso', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const MyApp());
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 900));
 
-    // Le badge de conso commence à '0'
-    expect(find.text('0'), findsOneWidget);
+    Text consoBadge() =>
+        tester.widget<Text>(find.byKey(const Key('conso-count')));
+    expect(consoBadge().data, '0');
 
-    // Tap sur l'emoji bière (le GestureDetector est centré dessus)
     await tester.tap(find.text('🍻'));
-    // Pump pour appliquer setState déclenché par _addConso
-    await tester.pumpAndSettle(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
 
-    // Maintenant on attend que le texte passe à '1'
-    expect(find.text('1'), findsOneWidget);
-  });
+    expect(consoBadge().data, '1');
 
-  testWidgets('Bouton "Remettre full" remet les consommations à 0', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(const MyApp());
-    await tester.pumpAndSettle();
-
-    // Incrémenter d'abord
-    await tester.tap(find.text('🍻'));
-    await tester.pumpAndSettle(const Duration(milliseconds: 500));
-    expect(find.text('1'), findsOneWidget);
-
-    // Trouver et taper sur le bouton 'Remettre full'
-    await tester.tap(find.text('Remettre full'));
-    await tester.pumpAndSettle(const Duration(seconds: 1));
-
-    // Le badge devrait être revenu à 0
-    expect(find.text('0'), findsOneWidget);
+    await flushPendingTimers(tester);
   });
 }
