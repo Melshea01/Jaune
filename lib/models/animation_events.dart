@@ -19,11 +19,15 @@ class AnimationEvents {
   // ─── Joy & Achievement Events ───────────────────────────────────────
 
   /// Jump of joy - daily success
+  /// Trois phases : anticipation (squat) → vol (étirement à l'apex) →
+  /// atterrissage (squash d'impact qui se résorbe). Sans la 3e phase,
+  /// le personnage atterrissait comme un sprite sans poids.
   static AnimationEvent jumpJoy = AnimationEvent(
     name: 'jump_joy',
-    duration: const Duration(milliseconds: 1000),
+    duration: const Duration(milliseconds: 1100),
     update: (p) {
       if (p < 0.15) {
+        // Anticipation
         final rp = p / 0.15;
         final squat = sin(rp * pi);
         return {
@@ -31,13 +35,23 @@ class AnimationEvents {
           'scaleY': 1 - 0.2 * squat,
           'scaleX': 1 + 0.2 * squat,
         };
-      } else {
-        final rp = (p - 0.15) / 0.85;
+      } else if (p < 0.82) {
+        // Vol
+        final rp = (p - 0.15) / 0.67;
         final height = 4 * rp * (1 - rp);
         return {
           'hopY': -160 * height,
-          'scaleX': 1 - 0.25 * height,
-          'scaleY': 1 + 0.25 * sin(rp * pi),
+          'scaleX': 1 - 0.15 * height,
+          'scaleY': 1 + 0.18 * height,
+        };
+      } else {
+        // Atterrissage : squash d'impact
+        final rp = (p - 0.82) / 0.18;
+        final squash = sin(rp * pi);
+        return {
+          'hopY': 0,
+          'scaleY': 1 - 0.16 * squash,
+          'scaleX': 1 + 0.20 * squash,
         };
       }
     },
@@ -54,26 +68,40 @@ class AnimationEvents {
     },
   );
 
-  /// Mega jump - 1 month streak
+  /// Mega jump - 1 month streak / level-up
+  /// Même structure 3 phases que jump_joy, amplifiée : plus l'impact est
+  /// haut, plus le squash d'atterrissage doit être fort pour vendre le poids.
   static AnimationEvent megaJump = AnimationEvent(
     name: 'mega_jump',
-    duration: const Duration(milliseconds: 1800),
+    duration: const Duration(milliseconds: 1900),
     update: (p) {
-      if (p < 0.2) {
-        final rp = p / 0.2;
+      if (p < 0.18) {
+        // Anticipation profonde
+        final rp = p / 0.18;
         final squat = sin(rp * pi);
         return {
           'hopY': 20 * squat,
           'scaleY': 1 - 0.3 * squat,
           'scaleX': 1 + 0.3 * squat,
         };
-      } else {
-        final rp = (p - 0.2) / 0.8;
+      } else if (p < 0.82) {
+        // Vol haut
+        final rp = (p - 0.18) / 0.64;
         final height = 4 * rp * (1 - rp);
         return {
           'hopY': -350 * height,
-          'scaleY': 1 + 0.4 * height,
-          'scaleX': 1 - 0.3 * height,
+          'scaleY': 1 + 0.35 * height,
+          'scaleX': 1 - 0.25 * height,
+        };
+      } else {
+        // Gros squash d'impact avec petit rebond résiduel
+        final rp = (p - 0.82) / 0.18;
+        final squash = sin(rp * pi);
+        final rebound = sin(rp * pi * 2) * (1 - rp);
+        return {
+          'hopY': -12 * rebound.abs(),
+          'scaleY': 1 - 0.28 * squash,
+          'scaleX': 1 + 0.32 * squash,
         };
       }
     },
@@ -92,12 +120,15 @@ class AnimationEvents {
   // ─── Alert & Startle Events ─────────────────────────────────────────
 
   /// Shiver - sudden cold
+  /// Fix : 150ms était imperceptible. Un frisson lisible dure ~500ms et
+  /// s'amortit naturellement (enveloppe décroissante) au lieu de couper net.
   static AnimationEvent shiver = AnimationEvent(
     name: 'shiver',
-    duration: const Duration(milliseconds: 150),
+    duration: const Duration(milliseconds: 550),
     update: (p) {
-      final tremor = sin(p * pi * 8);
-      return {'swayRad': tremor * 0.1, 'hopY': tremor * 6};
+      final decay = 1 - p;
+      final tremor = sin(p * pi * 10) * decay;
+      return {'swayRad': tremor * 0.08, 'hopY': tremor * 4};
     },
   );
 
@@ -127,14 +158,16 @@ class AnimationEvents {
   );
 
   /// Craquage - emotional breakdown
+  /// Fix : il s'enfonçait de 150px sous le sol. Un effondrement se lit par
+  /// l'écrasement (squash), pas par la traversée du plancher.
   static AnimationEvent craquage = AnimationEvent(
     name: 'craquage',
     duration: const Duration(milliseconds: 800),
     update: (p) {
       final drop = sin(p * pi);
       return {
-        'hopY': 150 * drop,
-        'scaleY': 1 - 0.3 * drop,
+        'hopY': 25 * drop,
+        'scaleY': 1 - 0.35 * drop,
         'scaleX': 1 + 0.4 * drop,
       };
     },
@@ -188,11 +221,14 @@ class AnimationEvents {
   );
 
   /// Craving - compulsive trembling
+  /// Enveloppe montée/descente : le tremblement s'installe puis s'apaise,
+  /// au lieu de vibrer à amplitude constante et s'arrêter d'un coup.
   static AnimationEvent craving = AnimationEvent(
     name: 'craving',
     duration: const Duration(milliseconds: 2000),
     update: (p) {
-      final vibe = sin(p * pi * 2 * 12);
+      final envelope = sin(p * pi);
+      final vibe = sin(p * pi * 2 * 12) * envelope;
       return {'swayRad': vibe * 0.1};
     },
   );
@@ -209,6 +245,9 @@ class AnimationEvents {
   );
 
   /// Drink beer - tilt back then land
+  /// Fix : l'atterrissage descendait de 40px sous la ligne de sol (le citron
+  /// traversait le plancher). Le squash scaleX/scaleY suffit à vendre
+  /// l'impact, avec un micro-enfoncement de 8px absorbé par les jambes.
   static AnimationEvent drinkBeer = AnimationEvent(
     name: 'drink_beer',
     duration: const Duration(milliseconds: 1400),
@@ -229,7 +268,7 @@ class AnimationEvents {
           'swayRad': -25 * (1 - rp) * (pi / 180),
           'scaleY': 1 - 0.15 * bounce,
           'scaleX': 1 + 0.2 * bounce,
-          'hopY': 40 * bounce,
+          'hopY': 8 * bounce,
         };
       }
     },

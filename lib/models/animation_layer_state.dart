@@ -99,7 +99,9 @@ class AnimationLayerState {
 /// Contains 80+ animation states with full parametrization
 final Map<String, Map<String, AnimationLayerState>> layerStates = {
   'global': {
-    'idle': const AnimationLayerState(hopAmp: 5, hopSpeed: 2.6),
+    // Idle apaisé : 3.5px à vitesse 2.1 — un balancement de respiration,
+    // pas un sautillement nerveux (l'utilisateur regarde cet état des heures)
+    'idle': const AnimationLayerState(hopAmp: 3.5, hopSpeed: 2.1),
     'floating_soft': const AnimationLayerState(hopAmp: 2, hopSpeed: 4.0),
     'bounce_light': const AnimationLayerState(hopAmp: 10, hopSpeed: 1.0),
     'pulse': const AnimationLayerState(hopAmp: 0, hopSpeed: 1.0),
@@ -189,6 +191,17 @@ final Map<String, Map<String, AnimationLayerState>> layerStates = {
       breathAmp: 0.05,
       breathSpeed: 6.5,
       lean: 50,
+    ),
+    // Fatigué mais attachant : léger affaissement et respiration lourde,
+    // sans basculer à 50° comme 'slump' (réservé aux états extrêmes)
+    'weary': const AnimationLayerState(
+      swayAmp: 2,
+      swaySpeed: 5.5,
+      breathAmp: 0.07,
+      breathSpeed: 5.5,
+      lean: 10,
+      baseScaleY: 0.97,
+      baseScaleX: 1.02,
     ),
     'digest': const AnimationLayerState(
       swayAmp: 0,
@@ -338,10 +351,11 @@ final Map<String, Map<String, AnimationLayerState>> layerStates = {
     ),
   },
   'jambes': {
+    // Synchronisé avec le hop global apaisé (2.1)
     'idle': const AnimationLayerState(
-      ampY: 3.5,
-      scaleAmp: 0.04,
-      speed: 2.6,
+      ampY: 3.0,
+      scaleAmp: 0.035,
+      speed: 2.1,
       gravFollow: 0.4,
     ),
     'floating': const AnimationLayerState(
@@ -438,7 +452,16 @@ final Map<String, Map<String, AnimationLayerState>> layerStates = {
     ),
   },
   'bras_D': {
-    'idle': const AnimationLayerState(amp: 0.06, speed: 2.6),
+    // Synchronisé avec le hop global apaisé (2.1)
+    'idle': const AnimationLayerState(amp: 0.06, speed: 2.1),
+    // Joyeux sans être frénétique : bras semi-levé qui ondule doucement
+    // (le double 'wave' permanent était épuisant à regarder)
+    'cheer': const AnimationLayerState(
+      amp: 0.22,
+      speed: 1.6,
+      base: -0.7,
+      gravFollow: 0.2,
+    ),
     'soft': const AnimationLayerState(
       amp: 0.02,
       speed: 4.0,
@@ -471,7 +494,15 @@ final Map<String, Map<String, AnimationLayerState>> layerStates = {
     'crossed': const AnimationLayerState(amp: 0, speed: 5.0, base: -1.2),
   },
   'bras_G': {
-    'idle': const AnimationLayerState(amp: 0.06, speed: 2.6),
+    // Synchronisé avec le hop global apaisé (2.1)
+    'idle': const AnimationLayerState(amp: 0.06, speed: 2.1),
+    // Pendant gauche de 'cheer' (déphasé naturellement par le moteur)
+    'cheer': const AnimationLayerState(
+      amp: 0.22,
+      speed: 1.6,
+      base: 0.7,
+      gravFollow: 0.2,
+    ),
     'soft': const AnimationLayerState(
       amp: 0.02,
       speed: 4.0,
@@ -581,6 +612,15 @@ final Map<String, Map<String, AnimationLayerState>> layerStates = {
       drift: 0,
       blinkInterval: 2.0,
       blinkDuration: 0.15,
+    ),
+    // Yeux lourds de fatigue : mi-clos avec clignements lents et fréquents
+    // (plus expressif que 'half_closed' qui fige le regard)
+    'sleepy': const AnimationLayerState(
+      scaleY: 0.50,
+      offsetY: 4,
+      drift: 0,
+      blinkInterval: 2.5,
+      blinkDuration: 0.30,
     ),
     'dead': const AnimationLayerState(
       scaleY: 0.01,

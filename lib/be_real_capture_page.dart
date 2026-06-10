@@ -157,8 +157,9 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
           healthPercent: widget.healthPercent,
           previewBytes: preview,
         );
-        if (mounted && outputPath != null)
+        if (mounted && outputPath != null) {
           Navigator.of(context).pop(outputPath);
+        }
         return;
       }
 
@@ -720,7 +721,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
                 CupertinoActivityIndicator(radius: 14),
                 SizedBox(height: 12),
                 Text(
-                  'Ditês JAUNEEE...',
+                  'Dites JAUNEEE...',
                   style: TextStyle(
                     color: Colors.white54,
                     fontWeight: FontWeight.w600,

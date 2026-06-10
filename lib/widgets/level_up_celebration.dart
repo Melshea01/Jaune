@@ -9,13 +9,15 @@ import '../services/character_service.dart';
 /// Overlay plein écran de célébration de passage de niveau :
 /// confettis, titre élastique, rang, et liste des déblocables gagnés.
 class LevelUpCelebration {
-  static void show({
+  /// Retourne un Future qui se résout à la fermeture — permet d'enchaîner
+  /// une réaction du personnage (ex : mega_jump du citron).
+  static Future<void> show({
     required BuildContext context,
     required int newLevel,
     required List<LevelUnlock> unlocks,
   }) {
     HapticFeedback.heavyImpact();
-    showGeneralDialog(
+    return showGeneralDialog<void>(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.transparent,

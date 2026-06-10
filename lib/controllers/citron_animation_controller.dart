@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import '../models/animation_layer_state.dart';
 import '../models/health_animation_map.dart';
@@ -75,14 +77,49 @@ class CitronAnimationController extends ChangeNotifier {
   }
 
   // ==================== Eye Blinking State Machine ====================
-  // This logic remains complex and could be a separate state machine class.
-  // For now, we'll keep it as is but acknowledge it's an area for future improvement.
+  // Clignement fluide : la paupière suit une courbe sinus (fermeture/ouverture
+  // douce) au lieu d'un aller-retour binaire, avec un double-clin occasionnel
+  // — un détail qui rend le regard vivant.
   late DateTime blinkTimer;
   bool blinkActive = false;
   double blinkElapsed = 0;
 
+  /// 0.0 = œil ouvert, 1.0 = paupière fermée (courbe lissée)
+  double blinkAmount = 0;
+
+  final math.Random _rng = math.Random();
+
   void _initializeBlinking() {
     blinkTimer = DateTime.now();
+  }
+
+  // ==================== Eye Saccades (regard vivant) ====================
+  // Les yeux dardent vers un point aléatoire toutes les 2,5 à 7,5 s puis
+  // reviennent au centre — comme un être qui observe son environnement.
+  // Mouvement rapide (saccade réelle) via easing exponentiel.
+
+  /// Décalage X courant du regard, à ajouter au drift de l'état
+  double eyeLookX = 0;
+  double _eyeLookTarget = 0;
+  double _saccadeElapsed = 0;
+  double _nextSaccadeAt = 3;
+
+  void _updateEyeSaccades(double dtSec, bool eyesAlive) {
+    if (!eyesAlive) {
+      _eyeLookTarget = 0;
+    } else {
+      _saccadeElapsed += dtSec;
+      if (_saccadeElapsed >= _nextSaccadeAt) {
+        _saccadeElapsed = 0;
+        _nextSaccadeAt = 2.5 + _rng.nextDouble() * 5;
+        // 60% du temps : fixe un point ; sinon revient au centre
+        _eyeLookTarget =
+            _rng.nextDouble() < 0.6 ? (_rng.nextDouble() * 8 - 4) : 0;
+      }
+    }
+    // Saccade rapide : convergence exponentielle vers la cible
+    eyeLookX +=
+        (_eyeLookTarget - eyeLookX) * (1 - math.exp(-dtSec * 12)).clamp(0, 1);
   }
 
   /// Update blinking animation - call every frame
@@ -94,37 +131,69 @@ class CitronAnimationController extends ChangeNotifier {
     final blinkDuration = currentYeuxState.blinkDuration;
 
     // A blinkInterval >= 99 is a signal to disable blinking for this state
-    if (blinkInterval >= 99) {
+    // (états zen/fermés/morts : le regard revient aussi au centre)
+    final eyesAlive = blinkInterval < 99;
+    _updateEyeSaccades(dt.inMilliseconds / 1000.0, eyesAlive);
+
+    if (!eyesAlive) {
       blinkActive = false;
+      blinkAmount = 0;
       return;
     }
 
     // Active blinking state machine
     if (!blinkActive) {
+      blinkAmount = 0;
       if (blinkElapsed > blinkInterval) {
         // Start blinking
         blinkActive = true;
         blinkElapsed = 0;
-        // Note: This doesn't actually trigger a state change on the layer.
-        // The Rive animation likely handles the visual blink based on a boolean.
       }
     } else {
+      // Paupière : 0 → 1 → 0 en suivant un sinus sur la durée du clin
+      final progress = (blinkElapsed / blinkDuration).clamp(0.0, 1.0);
+      blinkAmount = math.sin(progress * math.pi);
       if (blinkElapsed > blinkDuration) {
-        // Stop blinking
         blinkActive = false;
-        blinkElapsed = 0;
+        blinkAmount = 0;
+        // 20% de chance de double-clin : le prochain part presque aussitôt
+        blinkElapsed =
+            _rng.nextDouble() < 0.2
+                ? (blinkInterval - 0.25).clamp(0.0, blinkInterval)
+                : 0;
       }
     }
   }
 
+  /// Follow-through : lors d'un changement d'état, le tronc bouge en premier,
+  /// le visage suit, puis les membres, et la feuille en dernier (principe
+  /// d'animation "drag" — les appendices traînent derrière la masse).
+  static const Map<String, int> _followThroughDelayMs = {
+    'global': 0,
+    'milieu': 0,
+    'yeux': 60,
+    'bouche': 60,
+    'joues': 60,
+    'jambes': 100,
+    'bras_D': 130,
+    'bras_G': 130,
+    'plante': 200,
+  };
+
   /// Public API: Set animation states for multiple layers at once
   /// Example: setAnimation({'global': 'bounce_light', 'milieu': 'breathe_fast', ...})
-  void setAnimation(Map<String, String> config) {
+  /// [durationMs] : durée de la transition (réactions vives = 400ms,
+  /// changements d'humeur = 800ms par défaut)
+  void setAnimation(Map<String, String> config, {int durationMs = 800}) {
     _resetAnimationSpeedMultiplier();
     config.forEach((layerName, state) {
       final layer = _layers[layerName];
       if (layer != null) {
-        layer.set(state);
+        layer.set(
+          state,
+          durationMs: durationMs,
+          delayMs: _followThroughDelayMs[layerName] ?? 0,
+        );
       } else {
         debugPrint('⚠️ Attempted to set state for unknown layer: $layerName');
       }
@@ -153,7 +222,8 @@ class CitronAnimationController extends ChangeNotifier {
   bool playSpecialAnimation(String name) {
     final animation = SpecialAnimationMap.getAnimation(name);
     if (animation != null) {
-      setAnimation(animation);
+      // Les animations spéciales sont des réactions : transition vive
+      setAnimation(animation, durationMs: 400);
       animationSpeedMultiplier = SpecialAnimationMap.getSpeedMultiplier(name);
       notifyListeners();
       return true;
@@ -161,6 +231,14 @@ class CitronAnimationController extends ChangeNotifier {
     debugPrint('⚠️ Special animation not found: $name');
     return false;
   }
+
+  // ==================== One-shot Events ====================
+  // Les événements (jump_joy, drink_beer, hiccup…) se superposent à l'état
+  // continu : ils renvoient des transformations additives appliquées par
+  // CitronCharacter pendant leur durée, puis s'effacent.
+
+  AnimationEvent? _activeEvent;
+  int _eventStartMs = 0;
 
   /// Play a one-shot event animation by name
   /// Returns the AnimationEvent if found, null otherwise
@@ -170,11 +248,66 @@ class CitronAnimationController extends ChangeNotifier {
       debugPrint(
         '🎬 Event triggered: $eventName (${event.duration.inMilliseconds}ms)',
       );
-      // Event can be further handled by CitronCharacter widget for overlay
+      _activeEvent = event;
+      _eventStartMs = DateTime.now().millisecondsSinceEpoch;
+      notifyListeners();
     } else {
       debugPrint('⚠️ Event not found: $eventName');
     }
     return event;
+  }
+
+  bool get hasActiveEvent => _activeEvent != null;
+
+  /// Transformations de l'événement en cours à l'instant [nowMs].
+  /// Clés possibles : hopY, scaleX, scaleY, swayRad. Map vide si aucun.
+  Map<String, double> eventTransform(int nowMs) {
+    final event = _activeEvent;
+    if (event == null) return const {};
+
+    final progress = (nowMs - _eventStartMs) / event.duration.inMilliseconds;
+    if (progress >= 1.0) {
+      _activeEvent = null;
+      return const {};
+    }
+
+    final raw = event.update(progress.clamp(0.0, 1.0)) as Map;
+    return raw.map(
+      (key, value) => MapEntry(key.toString(), (value as num).toDouble()),
+    );
+  }
+
+  // ==================== Idle Life ====================
+  // Le secret d'un personnage attachant : il ne boucle pas la même animation
+  // à l'infini. Toutes les 7 à 15 s, un micro-comportement aléatoire adapté à
+  // son humeur (curiosité, petit saut, hoquet…) casse la monotonie.
+
+  /// 'happy' | 'neutral' | 'low' | 'none' — défini par la santé courante
+  String idleMood = 'neutral';
+
+  double _idleElapsed = 0;
+  double _nextIdleAt = 6;
+
+  static const Map<String, List<String>> _idlePools = {
+    'happy': ['curious', 'jump_joy', 'hiccup', 'coin_spin', 'encourage'],
+    'neutral': ['curious', 'encourage', 'hiccup', 'shiver'],
+    'low': ['shiver', 'curious'],
+  };
+
+  /// Update idle micro-behaviors - call every frame
+  void updateIdleLife(Duration dt) {
+    if (idleMood == 'none' || _activeEvent != null) return;
+
+    _idleElapsed += dt.inMilliseconds / 1000.0;
+    if (_idleElapsed < _nextIdleAt) return;
+
+    _idleElapsed = 0;
+    _nextIdleAt = 7 + _rng.nextDouble() * 8;
+
+    final pool = _idlePools[idleMood];
+    if (pool != null && pool.isNotEmpty) {
+      triggerEvent(pool[_rng.nextInt(pool.length)]);
+    }
   }
 
   /// Apply animation based on current health (0-100)

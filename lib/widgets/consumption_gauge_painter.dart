@@ -73,7 +73,7 @@ class ConsumptionGaugePainter extends CustomPainter {
       // Ajout d'un halo lumineux
       final haloPaint =
           Paint()
-            ..color = _colorForIndex(i, 0.5).withOpacity(0.2)
+            ..color = _colorForIndex(i, 0.5).withValues(alpha: 0.2)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0)
             ..style = PaintingStyle.stroke
             ..strokeWidth = baseStroke * 1.5;

@@ -53,7 +53,7 @@ class GroundShadowPainter extends CustomPainter {
     // Layer 1: Wide, soft halo for ambient shadow
     final haloPaint =
         Paint()
-          ..color = color.withOpacity(0.26)
+          ..color = color.withValues(alpha: 0.26)
           ..maskFilter = ui.MaskFilter.blur(
             ui.BlurStyle.normal,
             blurSigma + extraBlur,
@@ -65,7 +65,7 @@ class GroundShadowPainter extends CustomPainter {
     final Rect coreRect = fullRect.deflate(coreDeflate);
     final corePaint =
         Paint()
-          ..color = color.withOpacity(0.42)
+          ..color = color.withValues(alpha: 0.42)
           ..maskFilter = ui.MaskFilter.blur(
             ui.BlurStyle.normal,
             (blurSigma * 0.6) + (extraBlur * 0.5),
@@ -78,7 +78,7 @@ class GroundShadowPainter extends CustomPainter {
         .shift(const Offset(0, 2));
     final tailPaint =
         Paint()
-          ..color = color.withOpacity(0.16)
+          ..color = color.withValues(alpha: 0.16)
           ..maskFilter = ui.MaskFilter.blur(
             ui.BlurStyle.normal,
             (blurSigma * 1.2) + (extraBlur * 0.3),

@@ -10,7 +10,9 @@ class LayerController {
   late AnimationLayerState _target;
   late int _transStart;
 
-  static const int _transitionMs = 1000; // 1 second smooth transition
+  /// Durée de la transition en cours — les changements d'humeur sont lents,
+  /// les réactions (tap, conso) doivent être vives.
+  int _transitionMs = 800;
 
   LayerController({required this.stateDict, required this.defaultKey}) {
     _prev = stateDict[defaultKey]!;
@@ -20,7 +22,9 @@ class LayerController {
 
   /// Set a new animation state for this layer
   /// Transitions smoothly from current to new state
-  void set(String key) {
+  /// [delayMs] retarde le départ — permet le follow-through entre couches
+  /// (le corps bouge d'abord, les membres et la feuille suivent)
+  void set(String key, {int durationMs = 800, int delayMs = 0}) {
     if (!stateDict.containsKey(key)) {
       debugPrint('⚠️ Unknown layer state: $key');
       return;
@@ -29,7 +33,8 @@ class LayerController {
     // Interpolate previous → target, then target → new state
     _prev = get(DateTime.now().millisecondsSinceEpoch);
     _target = stateDict[key]!;
-    _transStart = DateTime.now().millisecondsSinceEpoch;
+    _transitionMs = durationMs;
+    _transStart = DateTime.now().millisecondsSinceEpoch + delayMs;
   }
 
   /// Get current interpolated state at given timestamp

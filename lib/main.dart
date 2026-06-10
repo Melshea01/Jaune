@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -25,6 +26,10 @@ import 'widgets/citron_debug_panel.dart';
 import 'widgets/xp_toast.dart';
 import 'widgets/level_up_celebration.dart';
 import 'widgets/streak_badge.dart';
+import 'widgets/level_sheet.dart';
+import 'widgets/info_sheet.dart';
+import 'widgets/pressable.dart';
+import 'theme/jaune_design.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -99,8 +104,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   // Calendar state
   final GlobalKey _calendarButtonKey = GlobalKey();
-  bool _isCalendarButtonPressed = false;
-  bool _isMainButtonPressed = false;
   bool _showDebugPanel = false;
 
   // Citron interaction state
@@ -154,13 +157,14 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   void _initializeAnimations() {
     _gaugeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 420),
+      duration: const Duration(milliseconds: 500),
     )..addListener(() {
       setState(() {
+        // Courbe easeOutCubic : la jauge file vite puis se pose en douceur
+        final double t = JauneMotion.smooth.transform(_gaugeController.value);
         final double start = (_consos - 1).clamp(0, double.infinity).toDouble();
         _animatedConsos =
-            ui.lerpDouble(start, _consos.toDouble(), _gaugeController.value) ??
-            _consos.toDouble();
+            ui.lerpDouble(start, _consos.toDouble(), t) ?? _consos.toDouble();
       });
     });
 
@@ -171,7 +175,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
     _calendarAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 420),
+      // La fermeture doit être plus rapide que l'ouverture (convention iOS)
+      reverseDuration: const Duration(milliseconds: 260),
     );
 
     _shadowController = AnimationController(
@@ -183,7 +189,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   void _initializeShineAnimation() {
     _shineController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 3200),
     )..repeat();
   }
 
@@ -283,9 +289,12 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         _storageService.dailyMap,
       );
 
-      // Afficher les toasts XP gagnés
+      // Afficher les toasts XP gagnés + saut de joie du citron
       for (final event in result.xpEvents) {
         _showXpToast(event);
+      }
+      if (result.xpEvents.isNotEmpty && !_citronController.hasActiveEvent) {
+        _citronController.triggerEvent('jump_joy');
       }
 
       // Célébration de level-up avec les déblocables gagnés
@@ -304,6 +313,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   Future<void> _addConso() async {
     HapticFeedback.mediumImpact();
+    // Feedback immédiat : le citron penche la tête en arrière et "boit"
+    _citronController.triggerEvent('drink_beer');
     setState(() {
       _consos += 1;
     });
@@ -406,7 +417,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         context: ctx,
         newLevel: newLevels.last,
         unlocks: unlocks,
-      );
+      ).then((_) {
+        // Payoff à la fermeture : le citron fait un saut spectaculaire
+        if (mounted) _citronController.triggerEvent('mega_jump');
+      });
     }
 
     if (navigatorKey.currentContext != null) {
@@ -442,6 +456,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       HapticFeedback.heavyImpact();
       _playCitronReaction('secretDance', duration: const Duration(seconds: 5));
     } else {
+      // Variété : le citron ne réagit jamais deux fois pareil au toucher
+      const tapEvents = ['jump_joy', 'curious', 'hiccup', 'coin_spin'];
+      _citronController.triggerEvent(
+        tapEvents[_citronTaps.length % tapEvents.length],
+      );
       _playCitronReaction('greeting');
     }
   }
@@ -453,6 +472,16 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     // Map health to animation presets
     final animationConfig = HealthAnimationMap.getPreset((hp * 100).toInt());
     _citronController.setAnimation(animationConfig);
+
+    // Humeur pour les micro-comportements d'idle (curiosité, petits sauts…)
+    _citronController.idleMood =
+        hp >= 0.75
+            ? 'happy'
+            : hp >= 0.40
+            ? 'neutral'
+            : hp > 0
+            ? 'low'
+            : 'none';
 
     debugPrint(
       '🎨 Citron Animation: HP: ${(hp * 100).toStringAsFixed(1)}% → ${animationConfig['bouche']}',
@@ -470,305 +499,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   }
 
   void _showLevelDialog() {
-    HapticFeedback.selectionClick();
-    final level = _characterService.level;
-    final phase = _characterService.levelPhase;
-    final xp = _characterService.profile.xp;
-    final xpToNext = _characterService.xpToNextLevel;
-    final progress = _characterService.levelProgress;
-    final unlocks = _characterService.acquiredUnlocks;
-
-    // Feature #1: Phase progression percentage
-    final phaseLevels = switch (phase) {
-      'discovery' => 5,
-      'engagement' => 10,
-      _ => 20,
-    };
-    final levelInPhase = (level - 1) % phaseLevels + 1;
-    final phasePercentage = ((levelInPhase / phaseLevels) * 100)
-        .toStringAsFixed(0);
-
-    String phaseLabel = switch (phase) {
-      'discovery' => '🌱 Découverte',
-      'engagement' => '⚡ Engagement',
-      _ => '🏆 Maîtrise',
-    };
-
-    Color phaseColor = switch (phase) {
-      'discovery' => Colors.green,
-      'engagement' => Colors.purple,
-      _ => Colors.amber,
-    };
-
-    // Feature #2: Dynamic rank titles
-    String rankTitle = switch (level) {
-      <= 5 => 'Apprenti 🌱',
-      <= 15 => 'Explorateur 🗺️',
-      <= 30 => 'Maître 🏆',
-      _ => 'Légende ⭐',
-    };
-
-    final currentLevelUnlocks = unlocks.where((u) => u.level == level).toList();
-    final nextUnlocks = unlocks.where((u) => u.level > level).take(3).toList();
-
-    // Feature #3: Highlight next key unlock
-    final nextUnlock = nextUnlocks.isNotEmpty ? nextUnlocks.first : null;
-    final xpToNextKeyUnlock =
-        nextUnlock != null ? ((nextUnlock.level - level) * xpToNext) - xp : 0;
-
-    showCupertinoDialog(
-      context: context,
-      builder:
-          (context) => CupertinoAlertDialog(
-            title: Column(
-              children: [
-                Text('🎮 Niveau $level'),
-                const SizedBox(height: 8),
-                Text(
-                  rankTitle,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: phaseColor,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '$phaseLabel • $levelInPhase/$phaseLevels ($phasePercentage%)',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 12),
-                  // XP Progress
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('XP'),
-                                Text(
-                                  '$xp/$xpToNext',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: LinearProgressIndicator(
-                                value: progress,
-                                minHeight: 10,
-                                backgroundColor: Colors.grey.shade300,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  phaseColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Déblocables actuels
-                  if (currentLevelUnlocks.isNotEmpty) ...[
-                    const Text(
-                      '✨ Déblocables ce niveau',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...currentLevelUnlocks.map((unlock) {
-                      final icon = switch (unlock.type) {
-                        UnlockType.citronState => '🎨',
-                        UnlockType.feature => '⭐',
-                        UnlockType.badge => '🏅',
-                        UnlockType.message => '💬',
-                      };
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$icon ${unlock.title}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              unlock.description,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 12),
-                  ],
-                  // Next key unlock highlighted
-                  if (nextUnlock != null) ...[
-                    Container(
-                      decoration: BoxDecoration(
-                        color: phaseColor.withValues(alpha: 0.1),
-                        border: Border.all(color: phaseColor, width: 1.5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '🎯 Prochain défi',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Niveau ${nextUnlock.level}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    Text(
-                                      nextUnlock.title,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: phaseColor,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                child: Text(
-                                  '+$xpToNextKeyUnlock XP',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  // Prochains déblocables
-                  if (nextUnlocks.isNotEmpty) ...[
-                    const Text(
-                      '🎯 Autres déblocables',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...nextUnlocks.skip(1).map((unlock) {
-                      final icon = switch (unlock.type) {
-                        UnlockType.citronState => '🎨',
-                        UnlockType.feature => '⭐',
-                        UnlockType.badge => '🏅',
-                        UnlockType.message => '💬',
-                      };
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(
-                          'Niv. ${unlock.level} - $icon ${unlock.title}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              CupertinoDialogAction(
-                child: const Text('Fermer'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-    );
+    LevelSheet.show(context, _characterService);
   }
 
   void _showInfoDialog() {
-    showCupertinoDialog(
-      context: context,
-      builder:
-          (context) => CupertinoAlertDialog(
-            title: const Text('Comment ça marche ?'),
-            content: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                const Text(
-                  "Chaque fois que tu bois, appuie sur le bouton « 🍻 »",
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "1 verre standard = 1 clic (ex : une pinte = 2 clics).",
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Ton 🍋 a des points de vie qui montent ou descendent selon ta consommation.",
-                ),
-              ],
-            ),
-            actions: [
-              CupertinoDialogAction(
-                child: const Text('OK'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-    );
+    InfoSheet.show(context);
   }
 
   Future<void> _navigateToBeRealCapture() async {
@@ -797,7 +532,12 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   Widget _buildShineEffect() {
     const buttonWidth = 200.0; // approximate width
 
-    final shinePosition = (_shineController.value * (buttonWidth + 60)) - 60;
+    // Le reflet balaye pendant 40% du cycle puis se repose : plus élégant
+    // qu'un balayage permanent, et attire l'œil par intermittence.
+    final sweep = Curves.easeInOut.transform(
+      (_shineController.value / 0.4).clamp(0.0, 1.0),
+    );
+    final shinePosition = (sweep * (buttonWidth + 60)) - 60;
 
     return Positioned.fill(
       child: ClipRRect(
@@ -840,8 +580,15 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
             bottom: 32,
           ),
           decoration: const BoxDecoration(
+            // Trois stops : le ciel garde de la présence jusqu'à mi-écran
+            // avant de fondre vers le blanc — plus de profondeur
             gradient: LinearGradient(
-              colors: [Color(0xFF95C6F4), Colors.white],
+              colors: [
+                JauneColors.sky,
+                JauneColors.skyLight,
+                Colors.white,
+              ],
+              stops: [0.0, 0.45, 1.0],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -857,20 +604,24 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                     onTap: _showLevelDialog,
                   ),
                   const Spacer(),
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed:
-                        () =>
-                            setState(() => _showDebugPanel = !_showDebugPanel),
-                    child: Icon(
-                      Icons.bug_report,
-                      color: Colors.grey.shade100.withAlpha(
-                        (0.7 * 255).round(),
+                  // Outil de debug : uniquement en build debug, jamais en prod
+                  if (kDebugMode) ...[
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed:
+                          () => setState(
+                            () => _showDebugPanel = !_showDebugPanel,
+                          ),
+                      child: Icon(
+                        Icons.bug_report,
+                        color: Colors.grey.shade100.withAlpha(
+                          (0.7 * 255).round(),
+                        ),
+                        size: 22,
                       ),
-                      size: 22,
                     ),
-                  ),
-                  const SizedBox(width: 8),
+                    const SizedBox(width: 8),
+                  ],
                   CupertinoButton(
                     padding: EdgeInsets.zero,
                     onPressed: _showInfoDialog,
@@ -915,7 +666,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                     .clamp(0, 70),
                               ),
                               painter: GroundShadowPainter(
-                                color: Colors.grey.shade800.withOpacity(0.35),
+                                color: Colors.grey.shade800.withValues(
+                                  alpha: 0.35,
+                                ),
                                 blurSigma: 32,
                                 coreFactor: 0.55,
                                 t: _shadowController.value,
@@ -938,8 +691,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
               const SizedBox(height: 12),
 
-              // Debug panel (toggleable)
-              if (_showDebugPanel)
+              // Debug panel (toggleable, debug uniquement)
+              if (kDebugMode && _showDebugPanel)
                 SizedBox(
                   height: 220,
                   child: Card(
@@ -976,7 +729,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
               const SizedBox(height: 20),
               // Capture button with shine effect
               if (_canPostBejaune)
-                GestureDetector(
+                PressableScale(
                   onTap: _navigateToBeRealCapture,
                   child: Stack(
                     children: [
@@ -1032,13 +785,14 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                   builder: (context) {
                     final label =
                         _hasPostedBejauneToday
-                            ? 'Deja poste aujourd\'hui'
-                            : 'Disponible a l\'apero';
+                            ? '✓ Déjà posté aujourd\'hui'
+                            : '🔒 Disponible à l\'apéro';
+                    // Le bas de l'écran est blanc : il faut un contraste sombre
                     return CustomPaint(
                       painter: _DashedRoundedRectPainter(
-                        color: Colors.white.withAlpha((0.7 * 255).round()),
+                        color: JauneColors.inkSoft.withValues(alpha: 0.45),
                         radius: 16,
-                        strokeWidth: 2.5,
+                        strokeWidth: 2.0,
                         dashLength: 10,
                         gapLength: 6,
                       ),
@@ -1055,7 +809,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                               style: Theme.of(
                                 context,
                               ).textTheme.labelLarge?.copyWith(
-                                color: Colors.white,
+                                color: JauneColors.inkSoft,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -1091,16 +845,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildCalendarButton() {
-    return GestureDetector(
+    return PressableScale(
       onTap: _showCalendarDialog,
-      onTapDown: (_) => setState(() => _isCalendarButtonPressed = true),
-      onTapUp: (_) => setState(() => _isCalendarButtonPressed = false),
-      onTapCancel: () => setState(() => _isCalendarButtonPressed = false),
-      child: AnimatedScale(
-        scale: _isCalendarButtonPressed ? 0.95 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        child: Container(
+      haptic: false, // _showCalendarDialog gère déjà l'haptique
+      child: Container(
           key: _calendarButtonKey,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
@@ -1168,7 +916,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -1176,7 +923,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     return Row(
       children: [
         // Reset button
-        GestureDetector(
+        PressableScale(
+          pressedScale: 0.9,
+          haptic: false,
           onTap: () {
             HapticFeedback.lightImpact();
             showCupertinoDialog(
@@ -1243,16 +992,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildMainButton() {
-    return GestureDetector(
+    return PressableScale(
       onTap: _addConso,
-      onTapDown: (_) => setState(() => _isMainButtonPressed = true),
-      onTapUp: (_) => setState(() => _isMainButtonPressed = false),
-      onTapCancel: () => setState(() => _isMainButtonPressed = false),
-      child: AnimatedScale(
-        scale: _isMainButtonPressed ? 0.88 : 1.0,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: Stack(
+      pressedScale: 0.88,
+      haptic: false, // _addConso joue déjà un mediumImpact
+      child: Stack(
           alignment: Alignment.center,
           children: [
           // Shadow
@@ -1336,7 +1080,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
           // _audioService.buildBubbleAnimation(_bubbleController),
           ],
         ),
-      ),
     );
   }
 

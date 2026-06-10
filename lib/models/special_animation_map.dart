@@ -33,6 +33,8 @@ class SpecialAnimationMap {
   // ─── Alcohol & Intoxication States ───────────────────────────────────
 
   /// Tipsy state (light intoxication - 1-2 drinks)
+  /// Yeux 'drunk' plutôt que 'half_closed' : le regard flotte et cligne
+  /// lentement au lieu de se figer — bien plus éméché.
   static const Map<String, String> tipsy = {
     'global': 'idle',
     'milieu': 'sway_tipsy',
@@ -40,7 +42,7 @@ class SpecialAnimationMap {
     'bras_D': 'ballant',
     'bras_G': 'ballant',
     'plante': 'breeze_fast',
-    'yeux': 'half_closed',
+    'yeux': 'drunk',
     'bouche': 'drunk_smile',
     'joues': 'flushed',
   };

@@ -44,7 +44,9 @@ class CalendarDialog {
 
     final animation = CurvedAnimation(
       parent: animationController,
-      curve: Curves.easeInOutCubic,
+      // Ouverture décélérée (l'élément "arrive"), fermeture accélérée
+      curve: Curves.easeOutQuart,
+      reverseCurve: Curves.easeInCubic,
     );
 
     entry = OverlayEntry(

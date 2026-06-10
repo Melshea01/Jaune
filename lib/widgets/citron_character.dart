@@ -32,9 +32,10 @@ class _CitronCharacterState extends State<CitronCharacter>
 
   void _setupTicker() {
     createTicker((elapsed) {
-      // Update blinking animation
+      // Update blinking + idle micro-behaviors
       final deltaTime = elapsed - _lastFrameTime;
       widget.controller.updateBlinking(deltaTime);
+      widget.controller.updateIdleLife(deltaTime);
       _lastFrameTime = elapsed;
 
       // Request rebuild for next frame (60 FPS loop)
@@ -102,12 +103,34 @@ class _CitronCharacterState extends State<CitronCharacter>
 
     // Plante and visage signals
     final leafWave = math.sin(t * plante.speed * sf * 2 * math.pi) * plante.amp;
-    final eyeDrift = math.sin(t * 2.3 * sf * math.pi) * yeux.drift;
+    // Dérive de l'état (ex: drunk) + saccades du regard (observation vivante)
+    final eyeDrift =
+        math.sin(t * 2.3 * sf * math.pi) * yeux.drift +
+        widget.controller.eyeLookX;
     final mouthPulse = math.sin(t * 2.8 * sf * math.pi) * (bouche.scaleY - 1.0);
 
-    final blinkScaleY =
-        widget.controller.blinkActive ? 0.08 : yeux.scaleY.clamp(0.08, 1.4);
+    // Clignement fluide : la paupière interpole entre l'ouverture de l'état
+    // courant et quasi-fermée, pilotée par la courbe sinus du contrôleur
+    final blinkAmt = widget.controller.blinkAmount.clamp(0.0, 1.0);
+    final baseEyeScale = yeux.scaleY.clamp(0.08, 1.6);
+    final blinkScaleY = baseEyeScale * (1.0 - blinkAmt) + 0.06 * blinkAmt;
     final blinkCompY = (1.0 - blinkScaleY) * 8.0;
+
+    // --- ÉVÉNEMENTS ONE-SHOT (jump_joy, drink_beer, hiccup…) ---
+    // Transformations additives superposées à l'état continu
+    final event = widget.controller.eventTransform(nowMs);
+    final eventHopY = event['hopY'] ?? 0.0;
+    final eventScaleX = event['scaleX'] ?? 1.0;
+    final eventScaleY = event['scaleY'] ?? 1.0;
+    final eventSwayRad = event['swayRad'] ?? 0.0;
+
+    // --- SQUASH & STRETCH sur les sauts ---
+    // Principe d'animation classique : écrasé à l'atterrissage (hop ≈ 0),
+    // légèrement étiré à l'apex. Donne du poids et du rebond au personnage.
+    final hopNorm =
+        global.hopAmp > 0 ? (hop.abs() / global.hopAmp).clamp(0.0, 1.0) : 0.0;
+    final landSquash = global.hopAmp > 0 ? (1.0 - hopNorm) * 0.05 : 0.0;
+    final apexStretch = hopNorm * 0.03;
 
     // --- TRANSFORMATIONS GLOBALES ---
     // (Respiration, affaissement, sauts)
@@ -117,17 +140,23 @@ class _CitronCharacterState extends State<CitronCharacter>
         hop -
         (math.max(legBounceD, legBounceG)) +
         (global.slump * 0.5) +
-        milieu.offsetY;
-    final rootRotationRad = (milieu.lean * math.pi / 180.0) + swayRad;
+        milieu.offsetY +
+        eventHopY;
+    final rootRotationRad =
+        (milieu.lean * math.pi / 180.0) + swayRad + eventSwayRad;
 
     // Prevent excessive squash/stretch: use delta from 1.0 (actual squash), reduce multiplier
     final legSquashDelta = (((legSquashD - 1.0) + (legSquashG - 1.0)) / 2.0);
     final rootScaleX = (milieu.baseScaleX *
-            (1 + breath * 0.2 + legSquashDelta * 0.6))
-        .clamp(0.6, 1.6);
+            (1 + breath * 0.2 + legSquashDelta * 0.6 + landSquash -
+                apexStretch * 0.5) *
+            eventScaleX)
+        .clamp(0.5, 1.8);
     final rootScaleY = ((milieu.baseScaleY - global.slump * 0.002) *
-            (1 - breath * 0.15 - legSquashDelta * 0.6))
-        .clamp(0.6, 1.6);
+            (1 - breath * 0.15 - legSquashDelta * 0.6 - landSquash +
+                apexStretch) *
+            eventScaleY)
+        .clamp(0.5, 1.8);
 
     final renderOpacity = (global.opacity *
             (0.85 + (joues.opacity.clamp(0, 1) * 0.15)))
@@ -205,7 +234,10 @@ class _CitronCharacterState extends State<CitronCharacter>
       return Positioned.fill(child: piece);
     }
 
-    return Transform.scale(
+    // RepaintBoundary : le citron se redessine à 60 fps, cette frontière
+    // évite de repeindre tout l'écran à chaque frame.
+    return RepaintBoundary(
+      child: Transform.scale(
       scale: widget.scale,
       child: SizedBox(
         width: 420,
@@ -273,6 +305,7 @@ class _CitronCharacterState extends State<CitronCharacter>
             ),
           ),
         ),
+      ),
       ),
     );
   }
