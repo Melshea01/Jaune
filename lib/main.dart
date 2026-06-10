@@ -21,10 +21,15 @@ import 'widgets/ground_shadow_painter.dart';
 import 'widgets/health_bar.dart';
 import 'widgets/reset_confirm_dialog.dart';
 import 'widgets/citron_character.dart';
+import 'widgets/citron_debug_panel.dart';
+import 'widgets/xp_toast.dart';
+import 'widgets/level_up_celebration.dart';
+import 'widgets/streak_badge.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
+  // Initialisation de l'application Jaune
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize timezone data
@@ -82,6 +87,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   int _consos = 0;
   double _animatedConsos = 0.0;
   bool _isSaving = false;
+  DateTime? _lastBejaunePost;
 
   // Animation controllers
   late AnimationController _gaugeController;
@@ -94,6 +100,12 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   // Calendar state
   final GlobalKey _calendarButtonKey = GlobalKey();
   bool _isCalendarButtonPressed = false;
+  bool _isMainButtonPressed = false;
+  bool _showDebugPanel = false;
+
+  // Citron interaction state
+  Timer? _citronReactionTimer;
+  final List<DateTime> _citronTaps = [];
 
   @override
   void initState() {
@@ -116,16 +128,24 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         final message = 'Score citron: ${(health * 100).toStringAsFixed(0)}%';
 
         if (navigatorKey.currentState != null) {
-          navigatorKey.currentState!.push(
-            MaterialPageRoute(
-              builder:
-                  (context) => BeRealCapturePage(
-                    avatarAsset: 'assets/avatar.png',
-                    message: message,
-                    healthPercent: health,
-                  ),
-            ),
-          );
+          navigatorKey.currentState!
+              .push(
+                MaterialPageRoute(
+                  builder:
+                      (context) => BeRealCapturePage(
+                        avatarAsset: 'assets/avatar.png',
+                        message: message,
+                        healthPercent: health,
+                        level: _characterService.level,
+                        streakDays: _characterService.soberStreakDays,
+                      ),
+                ),
+              )
+              .then((result) async {
+                if (result != null) {
+                  await _markBejaunePosted();
+                }
+              });
         }
       }
     };
@@ -174,11 +194,13 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
       final data = await _storageService.loadAppState();
       final profile = await _characterService.loadProfile();
+      final lastBejaunePost = await _storageService.getLastBejaunePost();
 
       setState(() {
         _consos = data.todayConsos;
         _animatedConsos = data.todayConsos.toDouble();
         _characterService.updateProfile(profile);
+        _lastBejaunePost = lastBejaunePost;
       });
 
       await _recomputeHealth();
@@ -187,15 +209,47 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       await _scheduleDailyNotification();
 
       // À l'ouverture de l'app — attribuer +3 XP
-      final xpEvent = await _characterService.awardAppOpenXp();
-      if (xpEvent != null) {
-        _showXpToast(xpEvent);
+      final xpResult = await _characterService.awardAppOpenXp();
+      if (xpResult.xpEvent != null) {
+        _showXpToast(xpResult.xpEvent!);
+      }
+      if (xpResult.newLevels.isNotEmpty) {
+        _showLevelUpCelebration(xpResult.newLevels, xpResult.newUnlocks);
       }
 
       // Mettre à jour l'état Rive basé sur la santé et les déblocables
       _updateRiveState();
+
+      // Petit salut de bienvenue du citron
+      _playCitronReaction('greeting', duration: const Duration(seconds: 3));
     } catch (e) {
       debugPrint('Error loading state: $e');
+    }
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  bool get _hasPostedBejauneToday {
+    final last = _lastBejaunePost;
+    if (last == null) return false;
+    return _isSameDay(last, DateTime.now());
+  }
+
+  bool get _isWithinAperoWindow {
+    return DeterministicNotificationScheduler.isWithinAperoWindow();
+  }
+
+  bool get _canPostBejaune {
+    return _isWithinAperoWindow && !_hasPostedBejauneToday;
+  }
+
+  Future<void> _markBejaunePosted() async {
+    final now = DateTime.now();
+    await _storageService.setLastBejaunePost(now);
+    if (mounted) {
+      setState(() => _lastBejaunePost = now);
     }
   }
 
@@ -204,10 +258,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     _isSaving = true;
 
     try {
-      await _storageService.saveAppState(
-        todayConsos: _consos,
-        dailyMap: _storageService.dailyMap,
-      );
+      await _storageService.updateTodayConsos(_consos);
       await _characterService.saveProfile();
     } catch (e) {
       debugPrint('Error saving state: $e');
@@ -237,9 +288,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         _showXpToast(event);
       }
 
-      // Afficher les modales de déblocage
-      for (final unlock in result.newUnlocks) {
-        _showUnlockModal(unlock);
+      // Célébration de level-up avec les déblocables gagnés
+      if (result.newLevels.isNotEmpty) {
+        _showLevelUpCelebration(result.newLevels, result.newUnlocks);
       }
 
       // Mettre à jour l'état Rive si la santé a changé
@@ -252,6 +303,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _addConso() async {
+    HapticFeedback.mediumImpact();
     setState(() {
       _consos += 1;
     });
@@ -264,6 +316,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     bool playedJaune = false;
     if (_consos == 8) {
       playedJaune = true;
+      HapticFeedback.heavyImpact();
       await _audioService.playJauneSound();
     } else {
       await _audioService.playConsumptionSound();
@@ -282,6 +335,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
     await _saveState();
     await _recomputeHealth();
+
+    // Réaction visuelle du citron au verre loggé (tipsy puis drunk à partir de 5)
+    _playCitronReaction(_consos >= 5 ? 'drunk' : 'tipsy');
   }
 
   Future<void> _resetTodayConsos() async {
@@ -315,7 +371,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
               'C\'est l\'heure de capturer ton moment à l\'apéro. Montre-nous ton verre !',
           payload: 'be_real_capture',
         );
-
         // Marquer comme programmée
         await _storageService.setLastNotificationSent(DateTime.now());
       }
@@ -326,35 +381,69 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   // ==================== XP & Unlock UI Integration ====================
 
-  /// Affiche un toast avec un événement XP (ex: "+3 XP")
+  /// Affiche un toast animé avec un événement XP (ex: "+3 XP")
   void _showXpToast(XpEvent event) {
     debugPrint('XP Toast: +${event.amount} XP (${event.reason})');
-    // TODO: Implémenter l'affichage du toast avec animation
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   SnackBar(
-    //     content: Text('+${event.amount} XP — ${event.reason}'),
-    //     duration: const Duration(seconds: 2),
-    //   ),
-    // );
+    final overlay = navigatorKey.currentState?.overlay;
+    if (overlay != null) {
+      XpToastManager.show(overlay, event);
+    } else {
+      // Premier frame pas encore rendu : on attend la fin du build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final o = navigatorKey.currentState?.overlay;
+        if (o != null) XpToastManager.show(o, event);
+      });
+    }
   }
 
-  /// Affiche une modal pour un déblocage (nouvel état Rive, badge, message, etc.)
-  void _showUnlockModal(LevelUnlock unlock) {
-    debugPrint('🎉 Unlock: ${unlock.title} (${unlock.key})');
-    // TODO: Implémenter la modal avec animation Rive si state
-    // showCupertinoDialog(
-    //   context: context,
-    //   builder: (context) => CupertinoAlertDialog(
-    //     title: Text('🎉 ${unlock.title}'),
-    //     content: Text(unlock.description),
-    //     actions: [
-    //       CupertinoDialogAction(
-    //         child: const Text('OK'),
-    //         onPressed: () => Navigator.pop(context),
-    //       ),
-    //     ],
-    //   ),
-    // );
+  /// Affiche la célébration plein écran de level-up (confettis + déblocables)
+  void _showLevelUpCelebration(List<int> newLevels, List<LevelUnlock> unlocks) {
+    if (newLevels.isEmpty) return;
+    void doShow() {
+      final ctx = navigatorKey.currentContext;
+      if (ctx == null) return;
+      LevelUpCelebration.show(
+        context: ctx,
+        newLevel: newLevels.last,
+        unlocks: unlocks,
+      );
+    }
+
+    if (navigatorKey.currentContext != null) {
+      doShow();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => doShow());
+    }
+  }
+
+  /// Joue une animation spéciale du citron puis revient à l'état de santé
+  void _playCitronReaction(
+    String name, {
+    Duration duration = const Duration(milliseconds: 2500),
+  }) {
+    _citronReactionTimer?.cancel();
+    _citronController.playSpecialAnimation(name);
+    _citronReactionTimer = Timer(duration, () {
+      if (mounted) _updateRiveState();
+    });
+  }
+
+  /// Tap sur le citron : salut + easter egg danse secrète (10 taps rapides)
+  void _onCitronTap() {
+    HapticFeedback.lightImpact();
+    final now = DateTime.now();
+    _citronTaps.add(now);
+    _citronTaps.removeWhere(
+      (t) => now.difference(t) > const Duration(seconds: 5),
+    );
+
+    if (_citronTaps.length >= 10) {
+      _citronTaps.clear();
+      HapticFeedback.heavyImpact();
+      _playCitronReaction('secretDance', duration: const Duration(seconds: 5));
+    } else {
+      _playCitronReaction('greeting');
+    }
   }
 
   /// Met à jour l'état Rive basé sur les déblocables et la santé
@@ -371,6 +460,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   }
 
   void _showCalendarDialog() {
+    HapticFeedback.selectionClick();
     CalendarDialog.show(
       context: context,
       buttonKey: _calendarButtonKey,
@@ -380,6 +470,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   }
 
   void _showLevelDialog() {
+    HapticFeedback.selectionClick();
     final level = _characterService.level;
     final phase = _characterService.levelPhase;
     final xp = _characterService.profile.xp;
@@ -681,20 +772,26 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _navigateToBeRealCapture() async {
+    if (!_canPostBejaune) return;
     final health = _characterService.healthPercent;
     final message = 'Score citron: ${(health * 100).toStringAsFixed(0)}%';
 
     if (!mounted) return;
-    await Navigator.of(context).push(
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder:
             (context) => BeRealCapturePage(
               avatarAsset: 'assets/avatar.png',
               message: message,
               healthPercent: health,
+              level: _characterService.level,
+              streakDays: _characterService.soberStreakDays,
             ),
       ),
     );
+    if (result != null) {
+      await _markBejaunePosted();
+    }
   }
 
   Widget _buildShineEffect() {
@@ -751,10 +848,29 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
           ),
           child: Column(
             children: [
-              // Header with info button
+              // Header with streak badge and info button
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  StreakBadge(
+                    streakDays: _characterService.soberStreakDays,
+                    onTap: _showLevelDialog,
+                  ),
+                  const Spacer(),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed:
+                        () =>
+                            setState(() => _showDebugPanel = !_showDebugPanel),
+                    child: Icon(
+                      Icons.bug_report,
+                      color: Colors.grey.shade100.withAlpha(
+                        (0.7 * 255).round(),
+                      ),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   CupertinoButton(
                     padding: EdgeInsets.zero,
                     onPressed: _showInfoDialog,
@@ -799,9 +915,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                     .clamp(0, 70),
                               ),
                               painter: GroundShadowPainter(
-                                color: Colors.grey.shade800.withValues(
-                                  alpha: 0.35,
-                                ),
+                                color: Colors.grey.shade800.withOpacity(0.35),
                                 blurSigma: 32,
                                 coreFactor: 0.55,
                                 t: _shadowController.value,
@@ -812,11 +926,33 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                           },
                         ),
                       ),
-                      CitronCharacter(controller: _citronController),
+                      GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: _onCitronTap,
+                        child: CitronCharacter(controller: _citronController),
+                      ),
                     ],
                   ),
                 ),
               ),
+
+              const SizedBox(height: 12),
+
+              // Debug panel (toggleable)
+              if (_showDebugPanel)
+                SizedBox(
+                  height: 220,
+                  child: Card(
+                    elevation: 6,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: CitronDebugPanel(controller: _citronController),
+                    ),
+                  ),
+                ),
 
               const SizedBox(height: 20),
 
@@ -839,57 +975,96 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
               ),*/
               const SizedBox(height: 20),
               // Capture button with shine effect
-              GestureDetector(
-                onTap: _navigateToBeRealCapture,
-                child: Stack(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF95C6F4), Color(0xFF5E9FD5)],
+              if (_canPostBejaune)
+                GestureDetector(
+                  onTap: _navigateToBeRealCapture,
+                  child: Stack(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
                         ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF95C6F4,
-                            ).withAlpha((0.5 * 255).round()),
-                            offset: const Offset(0, 4),
-                            blurRadius: 12,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF95C6F4), Color(0xFF5E9FD5)],
                           ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Poste un JAUNE',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.labelLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF95C6F4,
+                              ).withAlpha((0.5 * 255).round()),
+                              offset: const Offset(0, 4),
+                              blurRadius: 12,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Poste un JAUNE',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.labelLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    // Shine effect overlay
-                    AnimatedBuilder(
-                      animation: _shineController,
-                      builder: (context, _) {
-                        return _buildShineEffect();
-                      },
-                    ),
-                  ],
+                      // Shine effect overlay
+                      AnimatedBuilder(
+                        animation: _shineController,
+                        builder: (context, _) {
+                          return _buildShineEffect();
+                        },
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Builder(
+                  builder: (context) {
+                    final label =
+                        _hasPostedBejauneToday
+                            ? 'Deja poste aujourd\'hui'
+                            : 'Disponible a l\'apero';
+                    return CustomPaint(
+                      painter: _DashedRoundedRectPainter(
+                        color: Colors.white.withAlpha((0.7 * 255).round()),
+                        radius: 16,
+                        strokeWidth: 2.5,
+                        dashLength: 10,
+                        gapLength: 6,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              label,
+                              style: Theme.of(
+                                context,
+                              ).textTheme.labelLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              ),
               const SizedBox(height: 30),
 
               // Bottom controls
@@ -1003,6 +1178,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         // Reset button
         GestureDetector(
           onTap: () {
+            HapticFeedback.lightImpact();
             showCupertinoDialog(
               context: context,
               builder:
@@ -1069,9 +1245,16 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   Widget _buildMainButton() {
     return GestureDetector(
       onTap: _addConso,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
+      onTapDown: (_) => setState(() => _isMainButtonPressed = true),
+      onTapUp: (_) => setState(() => _isMainButtonPressed = false),
+      onTapCancel: () => setState(() => _isMainButtonPressed = false),
+      child: AnimatedScale(
+        scale: _isMainButtonPressed ? 0.88 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
           // Shadow
           Container(
             width: 72,
@@ -1150,8 +1333,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
             ),
           ),
           // Bubble animation overlay
-          _audioService.buildBubbleAnimation(_bubbleController),
-        ],
+          // _audioService.buildBubbleAnimation(_bubbleController),
+          ],
+        ),
       ),
     );
   }
@@ -1163,8 +1347,56 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     _calendarAnimationController.dispose();
     _shadowController.dispose();
     _shineController.dispose();
+    _citronReactionTimer?.cancel();
     _audioService.dispose();
-    _citronController.dispose();
+    // _citronController.dispose();
     super.dispose();
+  }
+}
+
+class _DashedRoundedRectPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+  final double strokeWidth;
+  final double dashLength;
+  final double gapLength;
+
+  _DashedRoundedRectPainter({
+    required this.color,
+    required this.radius,
+    required this.strokeWidth,
+    required this.dashLength,
+    required this.gapLength,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth;
+
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+    final path = Path()..addRRect(rrect);
+
+    for (final metric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final next = distance + dashLength;
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance = next + gapLength;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRoundedRectPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.radius != radius ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.dashLength != dashLength ||
+        oldDelegate.gapLength != gapLength;
   }
 }

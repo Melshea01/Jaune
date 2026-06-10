@@ -36,7 +36,7 @@ class HealthAnimationMap {
     'bras_G': 'idle',
     'plante': 'idle',
     'yeux': 'open',
-    'bouche': 'smile',
+    'bouche': 'sick',
     'joues': 'visible',
   };
 

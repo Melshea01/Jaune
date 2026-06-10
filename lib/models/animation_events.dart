@@ -85,10 +85,7 @@ class AnimationEvents {
     duration: const Duration(milliseconds: 2000),
     update: (p) {
       final swell = sin(p * pi);
-      return {
-        'scaleY': 1 + 0.2 * swell,
-        'scaleX': 1 + 0.2 * swell,
-      };
+      return {'scaleY': 1 + 0.2 * swell, 'scaleX': 1 + 0.2 * swell};
     },
   );
 
@@ -100,10 +97,7 @@ class AnimationEvents {
     duration: const Duration(milliseconds: 150),
     update: (p) {
       final tremor = sin(p * pi * 8);
-      return {
-        'swayRad': tremor * 0.1,
-        'hopY': tremor * 6,
-      };
+      return {'swayRad': tremor * 0.1, 'hopY': tremor * 6};
     },
   );
 
@@ -152,11 +146,7 @@ class AnimationEvents {
     duration: const Duration(milliseconds: 200),
     update: (p) {
       final j = 4 * p * (1 - p);
-      return {
-        'hopY': -20 * j,
-        'scaleY': 1 - 0.1 * j,
-        'scaleX': 1 + 0.1 * j,
-      };
+      return {'hopY': -20 * j, 'scaleY': 1 - 0.1 * j, 'scaleX': 1 + 0.1 * j};
     },
   );
 
@@ -168,10 +158,7 @@ class AnimationEvents {
     duration: const Duration(milliseconds: 600),
     update: (p) {
       final lean = sin(p * pi);
-      return {
-        'swayRad': 0.2 * lean,
-        'hopY': -20 * lean,
-      };
+      return {'swayRad': 0.2 * lean, 'hopY': -20 * lean};
     },
   );
 

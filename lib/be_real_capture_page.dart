@@ -1,8 +1,11 @@
 // Page de capture BeReal-style refactorisée
 import 'dart:ui' as ui;
+import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'services/camera_service.dart';
 import 'widgets/image_composer.dart';
@@ -11,12 +14,16 @@ class BeRealCapturePage extends StatefulWidget {
   final String avatarAsset;
   final String message;
   final double healthPercent;
+  final int level;
+  final int streakDays;
 
   const BeRealCapturePage({
     super.key,
     required this.avatarAsset,
     required this.message,
     required this.healthPercent,
+    this.level = 1,
+    this.streakDays = 0,
   });
 
   @override
@@ -48,17 +55,114 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
     if (mounted) setState(() {});
   }
 
+  Future<ui.Image?> _decodeXFileToUiImage(XFile? file) async {
+    if (file == null) return null;
+    final bytes = await file.readAsBytes();
+    final completer = Completer<ui.Image>();
+    ui.decodeImageFromList(bytes, (img) => completer.complete(img));
+    return completer.future;
+  }
+
+  Future<Uint8List?> _capturePreviewPng({
+    XFile? rearPhoto,
+    XFile? frontPhoto,
+  }) async {
+    final overlay = Overlay.of(context);
+    const double pixelRatio = 1.0;
+
+    const double storyWidth = 1080.0;
+    const double storyHeight = 1920.0;
+
+    // On décode directement les images pour le rendu
+    final rearUiImage = await _decodeXFileToUiImage(rearPhoto);
+    final frontUiImage = await _decodeXFileToUiImage(frontPhoto);
+
+    final completer = Completer<Uint8List?>();
+    final previewKey = GlobalKey();
+
+    final entry = OverlayEntry(
+      builder: (ctx) {
+        return Positioned(
+          left: -10000,
+          top: -10000,
+          child: Material(
+            color: Colors.transparent,
+            child: RepaintBoundary(
+              key: previewKey,
+              child: SizedBox(
+                width: storyWidth,
+                height: storyHeight,
+                child: _buildCompositionPreview(
+                  rearUiImage: rearUiImage,
+                  frontUiImage: frontUiImage,
+                  targetWidth: storyWidth,
+                  targetHeight: storyHeight,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+
+    // Attendre un frame pour que le rendu hors écran soit prêt
+    await WidgetsBinding.instance.endOfFrame;
+
+    try {
+      final boundary =
+          previewKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
+      if (boundary == null) {
+        completer.complete(null);
+      } else {
+        final ui.Image img = await boundary.toImage(pixelRatio: pixelRatio);
+        final ByteData? byteData = await img.toByteData(
+          format: ui.ImageByteFormat.png,
+        );
+        completer.complete(byteData?.buffer.asUint8List());
+      }
+    } catch (e) {
+      debugPrint('Preview capture error: $e');
+      completer.complete(null);
+    } finally {
+      entry.remove();
+    }
+
+    return completer.future;
+  }
+
   Future<void> _takePicture() async {
     if (_busy) return;
+    HapticFeedback.heavyImpact();
     setState(() => _busy = true);
 
     try {
-      // Prend les deux photos
       final photos = await _cameraService.takeBothPhotos();
       final rearPhoto = photos['rear'];
       final frontPhoto = photos['front'];
 
-      // Compose et partage l'image
+      final Uint8List? preview = await _capturePreviewPng(
+        rearPhoto: rearPhoto,
+        frontPhoto: frontPhoto,
+      );
+
+      if (preview != null) {
+        final outputPath = await _imageComposer.composeAndShare(
+          rearPhoto: null,
+          frontPhoto: null,
+          avatarAsset: widget.avatarAsset,
+          message: widget.message,
+          healthPercent: widget.healthPercent,
+          previewBytes: preview,
+        );
+        if (mounted && outputPath != null)
+          Navigator.of(context).pop(outputPath);
+        return;
+      }
+
+      // Fallback
       if (rearPhoto != null || frontPhoto != null) {
         final outputPath = await _imageComposer.composeAndShare(
           rearPhoto: rearPhoto,
@@ -74,11 +178,6 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
       }
     } catch (e) {
       debugPrint('Take picture error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur lors de la prise de photo')),
-        );
-      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -148,22 +247,28 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
     );
   }
 
-  Widget _buildCompositionPreview() {
-    final screenWidth = (MediaQuery.of(context).size.width - 32).clamp(
-      0.0,
-      400.0,
-    );
-    final aspectRatio = 9 / 12;
-    final previewHeight = screenWidth / aspectRatio;
+  Widget _buildCompositionPreview({
+    ui.Image? rearUiImage,
+    ui.Image? frontUiImage,
+    double? targetWidth,
+    double? targetHeight,
+  }) {
+    final screenWidth =
+        targetWidth ??
+        (MediaQuery.of(context).size.width - 32).clamp(0.0, 400.0);
+    final aspectRatio = 9 / 16;
+    final previewHeight = targetHeight ?? (screenWidth / aspectRatio);
+    final double uiScale =
+        (targetHeight != null || targetWidth != null) ? 2.0 : 1.0;
 
     final healthPercent = widget.healthPercent.clamp(0.0, 1.0);
     final healthValue = (healthPercent * 100).round();
 
     // Dimensions pour la zone PV
-    final pvBoxWidth = screenWidth * 0.32; //(format 9:12)
-    final pvBoxHeight = screenWidth * 0.42; //(format 9:12)
-    final barWidth = screenWidth * 0.28;
-    final barHeight = 8.0;
+    final pvBoxWidth = screenWidth * 0.22 * uiScale; //(format 9:12)
+    final pvBoxHeight = screenWidth * 0.30 * uiScale; //(format 9:12)
+    final barWidth = screenWidth * 0.22 * uiScale;
+    final barHeight = 14.0 * uiScale;
 
     return Container(
       width: screenWidth,
@@ -175,99 +280,158 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
       child: Stack(
         alignment: Alignment.topLeft,
         children: [
-          // Fond
-          Container(
-            width: screenWidth,
-            height: previewHeight,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.amber.shade700, Colors.orange.shade900],
+          // Fond : image ou dégradé
+          if (rearUiImage != null || frontUiImage != null)
+            SizedBox(
+              width: screenWidth,
+              height: previewHeight,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: RawImage(
+                  image: rearUiImage ?? frontUiImage,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            )
+          else
+            Container(
+              width: screenWidth,
+              height: previewHeight,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.amber.shade700, Colors.orange.shade900],
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.camera_alt,
+                  size: 48,
+                  color: Colors.white.withAlpha((0.2 * 255).round()),
+                ),
               ),
             ),
-            child: Center(
-              child: Icon(
-                Icons.camera_alt,
-                size: 48,
-                color: Colors.white.withAlpha((0.2 * 255).round()),
-              ),
+
+          // Niveau + streak en haut à gauche
+          Positioned(
+            left: 16 * uiScale,
+            top: 16 * uiScale,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildShareChip(
+                  uiScale: uiScale,
+                  emoji: '🎮',
+                  label: 'Niv. ${widget.level}',
+                  gradientColors: const [Color(0xFFF7D83F), Color(0xFFF6B73F)],
+                ),
+                if (widget.streakDays > 0) ...[
+                  SizedBox(height: 8 * uiScale),
+                  _buildShareChip(
+                    uiScale: uiScale,
+                    emoji: '🔥',
+                    label:
+                        '${widget.streakDays} ${widget.streakDays > 1 ? 'jours' : 'jour'}',
+                    gradientColors: const [
+                      Color(0xFFFF9D42),
+                      Color(0xFFFF6B35),
+                    ],
+                  ),
+                ],
+              ],
             ),
           ),
 
-          // Zone PV en haut à droite (PV + nombre + avatar sur une ligne)
-          Positioned(
-            right: 16,
-            top: 16,
-            child: Container(
-              width: pvBoxWidth,
-              height: pvBoxHeight,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.black.withAlpha((0.95 * 255).round()),
-                  width: 3.0,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha((0.3 * 255).round()),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+          // Selfie (front photo) en haut a droite avec PV
+          if (frontUiImage != null)
+            Positioned(
+              right: 16 * uiScale,
+              top: 16 * uiScale,
+              child: Container(
+                width: pvBoxWidth,
+                height: pvBoxHeight,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12 * uiScale),
+                  border: Border.all(
+                    color: Colors.black.withAlpha((0.95 * 255).round()),
+                    width: 3.0 * uiScale,
                   ),
-                ],
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Colors.blue.shade300, Colors.blue.shade600],
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    'PV',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withAlpha((0.7 * 255).round()),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha((0.3 * 255).round()),
+                      blurRadius: 12 * uiScale,
+                      offset: Offset(0, 4 * uiScale),
                     ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(9 * uiScale),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      RawImage(image: frontUiImage, fit: BoxFit.cover),
+                      Positioned(
+                        right: 6 * uiScale,
+                        top: -3 * uiScale,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              'PV',
+                              style: TextStyle(
+                                fontSize: 9 * uiScale * 1.5,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withAlpha(
+                                  (0.7 * 255).round(),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 2 * uiScale),
+                            Text(
+                              '$healthValue',
+                              style: TextStyle(
+                                fontSize: 16 * uiScale * 1.5,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(width: 2 * uiScale),
+                            Text(
+                              '🍋',
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.04 * uiScale,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '$healthValue',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 2),
-                  Text('🍋', style: TextStyle(fontSize: screenWidth * 0.06)),
-                  SizedBox(width: 2),
-                ],
+                ),
               ),
             ),
-          ),
 
           // Barre de santé (juste au-dessus de JAUNE, petit écart)
           Positioned(
-            bottom: 36,
+            bottom: 40 * uiScale,
             left: (screenWidth - barWidth) / 2,
             child: Container(
               width: barWidth,
               height: barHeight,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12 * uiScale),
                 border: Border.all(
                   color: Colors.white.withAlpha((0.35 * 255).round()),
-                  width: 1.5,
+                  width: 1.5 * uiScale,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withAlpha((0.18 * 255).round()),
-                    blurRadius: 6.0,
+                    blurRadius: 6.0 * uiScale,
                   ),
                 ],
               ),
@@ -278,7 +442,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
                     width: barWidth,
                     height: barHeight,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12 * uiScale),
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -294,7 +458,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
                     width: barWidth * healthPercent,
                     height: barHeight,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12 * uiScale),
                       gradient: LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
@@ -316,12 +480,68 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
               child: Text(
                 'JAUNE',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 18 * 2.4,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                   letterSpacing: 1,
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Chip arrondi (niveau, streak…) affiché sur l'image partagée
+  Widget _buildShareChip({
+    required double uiScale,
+    required String emoji,
+    required String label,
+    required List<Color> gradientColors,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: 12 * uiScale,
+        vertical: 6 * uiScale,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(20 * uiScale),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.4),
+          width: 1.2 * uiScale,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            offset: Offset(0, 2 * uiScale),
+            blurRadius: 8 * uiScale,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: TextStyle(fontSize: 13 * uiScale * 1.4)),
+          SizedBox(width: 4 * uiScale),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12 * uiScale * 1.4,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              shadows: const [
+                Shadow(
+                  color: Colors.black38,
+                  offset: Offset(0, 1),
+                  blurRadius: 2,
+                ),
+              ],
             ),
           ),
         ],
@@ -414,6 +634,10 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
   }
 
   Widget _buildPreviewArea() {
+    if (_cameraService.isInitializing) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (!_cameraService.isReady) {
       return Center(
         child: Column(

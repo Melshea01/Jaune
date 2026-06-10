@@ -1,6 +1,35 @@
 /// Special behavior animations beyond health-based presets
 /// Includes context-specific animations for various game scenarios
 class SpecialAnimationMap {
+  /// Per-preset tempo tuning. Values multiply the controller global speed.
+  static const Map<String, double> speedMultipliers = {
+    'tipsy': 0.95,
+    'drunk': 0.90,
+    'wasted': 0.80,
+    'hungover': 0.75,
+    'recovery': 0.90,
+    'dehydrated': 0.85,
+    'zen': 0.70,
+    'asleep': 0.60,
+    'pulse': 1.15,
+    'loading': 0.85,
+    'bored': 0.80,
+    'digest': 0.75,
+    'secretDance': 1.35,
+    'greeting': 1.05,
+    'walking': 1.00,
+    'sprinting': 1.20,
+    'panic': 1.15,
+    'workout': 1.05,
+    'freezing': 0.85,
+    'overheating': 0.90,
+    'levitation': 0.95,
+  };
+
+  static double getSpeedMultiplier(String name) {
+    return speedMultipliers[name] ?? 1.0;
+  }
+
   // ─── Alcohol & Intoxication States ───────────────────────────────────
 
   /// Tipsy state (light intoxication - 1-2 drinks)
@@ -165,12 +194,12 @@ class SpecialAnimationMap {
 
   /// Secret dance (easter egg - tap 10x)
   static const Map<String, String> secretDance = {
-    'global': 'dance',
-    'milieu': 'dance',
-    'jambes': 'dance',
-    'bras_D': 'dance',
-    'bras_G': 'dance',
-    'plante': 'dance',
+    'global': 'run',
+    'milieu': 'breathe_fast',
+    'jambes': 'run',
+    'bras_D': 'wave',
+    'bras_G': 'wave',
+    'plante': 'wind',
     'yeux': 'wide',
     'bouche': 'open',
     'joues': 'visible',
@@ -211,7 +240,7 @@ class SpecialAnimationMap {
     'jambes': 'run',
     'bras_D': 'run',
     'bras_G': 'run',
-    'plante': 'startle',
+    'plante': 'wind',
     'yeux': 'wide',
     'bouche': 'open',
     'joues': 'flushed',

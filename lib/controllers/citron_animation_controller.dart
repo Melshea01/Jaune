@@ -5,64 +5,78 @@ import '../models/special_animation_map.dart';
 import '../models/animation_events.dart';
 import '../services/layer_controller.dart';
 
-/// Central orchestrator for all 9 animation layers
-/// Manages state transitions and provides public API for animation control
+/// Central orchestrator for all animation layers
+/// Manages state transitions and provides a public API for animation control
 class CitronAnimationController extends ChangeNotifier {
-  late LayerController layerGlobal;
-  late LayerController layerMilieu;
-  late LayerController layerJambes;
-  late LayerController layerBrasD;
-  late LayerController layerBrasG;
-  late LayerController layerPlante;
-  late LayerController layerYeux;
-  late LayerController layerBouche;
-  late LayerController layerJoues;
+  final Map<String, LayerController> _layers = {};
+
+  // Define layer names and their default states
+  static const Map<String, String> _layerDefaults = {
+    'global': 'idle',
+    'milieu': 'idle',
+    'jambes': 'idle',
+    'bras_D': 'idle',
+    'bras_G': 'idle',
+    'plante': 'idle',
+    'yeux': 'open',
+    'bouche': 'smile',
+    'joues': 'visible',
+  };
+
+  // Public accessors for each layer
+  LayerController get layerGlobal => _layers['global']!;
+  LayerController get layerMilieu => _layers['milieu']!;
+  LayerController get layerJambes => _layers['jambes']!;
+  LayerController get layerBrasD => _layers['bras_D']!;
+  LayerController get layerBrasG => _layers['bras_G']!;
+  LayerController get layerPlante => _layers['plante']!;
+  LayerController get layerYeux => _layers['yeux']!;
+  LayerController get layerBouche => _layers['bouche']!;
+  LayerController get layerJoues => _layers['joues']!;
 
   CitronAnimationController() {
     _initializeLayers();
     _initializeBlinking();
   }
 
+  /// Global speed factor applied to all animation phases.
+  /// Values < 1.0 slow animations, > 1.0 speed them up.
+  double speedFactor = 0.50;
+
+  /// Additional tempo applied to the currently active preset.
+  /// Defaults to 1.0 and is tuned per special animation.
+  double animationSpeedMultiplier = 1.0;
+
+  void _resetAnimationSpeedMultiplier() {
+    animationSpeedMultiplier = 1.0;
+  }
+
+  /// Update the global speed factor at runtime and notify listeners.
+  void setSpeedFactor(double factor) {
+    speedFactor = factor.clamp(0.1, 4.0);
+    notifyListeners();
+  }
+
   void _initializeLayers() {
-    layerGlobal = LayerController(
-      stateDict: layerStates['global']!,
-      defaultKey: 'idle',
-    );
-    layerMilieu = LayerController(
-      stateDict: layerStates['milieu']!,
-      defaultKey: 'idle',
-    );
-    layerJambes = LayerController(
-      stateDict: layerStates['jambes']!,
-      defaultKey: 'idle',
-    );
-    layerBrasD = LayerController(
-      stateDict: layerStates['bras_D']!,
-      defaultKey: 'idle',
-    );
-    layerBrasG = LayerController(
-      stateDict: layerStates['bras_G']!,
-      defaultKey: 'idle',
-    );
-    layerPlante = LayerController(
-      stateDict: layerStates['plante']!,
-      defaultKey: 'idle',
-    );
-    layerYeux = LayerController(
-      stateDict: layerStates['yeux']!,
-      defaultKey: 'open',
-    );
-    layerBouche = LayerController(
-      stateDict: layerStates['bouche']!,
-      defaultKey: 'smile',
-    );
-    layerJoues = LayerController(
-      stateDict: layerStates['joues']!,
-      defaultKey: 'visible',
-    );
+    for (final entry in _layerDefaults.entries) {
+      final layerName = entry.key;
+      final defaultState = entry.value;
+      if (layerStates.containsKey(layerName)) {
+        _layers[layerName] = LayerController(
+          stateDict: layerStates[layerName]!,
+          defaultKey: defaultState,
+        );
+      } else {
+        debugPrint(
+          '⚠️ Configuration for layer "$layerName" not found in layerStates.',
+        );
+      }
+    }
   }
 
   // ==================== Eye Blinking State Machine ====================
+  // This logic remains complex and could be a separate state machine class.
+  // For now, we'll keep it as is but acknowledge it's an area for future improvement.
   late DateTime blinkTimer;
   bool blinkActive = false;
   double blinkElapsed = 0;
@@ -73,22 +87,30 @@ class CitronAnimationController extends ChangeNotifier {
 
   /// Update blinking animation - call every frame
   void updateBlinking(Duration dt) {
-    blinkElapsed += dt.inMilliseconds / 1000;
+    blinkElapsed += dt.inMilliseconds / 1000.0;
 
-    final currentYeuxState = layerYeux.get(DateTime.now().millisecondsSinceEpoch);
+    final currentYeuxState = getLayerState('yeux');
     final blinkInterval = currentYeuxState.blinkInterval;
     final blinkDuration = currentYeuxState.blinkDuration;
 
-    if (blinkInterval < 99) {
-      // Active blinking
-      if (blinkElapsed > blinkInterval) {
-        if (!blinkActive) {
-          blinkActive = true;
-          blinkElapsed = 0;
-        }
-      }
+    // A blinkInterval >= 99 is a signal to disable blinking for this state
+    if (blinkInterval >= 99) {
+      blinkActive = false;
+      return;
+    }
 
-      if (blinkActive && blinkElapsed > blinkDuration) {
+    // Active blinking state machine
+    if (!blinkActive) {
+      if (blinkElapsed > blinkInterval) {
+        // Start blinking
+        blinkActive = true;
+        blinkElapsed = 0;
+        // Note: This doesn't actually trigger a state change on the layer.
+        // The Rive animation likely handles the visual blink based on a boolean.
+      }
+    } else {
+      if (blinkElapsed > blinkDuration) {
+        // Stop blinking
         blinkActive = false;
         blinkElapsed = 0;
       }
@@ -98,66 +120,30 @@ class CitronAnimationController extends ChangeNotifier {
   /// Public API: Set animation states for multiple layers at once
   /// Example: setAnimation({'global': 'bounce_light', 'milieu': 'breathe_fast', ...})
   void setAnimation(Map<String, String> config) {
-    for (final entry in config.entries) {
-      final layer = entry.key;
-      final state = entry.value;
-
-      switch (layer) {
-        case 'global':
-          layerGlobal.set(state);
-        case 'milieu':
-          layerMilieu.set(state);
-        case 'jambes':
-          layerJambes.set(state);
-        case 'bras_D':
-          layerBrasD.set(state);
-        case 'bras_G':
-          layerBrasG.set(state);
-        case 'plante':
-          layerPlante.set(state);
-        case 'yeux':
-          layerYeux.set(state);
-        case 'bouche':
-          layerBouche.set(state);
-        case 'joues':
-          layerJoues.set(state);
-        default:
-          debugPrint('⚠️ Unknown layer: $layer');
+    _resetAnimationSpeedMultiplier();
+    config.forEach((layerName, state) {
+      final layer = _layers[layerName];
+      if (layer != null) {
+        layer.set(state);
+      } else {
+        debugPrint('⚠️ Attempted to set state for unknown layer: $layerName');
       }
-    }
-
+    });
     notifyListeners();
   }
 
   /// Get current animation state for a specific layer
-  AnimationLayerState getLayerState(String layer) {
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
-
-    return switch (layer) {
-      'global' => layerGlobal.get(nowMs),
-      'milieu' => layerMilieu.get(nowMs),
-      'jambes' => layerJambes.get(nowMs),
-      'bras_D' => layerBrasD.get(nowMs),
-      'bras_G' => layerBrasG.get(nowMs),
-      'plante' => layerPlante.get(nowMs),
-      'yeux' => layerYeux.get(nowMs),
-      'bouche' => layerBouche.get(nowMs),
-      'joues' => layerJoues.get(nowMs),
-      _ => throw ArgumentError('Unknown layer: $layer'),
-    };
+  AnimationLayerState getLayerState(String layerName) {
+    final layer = _layers[layerName];
+    if (layer == null) {
+      throw ArgumentError('Unknown layer: $layerName');
+    }
+    return layer.get(DateTime.now().millisecondsSinceEpoch);
   }
 
   /// Check if any layer is currently transitioning
   bool get isAnimating {
-    return layerGlobal.isTransitioning ||
-        layerMilieu.isTransitioning ||
-        layerJambes.isTransitioning ||
-        layerBrasD.isTransitioning ||
-        layerBrasG.isTransitioning ||
-        layerPlante.isTransitioning ||
-        layerYeux.isTransitioning ||
-        layerBouche.isTransitioning ||
-        layerJoues.isTransitioning;
+    return _layers.values.any((layer) => layer.isTransitioning);
   }
 
   // ==================== Special Animations API ====================
@@ -168,6 +154,8 @@ class CitronAnimationController extends ChangeNotifier {
     final animation = SpecialAnimationMap.getAnimation(name);
     if (animation != null) {
       setAnimation(animation);
+      animationSpeedMultiplier = SpecialAnimationMap.getSpeedMultiplier(name);
+      notifyListeners();
       return true;
     }
     debugPrint('⚠️ Special animation not found: $name');
@@ -179,7 +167,9 @@ class CitronAnimationController extends ChangeNotifier {
   AnimationEvent? triggerEvent(String eventName) {
     final event = AnimationEvents.getEvent(eventName);
     if (event != null) {
-      debugPrint('🎬 Event triggered: $eventName (${event.duration.inMilliseconds}ms)');
+      debugPrint(
+        '🎬 Event triggered: $eventName (${event.duration.inMilliseconds}ms)',
+      );
       // Event can be further handled by CitronCharacter widget for overlay
     } else {
       debugPrint('⚠️ Event not found: $eventName');
@@ -192,7 +182,4 @@ class CitronAnimationController extends ChangeNotifier {
     final preset = HealthAnimationMap.getPreset(health);
     setAnimation(preset);
   }
-
 }
-
-

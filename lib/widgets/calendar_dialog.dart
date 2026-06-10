@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:typicons_flutter/typicons_flutter.dart';
 import 'dart:ui' as ui;
@@ -34,8 +36,8 @@ class CalendarDialog {
     final finalRect = Rect.fromCenter(
       center: screenRect.center,
       width: math.min(420, screenRect.width - 32),
-      height: 460,
-    ).shift(Offset(0, (screenRect.height - 500) / 2 - 40));
+      height: 510,
+    ).shift(Offset(0, (screenRect.height - 550) / 2 - 40));
 
     final overlay = Overlay.of(context);
     late OverlayEntry entry;
@@ -180,6 +182,80 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
           fit: FlexFit.loose,
           child: SingleChildScrollView(child: _buildCalendar()),
         ),
+        _buildSelectedDayDetail(),
+      ],
+    );
+  }
+
+  /// Détail du jour sélectionné : date + nombre de verres
+  Widget _buildSelectedDayDetail() {
+    final day = _selectedDay;
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      transitionBuilder:
+          (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SizeTransition(sizeFactor: animation, child: child),
+          ),
+      child:
+          day == null
+              ? const SizedBox.shrink()
+              : Container(
+                key: ValueKey(day),
+                margin: const EdgeInsets.only(top: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: Colors.white.withValues(alpha: 0.85),
+                ),
+                child: _buildDayDetailContent(day),
+              ),
+    );
+  }
+
+  Widget _buildDayDetailContent(DateTime day) {
+    final dayKey = day.toIso8601String().substring(0, 10);
+    final count = widget.dailyMap[dayKey] ?? 0;
+    final label = DateFormat('EEEE d MMMM', 'fr_FR').format(day);
+    final capitalized = label[0].toUpperCase() + label.substring(1);
+
+    final (String emoji, String text) = switch (count) {
+      0 => ('💧', 'Journée sobre'),
+      1 || 2 => ('🍺', '$count verre${count > 1 ? 's' : ''} — modéré'),
+      <= 5 => ('🍻', '$count verres — ça monte'),
+      _ => ('🥴', '$count verres — grosse soirée'),
+    };
+
+    return Row(
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 22)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                capitalized,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                text,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -245,6 +321,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
         selectedDayPredicate:
             (day) => _selectedDay != null && isSameDay(day, _selectedDay),
         onDaySelected: (selectedDay, focusedDay) {
+          HapticFeedback.selectionClick();
           setState(() {
             _selectedDay = selectedDay;
           });

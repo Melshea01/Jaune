@@ -2,19 +2,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
-class AppState {
-  final int todayConsos;
-  final Map<String, int> dailyMap;
-
-  AppState({required this.todayConsos, required this.dailyMap});
-}
-
 class StorageService {
   static const String _kDailyConsosKey = 'daily_consos';
+  static const String _kLastNotificationSentKey = 'last_notification_sent';
+  static const String _kLastBejaunePostKey = 'last_bejaune_post';
 
   Map<String, int> _dailyMap = {};
 
-  Map<String, int> get dailyMap => Map.from(_dailyMap);
+  Map<String, int> get dailyMap => Map.unmodifiable(_dailyMap);
+
+  static String _dateToKey(DateTime date) {
+    return date.toIso8601String().substring(0, 10);
+  }
 
   Future<AppState> loadAppState() async {
     try {
@@ -48,50 +47,45 @@ class StorageService {
     }
   }
 
-  Future<void> saveAppState({
-    required int todayConsos,
-    required Map<String, int> dailyMap,
-  }) async {
+  Future<void> _saveDailyMap() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final todayKey = DateTime.now().toIso8601String().substring(0, 10);
-
-      _dailyMap = Map.from(dailyMap);
-      _dailyMap[todayKey] = todayConsos;
-
       await prefs.setString(_kDailyConsosKey, json.encode(_dailyMap));
     } catch (e) {
-      debugPrint('Error saving app state: $e');
+      debugPrint('Error saving daily map: $e');
     }
   }
 
-  void updateTodayConsos(int consos) {
-    final todayKey = DateTime.now().toIso8601String().substring(0, 10);
+  Future<void> updateTodayConsos(int consos) async {
+    final todayKey = _dateToKey(DateTime.now());
     _dailyMap[todayKey] = consos;
+    await _saveDailyMap();
   }
 
-  void resetTodayConsos() {
-    final todayKey = DateTime.now().toIso8601String().substring(0, 10);
+  Future<void> resetTodayConsos() async {
+    final todayKey = _dateToKey(DateTime.now());
     _dailyMap.remove(todayKey);
+    await _saveDailyMap();
   }
 
   int getTodayConsos() {
-    final todayKey = DateTime.now().toIso8601String().substring(0, 10);
+    final todayKey = _dateToKey(DateTime.now());
     return _dailyMap[todayKey] ?? 0;
   }
 
   int getConsosForDate(DateTime date) {
-    final dateKey = date.toIso8601String().substring(0, 10);
+    final dateKey = _dateToKey(date);
     return _dailyMap[dateKey] ?? 0;
   }
 
-  void setConsosForDate(DateTime date, int consos) {
-    final dateKey = date.toIso8601String().substring(0, 10);
+  Future<void> setConsosForDate(DateTime date, int consos) async {
+    final dateKey = _dateToKey(date);
     if (consos <= 0) {
       _dailyMap.remove(dateKey);
     } else {
       _dailyMap[dateKey] = consos;
     }
+    await _saveDailyMap();
   }
 
   List<DateTime> getDatesWithConsos() {
@@ -135,13 +129,13 @@ class StorageService {
 
   // ==================== NOTIFICATION TRACKING ====================
 
-  static const String _kLastNotificationSentKey = 'last_notification_sent';
-
   Future<DateTime?> getLastNotificationSent() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final timestamp = prefs.getInt(_kLastNotificationSentKey);
-      return timestamp != null ? DateTime.fromMillisecondsSinceEpoch(timestamp) : null;
+      return timestamp != null
+          ? DateTime.fromMillisecondsSinceEpoch(timestamp)
+          : null;
     } catch (e) {
       debugPrint('Error getting last notification sent: $e');
       return null;
@@ -151,9 +145,43 @@ class StorageService {
   Future<void> setLastNotificationSent(DateTime dateTime) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_kLastNotificationSentKey, dateTime.millisecondsSinceEpoch);
+      await prefs.setInt(
+        _kLastNotificationSentKey,
+        dateTime.millisecondsSinceEpoch,
+      );
     } catch (e) {
       debugPrint('Error setting last notification sent: $e');
     }
   }
+
+  // ==================== BEJAUNE POST TRACKING ====================
+
+  Future<DateTime?> getLastBejaunePost() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final timestamp = prefs.getInt(_kLastBejaunePostKey);
+      return timestamp != null
+          ? DateTime.fromMillisecondsSinceEpoch(timestamp)
+          : null;
+    } catch (e) {
+      debugPrint('Error getting last Bejaune post: $e');
+      return null;
+    }
+  }
+
+  Future<void> setLastBejaunePost(DateTime dateTime) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_kLastBejaunePostKey, dateTime.millisecondsSinceEpoch);
+    } catch (e) {
+      debugPrint('Error setting last Bejaune post: $e');
+    }
+  }
+}
+
+class AppState {
+  final int todayConsos;
+  final Map<String, int> dailyMap;
+
+  AppState({required this.todayConsos, required this.dailyMap});
 }

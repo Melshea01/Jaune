@@ -69,7 +69,7 @@
 
       <g id="Feuille_D">
         <defs>
-          <radialGradient id="gradient_5" gradientUnits="userSpaceOnUse" cx="-0.10405939" cy="25.709095" fx="-0.10405939" cy="25.709095" r="54.281479" fr="0">
+          <radialGradient id="gradient_5" gradientUnits="userSpaceOnUse" cx="-0.10405939" cy="25.709095" fx="-0.10405939" fy="25.709095" r="54.281479" fr="0">
             <stop offset="0" stop-color="#87AA3C"></stop>
             <stop offset="0.20238096" stop-color="#87AA3C"></stop>
             <stop offset="0.48268789" stop-color="#B4B94B"></stop>

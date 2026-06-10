@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -8,6 +9,10 @@ enum NotificationType { success, warning, danger, info }
 enum MessageTone { encouraging, warning, critical, neutral }
 
 class NotificationService {
+  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  static final _random = Random();
+
   /// Affiche une notification toast en bas de l'écran
   static void showToast(
     BuildContext context,
@@ -100,7 +105,7 @@ class NotificationService {
       'Énergie au maximum ! Tu es un exemple à suivre !',
       'Santé de fer ! Ton niveau $level le prouve !',
     ];
-    return messages[DateTime.now().millisecond % messages.length];
+    return messages[_random.nextInt(messages.length)];
   }
 
   static String _getGoodHealthMessage(int todayConsos, MessageTone tone) {
@@ -111,7 +116,7 @@ class NotificationService {
         'Ta santé te remercie pour cette pause !',
         'Journée claire, esprit libre !',
       ];
-      return messages[DateTime.now().millisecond % messages.length];
+      return messages[_random.nextInt(messages.length)];
     } else {
       final messages = [
         'Consommation modérée, équilibre maintenu !',
@@ -119,7 +124,7 @@ class NotificationService {
         'Bonne gestion de ta consommation !',
         'L\'équilibre est la clé, tu l\'as trouvée !',
       ];
-      return messages[DateTime.now().millisecond % messages.length];
+      return messages[_random.nextInt(messages.length)];
     }
   }
 
@@ -130,7 +135,7 @@ class NotificationService {
       'Ta santé demande une pause, écoute-la !',
       'Zone d\'alerte atteinte, sois vigilant !',
     ];
-    return messages[DateTime.now().millisecond % messages.length];
+    return messages[_random.nextInt(messages.length)];
   }
 
   static String _getCriticalHealthMessage(MessageTone tone) {
@@ -140,7 +145,7 @@ class NotificationService {
       'Ta santé est en danger, prends soin de toi !',
       'SOS : Ton corps tire la sonnette d\'alarme !',
     ];
-    return messages[DateTime.now().millisecond % messages.length];
+    return messages[_random.nextInt(messages.length)];
   }
 
   /// Génère un conseil personnalisé basé sur les tendances
@@ -201,9 +206,6 @@ class NotificationService {
 
   // ==================== NOTIFICATIONS LOCALES ====================
 
-  static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
   static Future<void> Function(String payload)? onNotificationTap;
 
   /// Initialise les notifications locales
@@ -218,12 +220,13 @@ class NotificationService {
           requestSoundPermission: true,
         );
 
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
 
-    await _flutterLocalNotificationsPlugin.initialize(
+    await _notificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
         // Gérer le clic sur la notification via le callback du widget
@@ -233,7 +236,9 @@ class NotificationService {
         }
 
         if (response.payload == 'be_real_capture') {
-          debugPrint('Notification cliquée: ouvrir BeReal capture (callback non configuré)');
+          debugPrint(
+            'Notification cliquée: ouvrir BeReal capture (callback non configuré)',
+          );
         }
       },
     );
@@ -263,7 +268,7 @@ class NotificationService {
       iOS: iosPlatformChannelSpecifics,
     );
 
-    await _flutterLocalNotificationsPlugin.show(
+    await _notificationsPlugin.show(
       0,
       title,
       body,
@@ -297,7 +302,7 @@ class NotificationService {
       iOS: iosPlatformChannelSpecifics,
     );
 
-    await _flutterLocalNotificationsPlugin.zonedSchedule(
+    await _notificationsPlugin.zonedSchedule(
       1,
       title,
       body,
@@ -308,6 +313,10 @@ class NotificationService {
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: payload,
     );
+  }
+
+  static Future<void> cancelNotification(int id) async {
+    await _notificationsPlugin.cancel(id);
   }
 }
 

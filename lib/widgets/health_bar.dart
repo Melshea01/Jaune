@@ -68,7 +68,12 @@ class HealthBar extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Stack(
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(end: percent),
+          duration: const Duration(milliseconds: 700),
+          curve: Curves.easeOutCubic,
+          builder: (context, animatedPercent, _) {
+            return Stack(
           alignment: Alignment.centerLeft,
           children: [
             Container(
@@ -85,16 +90,16 @@ class HealthBar extends StatelessWidget {
               ),
             ),
             FractionallySizedBox(
-              widthFactor: percent,
+              widthFactor: animatedPercent.clamp(0.0, 1.0),
               child: Container(
                 height: 20,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   gradient: LinearGradient(
                     colors:
-                        percent > 0.75
+                        animatedPercent > 0.75
                             ? [Color(0xFF43e97b), Color(0xFF38f9d7)]
-                            : (percent > 0.25
+                            : (animatedPercent > 0.25
                                 ? [Color(0xFFf7971e), Color(0xFFffd200)]
                                 : [Color(0xFFf85757), Color(0xFFf857a6)]),
                   ),
@@ -152,7 +157,7 @@ class HealthBar extends StatelessWidget {
             ),
             Center(
               child: Text(
-                '${(percent * 100).round()}%',
+                '${(animatedPercent * 100).round()}%',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
@@ -175,6 +180,8 @@ class HealthBar extends StatelessWidget {
               ),
             ),
           ],
+            );
+          },
         ),
       ],
     );

@@ -12,10 +12,7 @@ class LayerController {
 
   static const int _transitionMs = 1000; // 1 second smooth transition
 
-  LayerController({
-    required this.stateDict,
-    required this.defaultKey,
-  }) {
+  LayerController({required this.stateDict, required this.defaultKey}) {
     _prev = stateDict[defaultKey]!;
     _target = stateDict[defaultKey]!;
     _transStart = 0;
@@ -43,10 +40,10 @@ class LayerController {
 
     final elapsed = nowMs - _transStart;
     final t = (elapsed / _transitionMs).clamp(0.0, 1.0);
-    
+
     // Apply easeInOut curve for smooth animation
     final eased = _easeInOut(t);
-    
+
     return AnimationLayerState.lerp(_prev, _target, eased);
   }
 

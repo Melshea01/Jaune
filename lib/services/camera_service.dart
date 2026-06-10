@@ -8,13 +8,17 @@ class CameraService {
   List<CameraDescription> _cameras = [];
   CameraController? _controller;
   CameraController? _frontController;
+  bool _isInitializing = false;
 
   List<CameraDescription> get cameras => _cameras;
   CameraController? get controller => _controller;
   bool get isReady => _controller != null && _controller!.value.isInitialized;
+  bool get isInitializing => _isInitializing;
 
   /// Initialise les caméras disponibles
   Future<void> initCameras() async {
+    if (_isInitializing) return;
+    _isInitializing = true;
     try {
       debugPrint('[CameraService] calling availableCameras()');
       _cameras = await availableCameras();
@@ -42,6 +46,18 @@ class CameraService {
       }
     } catch (e) {
       debugPrint('Camera init error: $e');
+    } finally {
+      _isInitializing = false;
+    }
+  }
+
+  Future<void> ensureBackPreview() async {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      await _startControllerFor(CameraLensDirection.back);
+      return;
+    }
+    if (_controller!.description.lensDirection != CameraLensDirection.back) {
+      await _startControllerFor(CameraLensDirection.back);
     }
   }
 
@@ -85,6 +101,17 @@ class CameraService {
       }
     }
     return null;
+  }
+
+  Future<CameraController?> _ensureFrontController(
+    CameraDescription frontDesc,
+  ) async {
+    if (_frontController != null && _frontController!.value.isInitialized) {
+      return _frontController;
+    }
+
+    _frontController = await _initControllerWithFallback(frontDesc);
+    return _frontController;
   }
 
   /// Switch the preview camera between front and back by starting the
@@ -177,15 +204,22 @@ class CameraService {
         // Vérifie si les images sont identiques (même taille = même capteur)
         if (rearFile != null && frontFile != null) {
           if (await _arePhotosIdentical(rearFile, frontFile)) {
-            debugPrint(
-              'Detected duplicate images, retrying with controller switching',
-            );
-            final retryResults = await _retryWithControllerSwitching(
-              backDesc,
-              frontDesc,
-            );
-            rearFile = retryResults['rear'] ?? rearFile;
-            frontFile = retryResults['front'] ?? frontFile;
+            if (_controller?.description.lensDirection ==
+                CameraLensDirection.front) {
+              debugPrint(
+                'Detected duplicate images; skip retry to keep selfie preview',
+              );
+            } else {
+              debugPrint(
+                'Detected duplicate images, retrying with controller switching',
+              );
+              final retryResults = await _retryWithControllerSwitching(
+                backDesc,
+                frontDesc,
+              );
+              rearFile = retryResults['rear'] ?? rearFile;
+              frontFile = retryResults['front'] ?? frontFile;
+            }
           }
         }
       } else {
@@ -202,7 +236,37 @@ class CameraService {
 
   /// Capture la photo arrière
   Future<XFile?> _captureRearPhoto(CameraDescription backDesc) async {
-    // S'assure que le contrôleur principal est sur la caméra arrière
+    // If preview is on front camera, capture rear using a temp controller
+    if (_controller != null &&
+        _controller!.value.isInitialized &&
+        _controller!.description.lensDirection == CameraLensDirection.front) {
+      CameraController? tempRear;
+      try {
+        tempRear = await _initControllerWithFallback(backDesc);
+        if (tempRear != null && tempRear.value.isInitialized) {
+          try {
+            await tempRear.setFocusMode(FocusMode.auto);
+            await tempRear.setExposureMode(ExposureMode.auto);
+          } catch (_) {}
+
+          await Future.delayed(const Duration(milliseconds: 200));
+          final photo = await tempRear.takePicture();
+          debugPrint('Rear captured via temp controller: ${photo.path}');
+          return photo;
+        }
+      } catch (e) {
+        debugPrint('Rear temp capture failed: $e');
+      } finally {
+        if (tempRear != null) {
+          try {
+            await tempRear.dispose();
+          } catch (_) {}
+        }
+      }
+      return null;
+    }
+
+    // Otherwise, ensure main controller is rear
     if (_controller == null ||
         !_controller!.value.isInitialized ||
         _controller!.description.lensDirection != CameraLensDirection.back) {
@@ -215,7 +279,7 @@ class CameraService {
         await _controller!.setExposureMode(ExposureMode.auto);
       } catch (_) {}
 
-      await Future.delayed(const Duration(milliseconds: 700));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       for (int attempt = 1; attempt <= 2; attempt++) {
         try {
@@ -225,7 +289,7 @@ class CameraService {
         } catch (e) {
           debugPrint('Rear capture attempt $attempt failed: $e');
           if (attempt == 1) {
-            await Future.delayed(const Duration(milliseconds: 300));
+            await Future.delayed(const Duration(milliseconds: 150));
           }
         }
       }
@@ -233,30 +297,23 @@ class CameraService {
     return null;
   }
 
-  /// Capture la photo avant avec un contrôleur temporaire
+  /// Capture la photo avant avec un contrôleur réutilisé
   Future<XFile?> _captureFrontPhoto(CameraDescription frontDesc) async {
-    CameraController? tempFront;
     try {
-      tempFront = await _initControllerWithFallback(frontDesc);
-      if (tempFront != null && tempFront.value.isInitialized) {
+      final front = await _ensureFrontController(frontDesc);
+      if (front != null && front.value.isInitialized) {
         try {
-          await tempFront.setFocusMode(FocusMode.auto);
-          await tempFront.setExposureMode(ExposureMode.auto);
+          await front.setFocusMode(FocusMode.auto);
+          await front.setExposureMode(ExposureMode.auto);
         } catch (_) {}
 
-        await Future.delayed(const Duration(milliseconds: 600));
-        final photo = await tempFront.takePicture();
+        await Future.delayed(const Duration(milliseconds: 200));
+        final photo = await front.takePicture();
         debugPrint('Front captured: ${photo.path}');
         return photo;
       }
     } catch (e) {
       debugPrint('Front capture failed: $e');
-    } finally {
-      if (tempFront != null) {
-        try {
-          await tempFront.dispose();
-        } catch (_) {}
-      }
     }
     return null;
   }
@@ -274,7 +331,7 @@ class CameraService {
         await controller.setExposureMode(ExposureMode.auto);
       } catch (_) {}
 
-      await Future.delayed(const Duration(milliseconds: 600));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       for (int attempt = 1; attempt <= 2; attempt++) {
         try {
@@ -286,7 +343,7 @@ class CameraService {
         } catch (e) {
           debugPrint('${direction.name} capture attempt $attempt failed: $e');
           if (attempt == 1) {
-            await Future.delayed(const Duration(milliseconds: 250));
+            await Future.delayed(const Duration(milliseconds: 150));
           }
         }
       }
@@ -318,7 +375,7 @@ class CameraService {
     try {
       // Capture arrière
       await _startControllerFor(CameraLensDirection.back);
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 150));
       try {
         rear2 = await _controller!.takePicture();
         debugPrint('Fallback rear captured: ${rear2.path}');
@@ -328,7 +385,7 @@ class CameraService {
 
       // Capture avant
       await _startControllerFor(CameraLensDirection.front);
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 150));
       try {
         front2 = await _controller!.takePicture();
         debugPrint('Fallback front captured: ${front2.path}');

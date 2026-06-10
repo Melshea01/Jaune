@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+// 'dart:typed_data' not required; types available via 'package:flutter/services.dart'
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
 import 'package:appinio_social_share/appinio_social_share.dart';
@@ -21,10 +22,27 @@ class ImageComposer {
     required String avatarAsset,
     required String message,
     required double healthPercent,
+    Uint8List? previewBytes,
   }) async {
-    if (rearPhoto == null && frontPhoto == null) return null;
+    if (rearPhoto == null && frontPhoto == null && previewBytes == null) {
+      return null;
+    }
 
     try {
+      if (previewBytes != null) {
+        final previewImg = await _decodeImageFromList(previewBytes);
+        final int width = previewImg.width;
+        final int height = previewImg.height;
+
+        final tempDir = await getTemporaryDirectory();
+        final outPath =
+            '${tempDir.path}/jaune_share_${DateTime.now().millisecondsSinceEpoch}.png';
+        await File(outPath).writeAsBytes(previewBytes);
+
+        await _shareToInstagram(outPath, width, height);
+        return outPath;
+      }
+
       debugPrint(
         '[compose] rearPath=${rearPhoto?.path} frontPath=${frontPhoto?.path}',
       );
@@ -52,7 +70,7 @@ class ImageComposer {
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
 
-      // Dessine l'image de fond
+      // Dessine l'image de fond (préférence: previewBytes -> rear -> front)
       await _drawBackground(canvas, rearImg, frontImg, width, height);
 
       // Dessine le selfie en cercle
@@ -94,7 +112,6 @@ class ImageComposer {
     }
   }
 
-  /// Décode une image à partir de bytes
   Future<ui.Image> _decodeImageFromList(Uint8List bytes) async {
     final completer = Completer<ui.Image>();
     ui.decodeImageFromList(bytes, (img) => completer.complete(img));

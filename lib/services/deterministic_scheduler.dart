@@ -1,19 +1,27 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 
 class DeterministicNotificationScheduler {
   /// Génère une heure déterministe (17h-20h) basée sur la date du jour
   /// Utilise SHA-256 pour un hash déterministe synchronisé entre appareils
   static DateTime _getNotificationTimeForDate(DateTime date) {
-    final dateString = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final dateString =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final bytes = utf8.encode(dateString);
+    final digest = sha256.convert(bytes);
 
-    // Hash SHA-256 de la date
-    final hash = sha256.convert(utf8.encode(dateString));
-    final hashValue = hash.bytes.fold<int>(0, (a, b) => a ^ b);
+    // Utilise les 4 premiers octets pour l'heure et les 4 suivants pour la minute
+    // pour une meilleure distribution.
+    final hourData = Uint8List.fromList(digest.bytes.sublist(0, 4));
+    final minuteData = Uint8List.fromList(digest.bytes.sublist(4, 8));
 
-    // Génère l'heure : 17h + (hashValue % 3 heures), minute 0..59
-    final hour = 17 + (hashValue.abs() % 3);
-    final minute = (hashValue.abs() ~/ 3) % 60;
+    final hourHash = hourData.buffer.asByteData().getUint32(0);
+    final minuteHash = minuteData.buffer.asByteData().getUint32(0);
+
+    // Génère l'heure : 17h + (hash % 4 heures), minute 0..59
+    final hour = 17 + (hourHash % 4); // 17, 18, 19, 20
+    final minute = minuteHash % 60;
 
     return DateTime(date.year, date.month, date.day, hour, minute);
   }
@@ -59,6 +67,18 @@ class DeterministicNotificationScheduler {
     final today = DateTime.now();
     final lastSentDate = DateTime(lastSent.year, lastSent.month, lastSent.day);
 
-    return lastSentDate.isAtSameMomentAs(DateTime(today.year, today.month, today.day));
+    return lastSentDate.isAtSameMomentAs(
+      DateTime(today.year, today.month, today.day),
+    );
+  }
+
+  /// Vérifie si on est dans la fenetre "apero" du jour
+  static bool isWithinAperoWindow({
+    Duration window = const Duration(hours: 2),
+  }) {
+    final now = DateTime.now();
+    final start = getNotificationTime();
+    final end = start.add(window);
+    return !now.isBefore(start) && !now.isAfter(end);
   }
 }

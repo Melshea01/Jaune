@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="420" height="420" viewBox="-10 -20 420 440"><g id="Jambe_G">
+        <defs>
+          <radialGradient id="gradient_0" gradientUnits="userSpaceOnUse" cx="5.0622253" cy="12.551409" fx="5.0622253" fy="12.551409" r="35.235397" fr="0">
+            <stop offset="0" stop-color="#96B964" />
+            <stop offset="0.05952381" stop-color="#96B964" />
+            <stop offset="0.6964286" stop-color="#96B964" />
+            <stop offset="0.98809522" stop-color="#D9CB65" />
+            <stop offset="1" stop-color="#D9CB65" />
+          </radialGradient>
+        </defs>
+        <path fill="url(#gradient_0)" transform="translate(177.82 284.171)" d="M-18.8848 14.6175L-18.0006 19.7116L-17.186 23.7882L-16.2727 29.1264L-15.1606 33.5966L-14.3204 36.431L-12.6705 41.3126L-10.7179 45.0958L-8.95095 46.6574L-6.27832 48.3616L-3.37329 48.749L3.59878 48.749L11.3455 48.749L15.5933 48.168L17.5042 46.1151L18.6796 44.3333L19.4021 42.3192L20.3705 38.6395L20.7966 34.7274L20.7966 33.8682L20.3705 13.4748L20.3705 2.45515L-4.66547 -0.0024662L-18.5259 -0.0024662L-20.2832 0.790315L-18.8848 14.6175Z" />
+      </g>
+
+      </svg>
