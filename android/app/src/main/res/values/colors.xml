@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- JauneColors.sky : continuité visuelle launch screen → home -->
+    <color name="launch_sky">#FF95C6F4</color>
+</resources>

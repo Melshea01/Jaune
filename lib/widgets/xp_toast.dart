@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/gen/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 import '../services/character_service.dart';
 
 /// Gestionnaire de toasts XP empilables, affichés via l'Overlay.
@@ -156,7 +158,7 @@ class _XpToastWidgetState extends State<_XpToastWidget>
               const Text('⚡', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
               Text(
-                '+${widget.event.amount} XP',
+                AppLocalizations.of(context).xpToastAmount(widget.event.amount),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
@@ -166,7 +168,7 @@ class _XpToastWidgetState extends State<_XpToastWidget>
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  widget.event.reason,
+                  xpReasonLabel(AppLocalizations.of(context), widget.event),
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,

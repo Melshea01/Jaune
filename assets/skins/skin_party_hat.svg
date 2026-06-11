@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="-10 -20 420 440">
+  <g id="PartyHat" transform="rotate(-10 248 110)">
+    <!-- Cône -->
+    <path d="M222 112 L274 112 L248 48 Z" fill="#FF6B9D" stroke="#E0457E" stroke-width="3" stroke-linejoin="round"/>
+    <!-- Rayures -->
+    <path d="M231 89 L265 89 L259 74 L237 74 Z" fill="#F7D83F"/>
+    <path d="M226 104 L270 104 L267 96 L229 96 Z" fill="#5EC8F4"/>
+    <!-- Pompon -->
+    <circle cx="248" cy="46" r="9" fill="#F7D83F" stroke="#E8B73B" stroke-width="2.5"/>
+    <!-- Liseré bas -->
+    <path d="M222 112 L274 112" stroke="#E0457E" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

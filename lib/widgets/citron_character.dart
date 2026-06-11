@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart' as svg;
 
 import '../animation/citron_engine.dart';
 import '../controllers/citron_animation_controller.dart';
+import '../services/citron_skins.dart';
 import 'citron_aura.dart';
 import 'citron_particles.dart';
 
@@ -18,10 +19,15 @@ class CitronCharacter extends StatefulWidget {
   final CitronAnimationController controller;
   final double scale;
 
+  /// Clé du skin équipé ('' = citron classique). Les accessoires vivent
+  /// dans le transform racine : ils suivent toutes les animations.
+  final String skin;
+
   const CitronCharacter({
     super.key,
     required this.controller,
     this.scale = 1.0,
+    this.skin = '',
   });
 
   @override
@@ -199,6 +205,13 @@ class _CitronCharacterState extends State<CitronCharacter>
       );
     }
 
+    // Variante de couleur du skin (doré, sombre…) — par-dessus la teinte
+    // de santé : le citron doré pâlit quand même quand il va mal
+    final ColorFilter? skinFilter = skinColorFilter(widget.skin);
+    if (skinFilter != null) {
+      body = ColorFiltered(colorFilter: skinFilter, child: body);
+    }
+
     // RepaintBoundary : le citron se redessine à 60 fps, cette frontière
     // évite de repeindre tout l'écran à chaque frame.
     // L'aura et les particules vivent HORS du transform racine : la lumière
@@ -295,7 +308,34 @@ class _CitronCharacterState extends State<CitronCharacter>
                   alignment: const FractionalOffset(0.5, 0.46),
                   offset: mouthOffset,
                 ),
+                // Accessoire du skin équipé (couche la plus haute)
+                ..._buildSkinAccessory(yeuxMatrix),
               ],
     );
+  }
+
+  /// Accessoire SVG du skin, ancré sur le corps ou solidaire du regard
+  List<Widget> _buildSkinAccessory(Matrix4 yeuxMatrix) {
+    final skin = skinByKey(widget.skin);
+    final asset = skin?.asset;
+    if (skin == null || asset == null || skin.kind != SkinKind.accessory) {
+      return const [];
+    }
+
+    Widget piece = svg.SvgPicture.asset(
+      asset,
+      width: 420,
+      height: 420,
+      fit: BoxFit.contain,
+      allowDrawingOutsideViewBox: true,
+    );
+    if (skin.anchor == SkinAnchor.face) {
+      piece = Transform(
+        alignment: const FractionalOffset(0.5, 0.4),
+        transform: yeuxMatrix,
+        child: piece,
+      );
+    }
+    return [Positioned.fill(child: piece)];
   }
 }

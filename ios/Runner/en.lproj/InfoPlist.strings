@@ -1,0 +1,6 @@
+/* Permission prompts — English version */
+"NSCameraUsageDescription" = "Jaune uses the camera to capture your BeJaune photo at happy hour.";
+"NSPhotoLibraryAddUsageDescription" = "The composed photo is saved temporarily so it can be shared through your apps.";
+"NSPhotoLibraryUsageDescription" = "Jaune accesses your photo library to display and share your photos.";
+"NSMicrophoneUsageDescription" = "The microphone is only used if a future video feature requires it, never without your consent.";
+"NSUserNotificationsUsageDescription" = "Reminders so you never miss your BeJaune window at happy hour.";

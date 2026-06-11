@@ -12,6 +12,9 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../l10n/gen/app_localizations.dart';
+import '../services/settings_service.dart';
+
 class ImageComposer {
   final AppinioSocialShare _appinioSocialShare = AppinioSocialShare();
 
@@ -554,9 +557,13 @@ class ImageComposer {
       }
 
       try {
+        // Pas de BuildContext ici : locale effective résolue via les réglages
+        final l10n = lookupAppLocalizations(
+          SettingsService.instance.effectiveLocale,
+        );
         await Share.shareXFiles([
           XFile(imagePath),
-        ], text: 'Partagé depuis Jaune!');
+        ], text: l10n.sharedFromJaune);
         debugPrint('Partage réussi avec Share Plus');
         return;
       } catch (e) {

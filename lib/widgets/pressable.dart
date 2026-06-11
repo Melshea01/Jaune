@@ -13,6 +13,9 @@ class PressableScale extends StatefulWidget {
   final bool haptic;
   final HitTestBehavior behavior;
 
+  /// Libellé VoiceOver/TalkBack : l'élément est annoncé comme un bouton
+  final String? semanticLabel;
+
   const PressableScale({
     super.key,
     required this.child,
@@ -21,6 +24,7 @@ class PressableScale extends StatefulWidget {
     this.pressedScale = 0.95,
     this.haptic = true,
     this.behavior = HitTestBehavior.opaque,
+    this.semanticLabel,
   });
 
   @override
@@ -32,7 +36,7 @@ class _PressableScaleState extends State<PressableScale> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final Widget interactive = GestureDetector(
       behavior: widget.behavior,
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) => setState(() => _pressed = false),
@@ -51,6 +55,14 @@ class _PressableScaleState extends State<PressableScale> {
         curve: Curves.easeOut,
         child: widget.child,
       ),
+    );
+
+    if (widget.semanticLabel == null) return interactive;
+    return Semantics(
+      button: true,
+      enabled: widget.onTap != null,
+      label: widget.semanticLabel,
+      child: interactive,
     );
   }
 }

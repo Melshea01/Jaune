@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -29,121 +29,67 @@ enum UnlockType {
   message, // nouveaux messages du citron
 }
 
+/// Pure data : les libellés localisés sont résolus par clé dans
+/// lib/l10n/l10n_helpers.dart (unlockTitle / unlockDescription)
 class LevelUnlock {
   final int level;
   final UnlockType type;
   final String key;
-  final String title;
-  final String description;
 
   const LevelUnlock({
     required this.level,
     required this.type,
     required this.key,
-    required this.title,
-    required this.description,
   });
 }
 
 const List<LevelUnlock> kLevelUnlocks = [
   // --- Phase découverte (niv. 1-5) ---
-  LevelUnlock(
-    level: 2,
-    type: UnlockType.message,
-    key: 'messages_lvl2',
-    title: 'Le citron parle',
-    description: 'Premiers messages personnalisés',
-  ),
-  LevelUnlock(
-    level: 3,
-    type: UnlockType.feature,
-    key: 'history_7d',
-    title: 'Historique 7 jours',
-    description: 'Graphique de consommation débloqué',
-  ),
-  LevelUnlock(
-    level: 5,
-    type: UnlockType.badge,
-    key: 'badge_first_step',
-    title: 'Badge "Premier pas"',
-    description: 'Tu as commencé ton parcours',
-  ),
+  LevelUnlock(level: 2, type: UnlockType.message, key: 'messages_lvl2'),
+  LevelUnlock(level: 3, type: UnlockType.feature, key: 'history_7d'),
+  LevelUnlock(level: 4, type: UnlockType.citronState, key: 'skin_sunglasses'),
+  LevelUnlock(level: 5, type: UnlockType.badge, key: 'badge_first_step'),
 
   // --- Phase engagement (niv. 6-15) ---
-  LevelUnlock(
-    level: 6,
-    type: UnlockType.citronState,
-    key: 'state_happy',
-    title: 'Citron heureux',
-    description: 'Nouvel état visuel — bonne conso',
-  ),
-  LevelUnlock(
-    level: 8,
-    type: UnlockType.feature,
-    key: 'weekly_insight',
-    title: 'Insight hebdomadaire',
-    description: 'Analyse de ta semaine',
-  ),
-  LevelUnlock(
-    level: 10,
-    type: UnlockType.citronState,
-    key: 'state_tired',
-    title: 'Citron fatigué',
-    description: 'État long terme visible',
-  ),
-  LevelUnlock(
-    level: 12,
-    type: UnlockType.feature,
-    key: 'stats_advanced',
-    title: 'Stats avancées',
-    description: 'Tendances et comparaisons',
-  ),
-  LevelUnlock(
-    level: 15,
-    type: UnlockType.badge,
-    key: 'badge_regularity',
-    title: 'Badge "Régularité"',
-    description: '30 jours d\'utilisation',
-  ),
+  LevelUnlock(level: 6, type: UnlockType.citronState, key: 'state_happy'),
+  LevelUnlock(level: 7, type: UnlockType.citronState, key: 'skin_party_hat'),
+  LevelUnlock(level: 8, type: UnlockType.feature, key: 'weekly_insight'),
+  LevelUnlock(level: 10, type: UnlockType.citronState, key: 'state_tired'),
+  LevelUnlock(level: 12, type: UnlockType.feature, key: 'stats_advanced'),
+  LevelUnlock(level: 14, type: UnlockType.citronState, key: 'skin_crown'),
+  LevelUnlock(level: 15, type: UnlockType.badge, key: 'badge_regularity'),
 
   // --- Phase maîtrise (niv. 16+) ---
-  LevelUnlock(
-    level: 16,
-    type: UnlockType.citronState,
-    key: 'state_wise',
-    title: 'Citron sage',
-    description: 'Expression rare, longue sobriété',
-  ),
-  LevelUnlock(
-    level: 20,
-    type: UnlockType.citronState,
-    key: 'skin_dark',
-    title: 'Skin sombre',
-    description: 'Apparence alternative du citron',
-  ),
-  LevelUnlock(
-    level: 25,
-    type: UnlockType.message,
-    key: 'messages_deep',
-    title: 'Messages profonds',
-    description: 'Réflexions sur ton chemin',
-  ),
-  LevelUnlock(
-    level: 30,
-    type: UnlockType.badge,
-    key: 'badge_master',
-    title: 'Badge "Maître citron"',
-    description: 'Rare et partageable',
-  ),
+  LevelUnlock(level: 16, type: UnlockType.citronState, key: 'state_wise'),
+  LevelUnlock(level: 18, type: UnlockType.citronState, key: 'skin_gold'),
+  LevelUnlock(level: 20, type: UnlockType.citronState, key: 'skin_dark'),
+  LevelUnlock(level: 25, type: UnlockType.message, key: 'messages_deep'),
+  LevelUnlock(level: 30, type: UnlockType.badge, key: 'badge_master'),
 ];
 
 // ---------------------------------------------------------------------------
 // XpEvent — pour notifier l'UI de ce qui a été gagné
 // ---------------------------------------------------------------------------
+
+/// Raison d'un gain d'XP. Jamais persisté : refactor sûr.
+/// Libellé localisé résolu à l'affichage (xpReasonLabel).
+enum XpReason {
+  appOpen,
+  dailyLog,
+  soberYesterday,
+  greenDay,
+  soberStreak,
+  perfectWeek,
+}
+
 class XpEvent {
   final int amount;
-  final String reason;
-  const XpEvent(this.amount, this.reason);
+  final XpReason reason;
+
+  /// Valeur contextuelle (ex : nombre de jours du streak)
+  final int? value;
+
+  const XpEvent(this.amount, this.reason, {this.value});
 }
 
 // ---------------------------------------------------------------------------
@@ -161,6 +107,7 @@ class CharacterProfile {
   String lastPerfectWeekDate; // clé semaine ISO : bonus semaine parfaite
   String firstUseDate; // première utilisation — ancre des streaks
   int soberStreakDays; // jours sobres consécutifs (dérivé du calendrier)
+  String equippedSkin; // clé du skin porté ('' = citron classique)
 
   CharacterProfile({
     this.xp = 0,
@@ -173,31 +120,35 @@ class CharacterProfile {
     this.lastPerfectWeekDate = '',
     this.firstUseDate = '',
     this.soberStreakDays = 0,
+    this.equippedSkin = '',
   }) : currentPv = currentPv ?? 100;
 
   static final Map<String, List<String>> _assetMessages = {};
-  static bool _assetLoadingStarted = false;
+  static String _loadedMessagesLocale = '';
 
-  static Future<void> _loadMessagesFromAsset() async {
-    if (_assetMessages.isNotEmpty || _assetLoadingStarted) return;
-    _assetLoadingStarted = true;
+  /// Charge les messages du citron pour la langue donnée ('fr' ou 'en').
+  /// Rechargé si la langue change (changement dans les réglages).
+  static Future<void> ensureMessagesLoaded([String languageCode = 'fr']) async {
+    if (_loadedMessagesLocale == languageCode && _assetMessages.isNotEmpty) {
+      return;
+    }
     try {
-      final String raw = await rootBundle.loadString(
-        'assets/character_messages.json',
-      );
+      final String asset =
+          languageCode == 'fr'
+              ? 'assets/character_messages.json'
+              : 'assets/character_messages_en.json';
+      final String raw = await rootBundle.loadString(asset);
       final Map<String, dynamic> decoded =
           json.decode(raw) as Map<String, dynamic>;
+      _assetMessages.clear();
       decoded.forEach((k, v) {
         if (v is List) _assetMessages[k] = v.map((e) => e.toString()).toList();
       });
-      debugPrint('Loaded messages: ${_assetMessages.keys.toList()}');
+      _loadedMessagesLocale = languageCode;
+      debugPrint('Loaded messages ($languageCode): ${_assetMessages.keys.toList()}');
     } catch (e) {
       debugPrint('Failed to load character messages: $e');
     }
-  }
-
-  static Future<void> ensureMessagesLoaded() async {
-    await _loadMessagesFromAsset();
   }
 
   // --- Getters ---
@@ -235,11 +186,20 @@ class CharacterProfile {
     return 'dead';
   }
 
+  /// Dernier message affiché (index global) — évite la répétition immédiate
+  static int _lastMessageIndex = -1;
+
   String get message {
     try {
       final List<String> pool = _assetMessages[zone] ?? [];
       if (pool.isEmpty) return '';
-      return pool[math.Random().nextInt(pool.length)];
+      if (pool.length == 1) return pool.first;
+      int idx;
+      do {
+        idx = math.Random().nextInt(pool.length);
+      } while (idx == _lastMessageIndex);
+      _lastMessageIndex = idx;
+      return pool[idx];
     } catch (_) {
       return '';
     }
@@ -258,6 +218,7 @@ class CharacterProfile {
     'lastPerfectWeekDate': lastPerfectWeekDate,
     'firstUseDate': firstUseDate,
     'soberStreakDays': soberStreakDays,
+    'equippedSkin': equippedSkin,
   };
 
   static CharacterProfile fromJson(Map<String, dynamic> p) => CharacterProfile(
@@ -271,6 +232,7 @@ class CharacterProfile {
     lastPerfectWeekDate: (p['lastPerfectWeekDate'] as String?) ?? '',
     firstUseDate: (p['firstUseDate'] as String?) ?? '',
     soberStreakDays: (p['soberStreakDays'] as int?) ?? 0,
+    equippedSkin: (p['equippedSkin'] as String?) ?? '',
   );
 }
 
@@ -336,7 +298,20 @@ class CharacterService {
 
   // --- Logique métier ---
 
-  void updateProfile(CharacterProfile p) => _profile = p;
+  /// Skin équipé, observable : la home re-rend le citron sans devoir
+  /// faire transiter un callback à travers les sheets
+  final ValueNotifier<String> equippedSkin = ValueNotifier<String>('');
+
+  Future<void> equipSkin(String key) async {
+    _profile.equippedSkin = key;
+    equippedSkin.value = key;
+    await saveProfile();
+  }
+
+  void updateProfile(CharacterProfile p) {
+    _profile = p;
+    equippedSkin.value = p.equippedSkin;
+  }
 
   void updateHealth(double newHealthPercent) {
     final p = newHealthPercent.clamp(0.0, 1.0);
@@ -367,7 +342,7 @@ class CharacterService {
     final newUnlocks =
         kLevelUnlocks.where((u) => newLevels.contains(u.level)).toList();
     return (
-      xpEvent: const XpEvent(3, 'Ouverture de l\'app'),
+      xpEvent: const XpEvent(3, XpReason.appOpen),
       newLevels: newLevels,
       newUnlocks: newUnlocks,
     );
@@ -404,7 +379,7 @@ class CharacterService {
       if (includeLogBonus && _profile.lastLogDate != today) {
         _profile.lastLogDate = today;
         _addXp(3);
-        events.add(const XpEvent(3, 'Enregistrement du jour'));
+        events.add(const XpEvent(3, XpReason.dailyLog));
       }
 
       // Bonus de comportement (1x par jour)
@@ -455,7 +430,7 @@ class CharacterService {
     // d'avant la première utilisation)
     if (_profile.soberStreakDays > 0) {
       _addXp(5);
-      events.add(const XpEvent(5, 'Journée d\'hier sobre'));
+      events.add(const XpEvent(5, XpReason.soberYesterday));
     }
 
     // Journée verte (hier : 1-2 verres + un jour sobre dans la semaine d'avant)
@@ -469,7 +444,7 @@ class CharacterService {
       }
       if (hasSoberDayInWeek) {
         _addXp(10);
-        events.add(const XpEvent(10, 'Journée verte'));
+        events.add(const XpEvent(10, XpReason.greenDay));
       }
     }
 
@@ -477,7 +452,7 @@ class CharacterService {
     if (_profile.soberStreakDays > 0 && _profile.soberStreakDays % 3 == 0) {
       _addXp(8);
       events.add(
-        XpEvent(8, '${_profile.soberStreakDays} jours sobres d\'affilée'),
+        XpEvent(8, XpReason.soberStreak, value: _profile.soberStreakDays),
       );
     }
 
@@ -506,7 +481,7 @@ class CharacterService {
       if (weekTotal <= 7 && soberDays >= 2) {
         _profile.lastPerfectWeekDate = prevWeekKey;
         _addXp(15);
-        events.add(const XpEvent(15, 'Semaine parfaite'));
+        events.add(const XpEvent(15, XpReason.perfectWeek));
       }
     }
 

@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 2.0.0+1
 
 environment:
   sdk: ^3.7.0
@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -42,13 +44,15 @@ dependencies:
   appinio_social_share: ^0.3.2
   audioplayers: ^6.0.0
   table_calendar: ^3.1.2
-  intl: ^0.19.0
+  intl: ^0.20.2
   typicons_flutter: ^0.5.0
   android_intent_plus: ^6.0.0
   share_plus: ^10.0.0
   crypto: ^3.0.0
   flutter_local_notifications: ^17.2.2
   timezone: ^0.9.0
+  package_info_plus: ^9.0.1
+  home_widget: ^0.9.2+1
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +72,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -77,6 +82,9 @@ flutter:
   # étaient redondantes
   assets:
     - assets/
+    # Le glob n'est pas récursif : les sous-dossiers se déclarent explicitement
+    - assets/sounds/
+    - assets/skins/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -108,3 +116,11 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Pipeline d'icônes : `flutter pub run flutter_launcher_icons`
+# Artwork source : assets/icon/app_icon.png (1024×1024 recommandé)
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  remove_alpha_ios: true

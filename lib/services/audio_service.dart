@@ -2,13 +2,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 
+import 'settings_service.dart';
+
+/// Sons de l'app. Singleton : accessible depuis les célébrations et les
+/// sheets sans faire circuler d'instance. Tous les sons respectent le
+/// toggle des réglages, et un asset manquant dégrade silencieusement
+/// (les fichiers de assets/sounds/ sont des slots à remplir).
 class AudioService {
+  AudioService._() : _audioPlayer = AudioPlayer();
+  static final AudioService instance = AudioService._();
+
   final AudioPlayer _audioPlayer;
   Timer? _volumeFadeTimer;
 
-  AudioService() : _audioPlayer = AudioPlayer();
-
   Future<void> _playSound(String asset) async {
+    if (!SettingsService.instance.soundEnabled.value) return;
     try {
       _volumeFadeTimer?.cancel();
       await _audioPlayer.stop();
@@ -26,6 +34,21 @@ class AudioService {
 
   Future<void> playJauneSound() async {
     await _playSound('jaune_sound.mp3');
+  }
+
+  /// Fanfare de level-up (slot : assets/sounds/level_up.mp3)
+  Future<void> playLevelUpSound() async {
+    await _playSound('sounds/level_up.mp3');
+  }
+
+  /// Pop discret à l'ouverture des sheets (slot : assets/sounds/ui_pop.mp3)
+  Future<void> playUiPop() async {
+    await _playSound('sounds/ui_pop.mp3');
+  }
+
+  /// Carillon de palier de streak (slot : assets/sounds/streak_chime.mp3)
+  Future<void> playStreakChime() async {
+    await _playSound('sounds/streak_chime.mp3');
   }
 
   void fadeOutAudio(Duration fadeDuration) {
@@ -66,16 +89,6 @@ class AudioService {
       await _audioPlayer.setReleaseMode(ReleaseMode.stop);
     } catch (e) {
       debugPrint('Error stopping audio: $e');
-    }
-  }
-
-  void dispose() {
-    try {
-      _volumeFadeTimer?.cancel();
-      _audioPlayer.stop();
-      _audioPlayer.dispose();
-    } catch (e) {
-      debugPrint('Error disposing audio service: $e');
     }
   }
 }

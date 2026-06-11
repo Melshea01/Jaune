@@ -1,0 +1,313 @@
+{
+  "@@locale": "fr",
+
+  "appTitle": "Jaune",
+
+  "bejauneScoreMessage": "Score citron : {percent}%",
+  "@bejauneScoreMessage": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+
+  "notifAperoTitle": "🍋 Moment apéro avec Jaune !",
+  "notifAperoBody": "C'est l'heure de capturer ton moment à l'apéro. Montre-nous ton verre !",
+
+  "postBejaune": "Poste un JAUNE",
+  "alreadyPostedToday": "✓ Déjà posté aujourd'hui",
+  "availableAtApero": "🔒 Disponible à l'apéro",
+
+  "calendarTitle": "Calendrier",
+  "calendarSee": "Voir",
+  "calendarClose": "Fermer",
+
+  "dayDetailSober": "Journée sobre",
+  "dayDetailModerate": "{count, plural, =1{1 verre — modéré} other{{count} verres — modéré}}",
+  "@dayDetailModerate": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dayDetailRising": "{count} verres — ça monte",
+  "@dayDetailRising": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dayDetailHeavy": "{count} verres — grosse soirée",
+  "@dayDetailHeavy": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+
+  "xpToastAmount": "+{amount} XP",
+  "@xpToastAmount": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "xpReasonAppOpen": "Ouverture de l'app",
+  "xpReasonDailyLog": "Enregistrement du jour",
+  "xpReasonSoberYesterday": "Journée d'hier sobre",
+  "xpReasonGreenDay": "Journée verte",
+  "xpReasonPerfectWeek": "Semaine parfaite",
+
+  "soberStreakInARow": "{days, plural, =1{1 jour sobre d'affilée} other{{days} jours sobres d'affilée}}",
+  "@soberStreakInARow": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+
+  "rankApprentice": "Apprenti 🌱",
+  "rankExplorer": "Explorateur 🗺️",
+  "rankMaster": "Maître 🏆",
+  "rankLegend": "Légende ⭐",
+
+  "phaseDiscovery": "🌱 Découverte",
+  "phaseEngagement": "⚡ Engagement",
+  "phaseMastery": "🏆 Maîtrise",
+
+  "levelRingLabel": "NIVEAU",
+  "xpProgress": "⚡ {xp} / {xpToNext} XP",
+  "@xpProgress": {
+    "placeholders": {
+      "xp": {"type": "int"},
+      "xpToNext": {"type": "int"}
+    }
+  },
+  "streakKeepGoing": "Continue, ton citron rayonne !",
+  "unlockedAtThisLevel": "✨ Débloqué à ce niveau",
+  "nextChallenge": "🎯 Prochain défi",
+  "levelWithDescription": "Niveau {level} — {description}",
+  "@levelWithDescription": {
+    "placeholders": {
+      "level": {"type": "int"},
+      "description": {"type": "String"}
+    }
+  },
+  "xpReward": "+{xp} XP",
+  "@xpReward": {
+    "placeholders": {
+      "xp": {"type": "int"}
+    }
+  },
+  "andThen": "Et ensuite…",
+
+  "levelUpTitle": "NIVEAU {level}",
+  "@levelUpTitle": {
+    "placeholders": {
+      "level": {"type": "int"}
+    }
+  },
+  "unlockedBanner": "✨ DÉBLOQUÉ ✨",
+  "continueLabel": "Continuer",
+
+  "infoTitle": "Comment ça marche ?",
+  "infoStep1Title": "Loggue tes verres",
+  "infoStep1Text": "Chaque fois que tu bois, appuie sur le bouton « 🍻 ». 1 verre standard = 1 clic (ex : une pinte = 2 clics).",
+  "infoStep2Title": "Ton citron vit avec toi",
+  "infoStep2Text": "Ton citron a des points de vie qui montent ou descendent selon ta consommation. Prends soin de lui !",
+  "infoStep3Title": "Gagne de l'XP",
+  "infoStep3Text": "Journées sobres, semaines équilibrées et régularité te font monter de niveau et débloquer des surprises.",
+
+  "resetDayTitle": "Réinitialiser la journée ?",
+  "resetDayMessage": "Cela remettra à zéro tes consommations d'aujourd'hui. Tu confirmes ?",
+  "cancel": "Annuler",
+  "resetAction": "Réinitialiser",
+
+  "dayUnit": "{days, plural, =1{jour} other{jours}}",
+  "@dayUnit": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "daysCount": "{days, plural, =1{1 jour} other{{days} jours}}",
+  "@daysCount": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+
+  "captureBackTooltip": "Retour",
+  "backToCamera": "Retour à la caméra",
+  "previewCaption": "📱 Aperçu du montage final",
+  "debugModeOn": "🐛 Mode debug activé",
+  "debugModeOff": "📸 Mode normal",
+  "cameraUnavailable": "Accès caméra indisponible ou refusé.",
+  "tryAgain": "Essayer à nouveau",
+  "openSettings": "Ouvrir les réglages",
+  "previewUnavailable": "Aperçu indisponible",
+  "retry": "Réessayer",
+  "sayJaune": "Dites JAUNEEE...",
+  "photoLabel": "PHOTO",
+  "levelChip": "Niv. {level}",
+  "@levelChip": {
+    "placeholders": {
+      "level": {"type": "int"}
+    }
+  },
+  "hpLabel": "PV",
+  "sharedFromJaune": "Partagé depuis Jaune !",
+
+  "settingsTitle": "Réglages",
+  "settingsNotifications": "Rappels",
+  "settingsNotificationsSubtitle": "Notification quotidienne à l'apéro",
+  "settingsSound": "Sons",
+  "settingsSoundSubtitle": "Effets sonores de l'app",
+  "settingsLanguage": "Langue",
+  "settingsLanguageSystem": "Système",
+  "settingsPrivacy": "Confidentialité & santé",
+  "settingsPrivacyBody": "Tes données restent sur ton téléphone : rien n'est envoyé sur Internet, aucun compte, aucun tracking.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l'OMS — ce n'est pas un avis médical. Si ta consommation t'inquiète, parles-en à un professionnel de santé.",
+  "settingsVersion": "Version",
+  "settingsDeleteData": "Effacer mes données",
+  "deleteDataTitle": "Tout effacer ?",
+  "deleteDataMessage": "Consommations, progression et réglages seront définitivement supprimés de cet appareil.",
+  "deleteAction": "Effacer",
+
+  "unlockMessagesLvl2Title": "Le citron parle",
+  "unlockMessagesLvl2Desc": "Premiers messages personnalisés",
+  "unlockHistory7dTitle": "Historique 7 jours",
+  "unlockHistory7dDesc": "Graphique de consommation débloqué",
+  "unlockBadgeFirstStepTitle": "Badge « Premier pas »",
+  "unlockBadgeFirstStepDesc": "Tu as commencé ton parcours",
+  "unlockStateHappyTitle": "Citron heureux",
+  "unlockStateHappyDesc": "Nouvel état visuel — bonne conso",
+  "unlockWeeklyInsightTitle": "Insight hebdomadaire",
+  "unlockWeeklyInsightDesc": "Analyse de ta semaine",
+  "unlockStateTiredTitle": "Citron fatigué",
+  "unlockStateTiredDesc": "État long terme visible",
+  "unlockStatsAdvancedTitle": "Stats avancées",
+  "unlockStatsAdvancedDesc": "Tendances et comparaisons",
+  "unlockBadgeRegularityTitle": "Badge « Régularité »",
+  "unlockBadgeRegularityDesc": "30 jours d'utilisation",
+  "unlockStateWiseTitle": "Citron sage",
+  "unlockStateWiseDesc": "Expression rare, longue sobriété",
+  "unlockSkinDarkTitle": "Skin sombre",
+  "unlockSkinDarkDesc": "Apparence alternative du citron",
+  "unlockMessagesDeepTitle": "Messages profonds",
+  "unlockMessagesDeepDesc": "Réflexions sur ton chemin",
+  "unlockBadgeMasterTitle": "Badge « Maître citron »",
+  "unlockBadgeMasterDesc": "Rare et partageable",
+  "unlockSkinSunglassesTitle": "Lunettes de soleil",
+  "unlockSkinSunglassesDesc": "Le citron passe en mode star",
+  "unlockSkinPartyHatTitle": "Chapeau de fête",
+  "unlockSkinPartyHatDesc": "Pour célébrer chaque victoire",
+  "unlockSkinCrownTitle": "Couronne",
+  "unlockSkinCrownDesc": "La royauté se mérite",
+  "unlockSkinGoldTitle": "Citron doré",
+  "unlockSkinGoldDesc": "L'éclat des grands parcours",
+  "badgeEquip": "Équiper",
+  "badgeEquipped": "✓ Équipé",
+  "unlockGenericTitle": "Surprise",
+  "unlockGenericDesc": "Nouveau déblocage",
+
+  "onboarding1Title": "Voici Jaune",
+  "onboarding1Text": "Ton citron vit au rythme de ta consommation d'alcool. Prends soin de lui — il te le rendra.",
+  "onboarding2Title": "Ta santé en un coup d'œil",
+  "onboarding2Text": "Loggue chaque verre d'un tap. La barre de vie réagit, et les journées sobres te font gagner de l'XP et des surprises.",
+  "onboardingDisclaimer": "Indicateur ludique inspiré des repères de l'OMS — pas un avis médical.",
+  "onboardingDisclaimerAck": "J'ai compris",
+  "onboarding3Title": "Le BeJaune",
+  "onboarding3Text": "Chaque jour à l'apéro, une fenêtre s'ouvre pour capturer ton moment et le partager. Active les rappels pour ne jamais la rater.",
+  "onboardingEnableReminders": "Activer les rappels",
+  "onboardingRemindersEnabled": "✓ Rappels activés",
+  "onboardingNext": "Continuer",
+  "onboardingStart": "C'est parti !",
+  "onboardingLater": "Plus tard",
+
+  "calendarEmptyTitle": "Ton premier jour commence ici",
+  "calendarEmptyText": "Loggue tes verres et reviens voir ton mois prendre des couleurs.",
+
+  "a11yAddDrink": "Ajouter un verre. {count} aujourd'hui",
+  "@a11yAddDrink": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "a11yResetButton": "Réinitialiser les verres d'aujourd'hui",
+  "a11yCalendarButton": "Ouvrir le calendrier de consommation",
+  "a11yHealthBar": "{percent}% de santé, niveau {level}",
+  "@a11yHealthBar": {
+    "placeholders": {
+      "percent": {"type": "int"},
+      "level": {"type": "int"}
+    }
+  },
+  "a11yStreakBadge": "{days} jours sobres d'affilée, ouvrir la progression",
+  "@a11yStreakBadge": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "a11yCitron": "Jaune, ton citron. Touche-le pour le saluer",
+  "a11yCapture": "Prendre la photo BeJaune",
+
+  "notifStreakTitle": "🔥 {days} jours sobres !",
+  "@notifStreakTitle": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "notifStreakBody": "Ton citron rayonne. Viens le voir briller !",
+  "notifLevelTeaserTitle": "⚡ Niveau {level} en vue !",
+  "@notifLevelTeaserTitle": {
+    "placeholders": {
+      "level": {"type": "int"}
+    }
+  },
+  "notifLevelTeaserBody": "Plus que {xp} XP — une journée sobre et c'est dans la poche.",
+  "@notifLevelTeaserBody": {
+    "placeholders": {
+      "xp": {"type": "int"}
+    }
+  },
+
+  "badgeGalleryTitle": "Collection",
+  "badgeGalleryViewAll": "Voir toute la collection",
+  "badgeLockedLevel": "Niveau {level}",
+  "@badgeLockedLevel": {
+    "placeholders": {
+      "level": {"type": "int"}
+    }
+  },
+  "streakCountdown": "J-{days} avant le palier {target} 🔥",
+  "@streakCountdown": {
+    "placeholders": {
+      "days": {"type": "int"},
+      "target": {"type": "int"}
+    }
+  },
+
+  "statsTitle": "Statistiques",
+  "statsLast7Days": "7 derniers jours",
+  "statsThisWeek": "Cette semaine",
+  "statsLastWeek": "Semaine dernière",
+  "statsDrinksCount": "{count, plural, =0{0 verre} =1{1 verre} other{{count} verres}}",
+  "@statsDrinksCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "statsTrendDown": "−{percent}% vs semaine dernière 💪",
+  "@statsTrendDown": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "statsTrendUp": "+{percent}% vs semaine dernière",
+  "@statsTrendUp": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "statsTrendFlat": "Stable vs semaine dernière",
+  "statsRecords": "Records",
+  "statsLongestStreak": "Plus longue série sobre",
+  "statsLightestWeek": "Semaine la plus légère",
+  "statsDrinksAvoided": "Verres évités",
+  "statsAvoidedHint": "vs ton rythme des 4 premières semaines",
+  "a11yStatsButton": "Ouvrir les statistiques",
+  "shareAction": "Partager"
+}

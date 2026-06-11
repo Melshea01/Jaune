@@ -1,0 +1,6 @@
+/* Prompts de permission — version française */
+"NSCameraUsageDescription" = "Jaune utilise la caméra pour capturer ta photo BeJaune à l'apéro.";
+"NSPhotoLibraryAddUsageDescription" = "La photo composée est enregistrée temporairement pour être partagée via tes apps.";
+"NSPhotoLibraryUsageDescription" = "Jaune accède à ta photothèque pour afficher et partager tes photos.";
+"NSMicrophoneUsageDescription" = "Le micro n'est utilisé que si une future fonctionnalité vidéo le demande, jamais sans ton accord.";
+"NSUserNotificationsUsageDescription" = "Des rappels pour ne pas rater ta fenêtre BeJaune à l'apéro.";

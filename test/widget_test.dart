@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:jaune/l10n/gen/app_localizations.dart';
 import 'package:jaune/main.dart';
 
 /// Purge les timers différés (toasts ~4s, réaction citron 3s, bulle audio 8s)
@@ -31,7 +32,11 @@ void main() {
     await tester.pumpWidget(const MyApp());
     await tester.pump(const Duration(milliseconds: 900));
 
-    expect(find.text('Calendrier'), findsOneWidget);
+    // Libellé localisé : le test passe quelle que soit la locale du runner
+    final BuildContext context = tester.element(find.byType(Scaffold));
+    final l10n = AppLocalizations.of(context);
+
+    expect(find.text(l10n.calendarTitle), findsOneWidget);
     expect(find.text('🍻'), findsOneWidget);
     expect(find.byIcon(Icons.info_outline), findsOneWidget);
 
@@ -49,7 +54,12 @@ void main() {
     expect(consoBadge().data, '0');
 
     await tester.tap(find.text('🍻'));
+    // 1er pump : le setState s'applique et la transition du badge démarre ;
+    // 2e pump : la transition (250 ms) se termine ;
+    // 3e pump : l'AnimatedSwitcher purge l'ancien enfant au frame suivant
     await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(consoBadge().data, '1');
 

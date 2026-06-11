@@ -3,8 +3,15 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/gen/app_localizations.dart';
+import '../l10n/l10n_helpers.dart' as l10n_helpers;
+import '../services/audio_service.dart';
 import '../services/character_service.dart';
+import '../services/milestone_scheduler.dart';
 import '../theme/jaune_design.dart';
+import 'badge_gallery_sheet.dart';
+import 'pressable.dart';
+import 'share_card.dart';
 
 /// Bottom sheet de progression : niveau, rang, phase, XP, streak,
 /// déblocables acquis et prochains défis.
@@ -12,6 +19,7 @@ import '../theme/jaune_design.dart';
 class LevelSheet {
   static void show(BuildContext context, CharacterService service) {
     HapticFeedback.selectionClick();
+    AudioService.instance.playUiPop();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -28,6 +36,7 @@ class _LevelSheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final level = service.level;
     final phase = service.levelPhase;
     final xp = service.profile.xp;
@@ -43,19 +52,10 @@ class _LevelSheetContent extends StatelessWidget {
     };
     final levelInPhase = (level - 1) % phaseLevels + 1;
 
-    final phaseLabel = switch (phase) {
-      'discovery' => '🌱 Découverte',
-      'engagement' => '⚡ Engagement',
-      _ => '🏆 Maîtrise',
-    };
+    final phaseLabel = l10n_helpers.phaseLabel(l10n, phase);
     final phaseColor = JauneColors.phaseColor(phase);
 
-    final rankTitle = switch (level) {
-      <= 5 => 'Apprenti 🌱',
-      <= 15 => 'Explorateur 🗺️',
-      <= 30 => 'Maître 🏆',
-      _ => 'Légende ⭐',
-    };
+    final rankTitle = l10n_helpers.rankTitle(l10n, level);
 
     final currentLevelUnlocks = unlocks.where((u) => u.level == level).toList();
     final nextUnlocks =
@@ -127,7 +127,7 @@ class _LevelSheetContent extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '⚡ $xp / $xpToNext XP',
+                              l10n.xpProgress(xp, xpToNext),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
@@ -169,16 +169,16 @@ class _LevelSheetContent extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '$streak ${streak > 1 ? 'jours sobres' : 'jour sobre'} d\'affilée',
+                                  l10n.soberStreakInARow(streak),
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w800,
                                     color: JauneColors.ink,
                                   ),
                                 ),
-                                const Text(
-                                  'Continue, ton citron rayonne !',
-                                  style: TextStyle(
+                                Text(
+                                  _streakSubtitle(l10n, streak),
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: JauneColors.inkSoft,
@@ -187,6 +187,35 @@ class _LevelSheetContent extends StatelessWidget {
                               ],
                             ),
                           ),
+                          // Aux paliers, le streak se partage en carte brandée
+                          if (MilestoneScheduler.streakMilestones
+                              .contains(streak)) ...[
+                            const SizedBox(width: 8),
+                            PressableScale(
+                              semanticLabel: l10n.shareAction,
+                              onTap:
+                                  () => ShareCard.shareStreak(
+                                    context,
+                                    days: streak,
+                                    skin: service.profile.equippedSkin,
+                                  ),
+                              child: Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: JauneColors.flame.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.ios_share,
+                                  size: 18,
+                                  color: JauneColors.flame,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -195,7 +224,7 @@ class _LevelSheetContent extends StatelessWidget {
                   // --- Déblocables de ce niveau ---
                   if (currentLevelUnlocks.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    const _SectionTitle('✨ Débloqué à ce niveau'),
+                    _SectionTitle(l10n.unlockedAtThisLevel),
                     const SizedBox(height: 10),
                     ...currentLevelUnlocks.map(
                       (u) => _UnlockRow(unlock: u, accent: phaseColor),
@@ -205,7 +234,7 @@ class _LevelSheetContent extends StatelessWidget {
                   // --- Prochain défi (mis en avant) ---
                   if (nextUnlock != null) ...[
                     const SizedBox(height: 24),
-                    const _SectionTitle('🎯 Prochain défi'),
+                    _SectionTitle(l10n.nextChallenge),
                     const SizedBox(height: 10),
                     Container(
                       padding: const EdgeInsets.all(14),
@@ -226,7 +255,7 @@ class _LevelSheetContent extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  nextUnlock.title,
+                                  l10n_helpers.unlockTitle(l10n, nextUnlock),
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w800,
@@ -234,7 +263,13 @@ class _LevelSheetContent extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'Niveau ${nextUnlock.level} — ${nextUnlock.description}',
+                                  l10n.levelWithDescription(
+                                    nextUnlock.level,
+                                    l10n_helpers.unlockDescription(
+                                      l10n,
+                                      nextUnlock,
+                                    ),
+                                  ),
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -255,7 +290,7 @@ class _LevelSheetContent extends StatelessWidget {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              '+$xpToNextKeyUnlock XP',
+                              l10n.xpReward(xpToNextKeyUnlock),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
@@ -268,10 +303,44 @@ class _LevelSheetContent extends StatelessWidget {
                     ),
                   ],
 
+                  // --- Toute la collection ---
+                  const SizedBox(height: 20),
+                  PressableScale(
+                    semanticLabel: l10n.badgeGalleryViewAll,
+                    onTap: () => BadgeGallerySheet.show(context, service),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: JauneColors.lemon.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(JauneRadii.card),
+                        border: Border.all(
+                          color: JauneColors.lemonDeep.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('🏅', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 8),
+                          Text(
+                            l10n.badgeGalleryViewAll,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: JauneColors.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                   // --- Autres déblocables à venir ---
                   if (nextUnlocks.length > 1) ...[
                     const SizedBox(height: 24),
-                    const _SectionTitle('Et ensuite…'),
+                    _SectionTitle(l10n.andThen),
                     const SizedBox(height: 10),
                     ...nextUnlocks
                         .skip(1)
@@ -307,7 +376,7 @@ class _LevelSheetContent extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
-                                    u.title,
+                                    l10n_helpers.unlockTitle(l10n, u),
                                     style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -335,6 +404,17 @@ class _LevelSheetContent extends StatelessWidget {
     UnlockType.badge => '🏅',
     UnlockType.message => '💬',
   };
+
+  /// Sous-titre de la carte streak : compte à rebours vers le prochain
+  /// palier {3, 7, 30, 100}, sinon l'encouragement générique
+  static String _streakSubtitle(AppLocalizations l10n, int streak) {
+    for (final target in MilestoneScheduler.streakMilestones) {
+      if (streak < target) {
+        return l10n.streakCountdown(target - streak, target);
+      }
+    }
+    return l10n.streakKeepGoing;
+  }
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -412,7 +492,10 @@ class _UnlockRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  unlock.title,
+                  l10n_helpers.unlockTitle(
+                    AppLocalizations.of(context),
+                    unlock,
+                  ),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -420,7 +503,10 @@ class _UnlockRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  unlock.description,
+                  l10n_helpers.unlockDescription(
+                    AppLocalizations.of(context),
+                    unlock,
+                  ),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -475,7 +561,7 @@ class _ProgressRing extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'NIVEAU',
+                    AppLocalizations.of(context).levelRingLabel,
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w800,

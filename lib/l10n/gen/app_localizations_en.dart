@@ -1,0 +1,587 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class AppLocalizationsEn extends AppLocalizations {
+  AppLocalizationsEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get appTitle => 'Jaune';
+
+  @override
+  String bejauneScoreMessage(int percent) {
+    return 'Lemon score: $percent%';
+  }
+
+  @override
+  String get notifAperoTitle => '🍋 Happy hour with Jaune!';
+
+  @override
+  String get notifAperoBody =>
+      'Time to capture your happy-hour moment. Show us your glass!';
+
+  @override
+  String get postBejaune => 'Post a JAUNE';
+
+  @override
+  String get alreadyPostedToday => '✓ Already posted today';
+
+  @override
+  String get availableAtApero => '🔒 Available at happy hour';
+
+  @override
+  String get calendarTitle => 'Calendar';
+
+  @override
+  String get calendarSee => 'View';
+
+  @override
+  String get calendarClose => 'Close';
+
+  @override
+  String get dayDetailSober => 'Sober day';
+
+  @override
+  String dayDetailModerate(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count drinks — moderate',
+      one: '1 drink — moderate',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dayDetailRising(int count) {
+    return '$count drinks — heating up';
+  }
+
+  @override
+  String dayDetailHeavy(int count) {
+    return '$count drinks — big night';
+  }
+
+  @override
+  String xpToastAmount(int amount) {
+    return '+$amount XP';
+  }
+
+  @override
+  String get xpReasonAppOpen => 'Opened the app';
+
+  @override
+  String get xpReasonDailyLog => 'Logged today';
+
+  @override
+  String get xpReasonSoberYesterday => 'Sober yesterday';
+
+  @override
+  String get xpReasonGreenDay => 'Green day';
+
+  @override
+  String get xpReasonPerfectWeek => 'Perfect week';
+
+  @override
+  String soberStreakInARow(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days sober days in a row',
+      one: '1 sober day in a row',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rankApprentice => 'Apprentice 🌱';
+
+  @override
+  String get rankExplorer => 'Explorer 🗺️';
+
+  @override
+  String get rankMaster => 'Master 🏆';
+
+  @override
+  String get rankLegend => 'Legend ⭐';
+
+  @override
+  String get phaseDiscovery => '🌱 Discovery';
+
+  @override
+  String get phaseEngagement => '⚡ Engagement';
+
+  @override
+  String get phaseMastery => '🏆 Mastery';
+
+  @override
+  String get levelRingLabel => 'LEVEL';
+
+  @override
+  String xpProgress(int xp, int xpToNext) {
+    return '⚡ $xp / $xpToNext XP';
+  }
+
+  @override
+  String get streakKeepGoing => 'Keep going, your lemon is glowing!';
+
+  @override
+  String get unlockedAtThisLevel => '✨ Unlocked at this level';
+
+  @override
+  String get nextChallenge => '🎯 Next challenge';
+
+  @override
+  String levelWithDescription(int level, String description) {
+    return 'Level $level — $description';
+  }
+
+  @override
+  String xpReward(int xp) {
+    return '+$xp XP';
+  }
+
+  @override
+  String get andThen => 'And then…';
+
+  @override
+  String levelUpTitle(int level) {
+    return 'LEVEL $level';
+  }
+
+  @override
+  String get unlockedBanner => '✨ UNLOCKED ✨';
+
+  @override
+  String get continueLabel => 'Continue';
+
+  @override
+  String get infoTitle => 'How does it work?';
+
+  @override
+  String get infoStep1Title => 'Log your drinks';
+
+  @override
+  String get infoStep1Text =>
+      'Each time you drink, tap the \"🍻\" button. 1 standard drink = 1 tap (e.g. a pint = 2 taps).';
+
+  @override
+  String get infoStep2Title => 'Your lemon lives with you';
+
+  @override
+  String get infoStep2Text =>
+      'Your lemon has health points that rise or fall with your drinking. Take good care of it!';
+
+  @override
+  String get infoStep3Title => 'Earn XP';
+
+  @override
+  String get infoStep3Text =>
+      'Sober days, balanced weeks and consistency level you up and unlock surprises.';
+
+  @override
+  String get resetDayTitle => 'Reset today?';
+
+  @override
+  String get resetDayMessage =>
+      'This will reset today\'s drinks to zero. Are you sure?';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get resetAction => 'Reset';
+
+  @override
+  String dayUnit(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'days',
+      one: 'day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String daysCount(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get captureBackTooltip => 'Back';
+
+  @override
+  String get backToCamera => 'Back to camera';
+
+  @override
+  String get previewCaption => '📱 Final composition preview';
+
+  @override
+  String get debugModeOn => '🐛 Debug mode on';
+
+  @override
+  String get debugModeOff => '📸 Normal mode';
+
+  @override
+  String get cameraUnavailable => 'Camera unavailable or access denied.';
+
+  @override
+  String get tryAgain => 'Try again';
+
+  @override
+  String get openSettings => 'Open settings';
+
+  @override
+  String get previewUnavailable => 'Preview unavailable';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get sayJaune => 'Say JAUNEEE...';
+
+  @override
+  String get photoLabel => 'PHOTO';
+
+  @override
+  String levelChip(int level) {
+    return 'Lvl $level';
+  }
+
+  @override
+  String get hpLabel => 'HP';
+
+  @override
+  String get sharedFromJaune => 'Shared from Jaune!';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsNotifications => 'Reminders';
+
+  @override
+  String get settingsNotificationsSubtitle => 'Daily happy-hour notification';
+
+  @override
+  String get settingsSound => 'Sounds';
+
+  @override
+  String get settingsSoundSubtitle => 'In-app sound effects';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsLanguageSystem => 'System';
+
+  @override
+  String get settingsPrivacy => 'Privacy & health';
+
+  @override
+  String get settingsPrivacyBody =>
+      'Your data stays on your phone: nothing is sent to the Internet, no account, no tracking.\n\nThe health bar is a playful indicator inspired by WHO guidelines — it is not medical advice. If your drinking worries you, talk to a health professional.';
+
+  @override
+  String get settingsVersion => 'Version';
+
+  @override
+  String get settingsDeleteData => 'Delete my data';
+
+  @override
+  String get deleteDataTitle => 'Delete everything?';
+
+  @override
+  String get deleteDataMessage =>
+      'Drinks, progress and settings will be permanently deleted from this device.';
+
+  @override
+  String get deleteAction => 'Delete';
+
+  @override
+  String get unlockMessagesLvl2Title => 'The lemon speaks';
+
+  @override
+  String get unlockMessagesLvl2Desc => 'First personalized messages';
+
+  @override
+  String get unlockHistory7dTitle => '7-day history';
+
+  @override
+  String get unlockHistory7dDesc => 'Consumption chart unlocked';
+
+  @override
+  String get unlockBadgeFirstStepTitle => '\"First step\" badge';
+
+  @override
+  String get unlockBadgeFirstStepDesc => 'You started your journey';
+
+  @override
+  String get unlockStateHappyTitle => 'Happy lemon';
+
+  @override
+  String get unlockStateHappyDesc => 'New visual state — healthy habits';
+
+  @override
+  String get unlockWeeklyInsightTitle => 'Weekly insight';
+
+  @override
+  String get unlockWeeklyInsightDesc => 'A look at your week';
+
+  @override
+  String get unlockStateTiredTitle => 'Tired lemon';
+
+  @override
+  String get unlockStateTiredDesc => 'Long-term state made visible';
+
+  @override
+  String get unlockStatsAdvancedTitle => 'Advanced stats';
+
+  @override
+  String get unlockStatsAdvancedDesc => 'Trends and comparisons';
+
+  @override
+  String get unlockBadgeRegularityTitle => '\"Consistency\" badge';
+
+  @override
+  String get unlockBadgeRegularityDesc => '30 days of use';
+
+  @override
+  String get unlockStateWiseTitle => 'Wise lemon';
+
+  @override
+  String get unlockStateWiseDesc => 'Rare expression, long sobriety';
+
+  @override
+  String get unlockSkinDarkTitle => 'Dark skin';
+
+  @override
+  String get unlockSkinDarkDesc => 'Alternative lemon look';
+
+  @override
+  String get unlockMessagesDeepTitle => 'Deep messages';
+
+  @override
+  String get unlockMessagesDeepDesc => 'Reflections on your path';
+
+  @override
+  String get unlockBadgeMasterTitle => '\"Lemon master\" badge';
+
+  @override
+  String get unlockBadgeMasterDesc => 'Rare and shareable';
+
+  @override
+  String get unlockSkinSunglassesTitle => 'Sunglasses';
+
+  @override
+  String get unlockSkinSunglassesDesc => 'Lemon goes full celebrity';
+
+  @override
+  String get unlockSkinPartyHatTitle => 'Party hat';
+
+  @override
+  String get unlockSkinPartyHatDesc => 'To celebrate every win';
+
+  @override
+  String get unlockSkinCrownTitle => 'Crown';
+
+  @override
+  String get unlockSkinCrownDesc => 'Royalty is earned';
+
+  @override
+  String get unlockSkinGoldTitle => 'Golden lemon';
+
+  @override
+  String get unlockSkinGoldDesc => 'The shine of long journeys';
+
+  @override
+  String get badgeEquip => 'Equip';
+
+  @override
+  String get badgeEquipped => '✓ Equipped';
+
+  @override
+  String get unlockGenericTitle => 'Surprise';
+
+  @override
+  String get unlockGenericDesc => 'New unlock';
+
+  @override
+  String get onboarding1Title => 'Meet Jaune';
+
+  @override
+  String get onboarding1Text =>
+      'Your lemon lives to the rhythm of your drinking. Take care of it — it will return the favor.';
+
+  @override
+  String get onboarding2Title => 'Your health at a glance';
+
+  @override
+  String get onboarding2Text =>
+      'Log every drink with one tap. The health bar reacts, and sober days earn you XP and surprises.';
+
+  @override
+  String get onboardingDisclaimer =>
+      'A playful indicator inspired by WHO guidelines — not medical advice.';
+
+  @override
+  String get onboardingDisclaimerAck => 'Got it';
+
+  @override
+  String get onboarding3Title => 'The BeJaune';
+
+  @override
+  String get onboarding3Text =>
+      'Every day at happy hour, a window opens to capture your moment and share it. Turn on reminders so you never miss it.';
+
+  @override
+  String get onboardingEnableReminders => 'Turn on reminders';
+
+  @override
+  String get onboardingRemindersEnabled => '✓ Reminders on';
+
+  @override
+  String get onboardingNext => 'Continue';
+
+  @override
+  String get onboardingStart => 'Let\'s go!';
+
+  @override
+  String get onboardingLater => 'Later';
+
+  @override
+  String get calendarEmptyTitle => 'Your first day starts here';
+
+  @override
+  String get calendarEmptyText =>
+      'Log your drinks and watch your month fill with color.';
+
+  @override
+  String a11yAddDrink(int count) {
+    return 'Add a drink. $count today';
+  }
+
+  @override
+  String get a11yResetButton => 'Reset today\'s drinks';
+
+  @override
+  String get a11yCalendarButton => 'Open the consumption calendar';
+
+  @override
+  String a11yHealthBar(int percent, int level) {
+    return '$percent% health, level $level';
+  }
+
+  @override
+  String a11yStreakBadge(int days) {
+    return '$days sober days in a row, open progress';
+  }
+
+  @override
+  String get a11yCitron => 'Jaune, your lemon. Tap it to say hi';
+
+  @override
+  String get a11yCapture => 'Take the BeJaune photo';
+
+  @override
+  String notifStreakTitle(int days) {
+    return '🔥 $days sober days!';
+  }
+
+  @override
+  String get notifStreakBody => 'Your lemon is glowing. Come see it shine!';
+
+  @override
+  String notifLevelTeaserTitle(int level) {
+    return '⚡ Level $level in sight!';
+  }
+
+  @override
+  String notifLevelTeaserBody(int xp) {
+    return 'Only $xp XP left — one sober day and it\'s yours.';
+  }
+
+  @override
+  String get badgeGalleryTitle => 'Collection';
+
+  @override
+  String get badgeGalleryViewAll => 'View the whole collection';
+
+  @override
+  String badgeLockedLevel(int level) {
+    return 'Level $level';
+  }
+
+  @override
+  String streakCountdown(int days, int target) {
+    return '$days days to the $target-day milestone 🔥';
+  }
+
+  @override
+  String get statsTitle => 'Statistics';
+
+  @override
+  String get statsLast7Days => 'Last 7 days';
+
+  @override
+  String get statsThisWeek => 'This week';
+
+  @override
+  String get statsLastWeek => 'Last week';
+
+  @override
+  String statsDrinksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count drinks',
+      one: '1 drink',
+      zero: '0 drinks',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String statsTrendDown(int percent) {
+    return '−$percent% vs last week 💪';
+  }
+
+  @override
+  String statsTrendUp(int percent) {
+    return '+$percent% vs last week';
+  }
+
+  @override
+  String get statsTrendFlat => 'Steady vs last week';
+
+  @override
+  String get statsRecords => 'Records';
+
+  @override
+  String get statsLongestStreak => 'Longest sober streak';
+
+  @override
+  String get statsLightestWeek => 'Lightest week';
+
+  @override
+  String get statsDrinksAvoided => 'Drinks avoided';
+
+  @override
+  String get statsAvoidedHint => 'vs your pace in the first 4 weeks';
+
+  @override
+  String get a11yStatsButton => 'Open statistics';
+
+  @override
+  String get shareAction => 'Share';
+}

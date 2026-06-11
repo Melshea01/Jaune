@@ -7,6 +7,7 @@ import 'package:typicons_flutter/typicons_flutter.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 
+import '../l10n/gen/app_localizations.dart';
 import '../utils/date_keys.dart';
 
 class CalendarDialog {
@@ -103,7 +104,8 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
               widget.beginRect,
               widget.finalRect,
               widget.animation.value.clamp(0.0, 1.0),
-            ) ?? widget.finalRect;
+            ) ??
+            widget.finalRect;
 
         final borderRadius =
             BorderRadius.lerp(
@@ -186,8 +188,51 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
           fit: FlexFit.loose,
           child: SingleChildScrollView(child: _buildCalendar()),
         ),
+        if (widget.dailyMap.isEmpty) _buildEmptyState(),
         _buildSelectedDayDetail(),
       ],
+    );
+  }
+
+  /// Premier usage : aucun verre loggé — accueillir plutôt que montrer
+  /// une grille vide sans explication
+  Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: Colors.white.withValues(alpha: 0.85),
+      ),
+      child: Row(
+        children: [
+          const Text('🍋', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.calendarEmptyTitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  l10n.calendarEmptyText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -222,16 +267,18 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
   }
 
   Widget _buildDayDetailContent(DateTime day) {
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
     final dayKey = dateKey(day);
     final count = widget.dailyMap[dayKey] ?? 0;
-    final label = DateFormat('EEEE d MMMM', 'fr_FR').format(day);
+    final label = DateFormat('EEEE d MMMM', locale).format(day);
     final capitalized = label[0].toUpperCase() + label.substring(1);
 
     final (String emoji, String text) = switch (count) {
-      0 => ('💧', 'Journée sobre'),
-      1 || 2 => ('🍺', '$count verre${count > 1 ? 's' : ''} — modéré'),
-      <= 5 => ('🍻', '$count verres — ça monte'),
-      _ => ('🥴', '$count verres — grosse soirée'),
+      0 => ('💧', l10n.dayDetailSober),
+      1 || 2 => ('🍺', l10n.dayDetailModerate(count)),
+      <= 5 => ('🍻', l10n.dayDetailRising(count)),
+      _ => ('🥴', l10n.dayDetailHeavy(count)),
     };
 
     return Row(
@@ -269,9 +316,9 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
       children: [
         const Icon(CupertinoIcons.calendar, size: 22),
         const SizedBox(width: 8),
-        const Text(
-          'Calendrier',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          AppLocalizations.of(context).calendarTitle,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const Spacer(),
         TextButton(
@@ -283,14 +330,14 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(CupertinoIcons.xmark, color: Colors.white, size: 16),
-              SizedBox(width: 6),
+              const Icon(CupertinoIcons.xmark, color: Colors.white, size: 16),
+              const SizedBox(width: 6),
               Text(
-                'Fermer',
-                style: TextStyle(
+                AppLocalizations.of(context).calendarClose,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -317,7 +364,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
         ],
       ),
       child: TableCalendar(
-        locale: 'fr_FR',
+        locale: Localizations.localeOf(context).toString(),
         firstDay: DateTime.utc(2000, 1, 1),
         lastDay: DateTime.utc(2100, 12, 31),
         focusedDay: _selectedDay ?? DateTime.now(),
@@ -350,11 +397,13 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
         ),
         calendarBuilders: CalendarBuilders(
           dowBuilder: (context, day) {
-            const labels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-            final idx = (day.weekday - 1) % 7;
+            // Initiale localisée du jour de la semaine (L M M J V S D / M T W…)
+            final locale = Localizations.localeOf(context).toString();
+            final initial =
+                DateFormat.E(locale).format(day).characters.first.toUpperCase();
             return Center(
               child: Text(
-                labels[idx],
+                initial,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.grey.shade700,
                   fontWeight: FontWeight.w700,

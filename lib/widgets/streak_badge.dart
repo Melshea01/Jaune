@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/gen/app_localizations.dart';
+
 /// Badge flamme 🔥 affichant le streak de jours sobres consécutifs.
 /// Pulse doucement quand le streak est actif pour attirer l'œil.
 class StreakBadge extends StatefulWidget {
@@ -51,13 +53,24 @@ class _StreakBadgeState extends State<StreakBadge>
     super.dispose();
   }
 
+  /// Dégradé du badge selon le palier : orange → rouge profond (7 j) →
+  /// or (30 j, couleur de la marque)
+  static List<Color> _tierColors(int days) {
+    if (days >= 30) return const [Color(0xFFF7D83F), Color(0xFFFF6B35)];
+    if (days >= 7) return const [Color(0xFFFF6B35), Color(0xFFE63946)];
+    return const [Color(0xFFFF9D42), Color(0xFFFF6B35)];
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.streakDays <= 0) return const SizedBox.shrink();
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: AnimatedBuilder(
+    return Semantics(
+      button: widget.onTap != null,
+      label: AppLocalizations.of(context).a11yStreakBadge(widget.streakDays),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedBuilder(
         animation: _pulseController,
         builder: (context, child) {
           final scale = 1.0 + _pulseController.value * 0.08;
@@ -66,10 +79,11 @@ class _StreakBadgeState extends State<StreakBadge>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            // Paliers : la flamme s'intensifie à 7 jours, devient dorée à 30
+            gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFFF9D42), Color(0xFFFF6B35)],
+              colors: _tierColors(widget.streakDays),
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
@@ -78,16 +92,27 @@ class _StreakBadgeState extends State<StreakBadge>
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFFF6B35).withValues(alpha: 0.4),
+                color: _tierColors(
+                  widget.streakDays,
+                ).last.withValues(alpha: 0.4),
                 offset: const Offset(0, 3),
-                blurRadius: 10,
+                blurRadius: widget.streakDays >= 7 ? 14 : 10,
               ),
             ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('🔥', style: TextStyle(fontSize: 16)),
+              Text(
+                '🔥',
+                style: TextStyle(
+                  fontSize: widget.streakDays >= 30
+                      ? 20
+                      : widget.streakDays >= 7
+                      ? 18
+                      : 16,
+                ),
+              ),
               const SizedBox(width: 5),
               Text(
                 '${widget.streakDays}',
@@ -99,7 +124,7 @@ class _StreakBadgeState extends State<StreakBadge>
               ),
               const SizedBox(width: 3),
               Text(
-                widget.streakDays > 1 ? 'jours' : 'jour',
+                AppLocalizations.of(context).dayUnit(widget.streakDays),
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -108,6 +133,7 @@ class _StreakBadgeState extends State<StreakBadge>
               ),
             ],
           ),
+        ),
         ),
       ),
     );

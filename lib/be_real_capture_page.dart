@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'l10n/gen/app_localizations.dart';
 import 'services/camera_service.dart';
 import 'theme/jaune_design.dart';
 import 'widgets/image_composer.dart';
@@ -211,11 +212,11 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
                   ElevatedButton.icon(
                     onPressed: () => setState(() => _debugMode = false),
                     icon: const Icon(Icons.camera_alt),
-                    label: const Text('Retour à la caméra'),
+                    label: Text(AppLocalizations.of(context).backToCamera),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '📱 Aperçu du montage final',
+                    AppLocalizations.of(context).previewCaption,
                     style: Theme.of(
                       context,
                     ).textTheme.labelSmall?.copyWith(color: Colors.white70),
@@ -326,7 +327,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
                 _buildShareChip(
                   uiScale: uiScale,
                   emoji: '🎮',
-                  label: 'Niv. ${widget.level}',
+                  label: AppLocalizations.of(context).levelChip(widget.level),
                   gradientColors: const [Color(0xFFF7D83F), Color(0xFFF6B73F)],
                 ),
                 if (widget.streakDays > 0) ...[
@@ -334,8 +335,9 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
                   _buildShareChip(
                     uiScale: uiScale,
                     emoji: '🔥',
-                    label:
-                        '${widget.streakDays} ${widget.streakDays > 1 ? 'jours' : 'jour'}',
+                    label: AppLocalizations.of(
+                      context,
+                    ).daysCount(widget.streakDays),
                     gradientColors: const [
                       Color(0xFFFF9D42),
                       Color(0xFFFF6B35),
@@ -383,7 +385,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
                           textBaseline: TextBaseline.alphabetic,
                           children: [
                             Text(
-                              'PV',
+                              AppLocalizations.of(context).hpLabel,
                               style: TextStyle(
                                 fontSize: 9 * uiScale * 1.5,
                                 fontWeight: FontWeight.w600,
@@ -473,20 +475,19 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
             ),
           ),
 
-          // JAUNE en bas centré (discret et petit)
+          // Lockup de marque en bas : wordmark + lien — chaque story
+          // partagée pointe vers l'app
           Positioned(
             bottom: 12,
             left: 0,
             right: 0,
-            child: Center(
-              child: Text(
-                'JAUNE',
-                style: TextStyle(
-                  fontSize: 18 * 2.4,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: 1,
-                ),
+            child: Text(
+              'JAUNE',
+              style: TextStyle(
+                fontSize: 18 * 2.4,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: 1,
               ),
             ),
           ),
@@ -568,7 +569,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
           size: 28,
         ),
         onPressed: () => Navigator.of(context).pop(),
-        tooltip: 'Retour',
+        tooltip: AppLocalizations.of(context).captureBackTooltip,
       ),
       title: GestureDetector(
         onLongPress: () {
@@ -576,7 +577,9 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                _debugMode ? '🐛 Mode debug activé' : '📸 Mode normal',
+                _debugMode
+                    ? AppLocalizations.of(context).debugModeOn
+                    : AppLocalizations.of(context).debugModeOff,
               ),
               duration: const Duration(milliseconds: 800),
             ),
@@ -600,9 +603,9 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'Accès caméra indisponible ou refusé.',
-            style: TextStyle(color: Colors.white),
+          Text(
+            AppLocalizations.of(context).cameraUnavailable,
+            style: const TextStyle(color: Colors.white),
           ),
           const SizedBox(height: 16),
           ElevatedButton(
@@ -610,7 +613,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
               await _initCameras();
               setState(() {});
             },
-            child: const Text('Essayer à nouveau'),
+            child: Text(AppLocalizations.of(context).tryAgain),
           ),
           const SizedBox(height: 8),
           ElevatedButton(
@@ -618,7 +621,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
               final uri = Uri.parse('app-settings:');
               if (await canLaunchUrl(uri)) await launchUrl(uri);
             },
-            child: const Text('Ouvrir les réglages'),
+            child: Text(AppLocalizations.of(context).openSettings),
           ),
         ],
       ),
@@ -643,9 +646,9 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
           children: [
             const Icon(Icons.videocam_off, size: 48, color: Colors.white70),
             const SizedBox(height: 12),
-            const Text(
-              'Aperçu indisponible',
-              style: TextStyle(color: Colors.white70),
+            Text(
+              AppLocalizations.of(context).previewUnavailable,
+              style: const TextStyle(color: Colors.white70),
             ),
             const SizedBox(height: 8),
             Text(
@@ -656,7 +659,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _initCameras,
-              child: const Text('Réessayer'),
+              child: Text(AppLocalizations.of(context).retry),
             ),
           ],
         ),
@@ -711,15 +714,15 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
         filter: ui.ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
         child: Container(
           color: Colors.black.withAlpha((0.22 * 255).round()),
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CupertinoActivityIndicator(radius: 14),
-                SizedBox(height: 12),
+                const CupertinoActivityIndicator(radius: 14),
+                const SizedBox(height: 12),
                 Text(
-                  'Dites JAUNEEE...',
-                  style: TextStyle(
+                  AppLocalizations.of(context).sayJaune,
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontWeight: FontWeight.w600,
                   ),
@@ -737,9 +740,12 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
       children: [
         Container(
           margin: const EdgeInsets.all(4),
-          child: const Text(
-            "PHOTO",
-            style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+          child: Text(
+            AppLocalizations.of(context).photoLabel,
+            style: const TextStyle(
+              color: Colors.amber,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         Container(

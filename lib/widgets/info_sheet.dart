@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/gen/app_localizations.dart';
+import '../services/audio_service.dart';
 import '../theme/jaune_design.dart';
 
 /// Bottom sheet "Comment ça marche ?" — remplace l'ancien CupertinoAlertDialog
@@ -8,6 +10,7 @@ import '../theme/jaune_design.dart';
 class InfoSheet {
   static void show(BuildContext context) {
     HapticFeedback.selectionClick();
+    AudioService.instance.playUiPop();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -47,37 +50,31 @@ class _InfoSheetContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Comment ça marche ?',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context).infoTitle,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w900,
               color: JauneColors.ink,
             ),
           ),
           const SizedBox(height: 24),
-          const _InfoStep(
+          _InfoStep(
             emoji: '🍻',
-            title: 'Loggue tes verres',
-            text:
-                'Chaque fois que tu bois, appuie sur le bouton « 🍻 ». '
-                '1 verre standard = 1 clic (ex : une pinte = 2 clics).',
+            title: AppLocalizations.of(context).infoStep1Title,
+            text: AppLocalizations.of(context).infoStep1Text,
           ),
           const SizedBox(height: 18),
-          const _InfoStep(
+          _InfoStep(
             emoji: '🍋',
-            title: 'Ton citron vit avec toi',
-            text:
-                'Ton citron a des points de vie qui montent ou descendent '
-                'selon ta consommation. Prends soin de lui !',
+            title: AppLocalizations.of(context).infoStep2Title,
+            text: AppLocalizations.of(context).infoStep2Text,
           ),
           const SizedBox(height: 18),
-          const _InfoStep(
+          _InfoStep(
             emoji: '🔥',
-            title: 'Gagne de l\'XP',
-            text:
-                'Journées sobres, semaines équilibrées et régularité '
-                'te font monter de niveau et débloquer des surprises.',
+            title: AppLocalizations.of(context).infoStep3Title,
+            text: AppLocalizations.of(context).infoStep3Text,
           ),
         ],
       ),

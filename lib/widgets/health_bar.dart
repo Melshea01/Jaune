@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 
+import '../l10n/gen/app_localizations.dart';
 import '../theme/jaune_design.dart';
 
 class HealthBar extends StatelessWidget {
@@ -17,6 +18,16 @@ class HealthBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Semantics(
+      button: onTap != null,
+      label: AppLocalizations.of(
+        context,
+      ).a11yHealthBar((percent * 100).round(), level),
+      child: _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

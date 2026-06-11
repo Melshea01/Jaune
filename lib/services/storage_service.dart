@@ -21,6 +21,9 @@ class StorageService {
       final savedDaily = prefs.getString(_kDailyConsosKey);
 
       int todayConsos = 0;
+      // Pas de données persistées (premier lancement ou suppression des
+      // données) : repartir d'une map vide, pas de l'état mémoire précédent
+      _dailyMap = {};
 
       if (savedDaily != null && savedDaily.isNotEmpty) {
         try {
@@ -157,6 +160,17 @@ class StorageService {
       );
     } catch (e) {
       debugPrint('Error setting last notification sent: $e');
+    }
+  }
+
+  /// Réactivation des notifications : sans ça, le marqueur « déjà programmée
+  /// aujourd'hui » bloquerait le re-scheduling jusqu'à demain
+  Future<void> clearLastNotificationSent() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kLastNotificationSentKey);
+    } catch (e) {
+      debugPrint('Error clearing last notification sent: $e');
     }
   }
 

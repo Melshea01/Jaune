@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="-10 -20 420 440">
+  <g id="Crown" transform="rotate(6 178 104)">
+    <!-- Bandeau et pointes -->
+    <path d="M150 106 L150 76 L166 92 L178 64 L190 92 L206 76 L206 106 Q178 114 150 106 Z"
+          fill="#F7D83F" stroke="#D9A427" stroke-width="3.5" stroke-linejoin="round"/>
+    <!-- Joyaux des pointes -->
+    <circle cx="150" cy="73" r="5" fill="#FF6B9D" stroke="#D9A427" stroke-width="2"/>
+    <circle cx="178" cy="60" r="6" fill="#5EC8F4" stroke="#D9A427" stroke-width="2"/>
+    <circle cx="206" cy="73" r="5" fill="#7BE07B" stroke="#D9A427" stroke-width="2"/>
+    <!-- Joyau central du bandeau -->
+    <ellipse cx="178" cy="100" rx="6" ry="5" fill="#FF5E3A" stroke="#D9A427" stroke-width="2"/>
+  </g>
+</svg>
