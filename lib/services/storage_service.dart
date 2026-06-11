@@ -58,7 +58,13 @@ class StorageService {
 
   Future<void> updateTodayConsos(int consos) async {
     final todayKey = _dateToKey(DateTime.now());
-    _dailyMap[todayKey] = consos;
+    // Cohérence avec setConsosForDate : 0 conso = pas d'entrée
+    // (évite les clés fantômes « today: 0 » après un reset)
+    if (consos <= 0) {
+      _dailyMap.remove(todayKey);
+    } else {
+      _dailyMap[todayKey] = consos;
+    }
     await _saveDailyMap();
   }
 

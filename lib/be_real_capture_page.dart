@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'services/camera_service.dart';
+import 'theme/jaune_design.dart';
 import 'widgets/image_composer.dart';
 
 class BeRealCapturePage extends StatefulWidget {
@@ -550,14 +551,10 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
     );
   }
 
+  /// Mêmes paliers que la barre de PV de l'app : l'image partagée raconte
+  /// exactement la même histoire que l'écran principal
   List<Color> _getHealthGradientColors(double healthPercent) {
-    if (healthPercent > 0.6) {
-      return [const Color(0xFF43e97b), const Color(0xFF38f9d7)];
-    } else if (healthPercent > 0.3) {
-      return [const Color(0xFFf7971e), const Color(0xFFffd200)];
-    } else {
-      return [const Color(0xFFf85757), const Color(0xFFf857a6)];
-    }
+    return JauneColors.healthGradient(healthPercent);
   }
 
   AppBar _buildAppBar() {

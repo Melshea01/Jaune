@@ -423,12 +423,14 @@ class CalendarConsumptionCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Paliers alignés sur la formule PV : ≤2 modéré, 3-4 attention,
+    // 5 limite, ≥6 binge (seuil de pénalité OMS)
     Color bg;
     if (count <= 2) {
       bg = Colors.green.shade600;
     } else if (count <= 4) {
       bg = Colors.yellow.shade700;
-    } else if (count <= 6) {
+    } else if (count <= 5) {
       bg = Colors.deepOrange.shade600;
     } else {
       bg = Colors.redAccent.shade700;

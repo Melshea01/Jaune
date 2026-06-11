@@ -16,19 +16,27 @@ abstract class JauneColors {
   static const flame = Color(0xFFFF6B35);
   static const flameLight = Color(0xFFFF9D42);
 
-  // Santé
-  static const healthHigh = [Color(0xFF43E97B), Color(0xFF38F9D7)];
-  static const healthMid = [Color(0xFFF7971E), Color(0xFFFFD200)];
+  // Santé — 5 paliers alignés sur les émotions du citron
+  // (superHappy ≥90, happy ≥75, neutral ≥50, tired ≥25, sick <25)
+  static const healthVibrant = [Color(0xFF43E97B), Color(0xFF38F9D7)];
+  static const healthHigh = [Color(0xFFA8E063), Color(0xFF56AB2F)];
+  static const healthMid = [Color(0xFFFFD200), Color(0xFFF7971E)];
+  static const healthWarm = [Color(0xFFFF8C42), Color(0xFFFF5E3A)];
   static const healthLow = [Color(0xFFF85757), Color(0xFFF857A6)];
 
   // Texte
   static const ink = Color(0xFF22223A);
   static const inkSoft = Color(0xFF6E6E85);
 
-  /// Dégradé de santé selon le pourcentage (logique partagée par toute l'app)
+  /// Dégradé de santé selon le pourcentage — source unique pour la barre
+  /// de PV, l'image partagée et tout futur indicateur. Les seuils sont
+  /// CEUX des presets d'animation : la couleur et l'émotion changent
+  /// ensemble.
   static List<Color> healthGradient(double percent) {
-    if (percent > 0.75) return healthHigh;
-    if (percent > 0.25) return healthMid;
+    if (percent >= 0.90) return healthVibrant;
+    if (percent >= 0.75) return healthHigh;
+    if (percent >= 0.50) return healthMid;
+    if (percent >= 0.25) return healthWarm;
     return healthLow;
   }
 

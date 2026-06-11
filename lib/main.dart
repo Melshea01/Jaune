@@ -14,7 +14,6 @@ import 'services/storage_service.dart';
 import 'services/notification_service.dart';
 import 'services/deterministic_scheduler.dart';
 import 'controllers/citron_animation_controller.dart';
-import 'models/health_animation_map.dart';
 import 'be_real_capture_page.dart';
 import 'widgets/calendar_dialog.dart';
 import 'widgets/consumption_gauge_painter.dart';
@@ -83,7 +82,8 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
+class _MyHomePageState extends State<MyHomePage>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   // Services
   late final CharacterService _characterService;
   late final StorageService _storageService;
@@ -93,6 +93,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   int _consos = 0;
   double _animatedConsos = 0.0;
   DateTime? _lastBejaunePost;
+
+  /// Jour auquel appartient le compteur _consos — détecte le passage de
+  /// minuit (app ouverte pendant une soirée) pour ne pas écrire le compteur
+  /// d'hier sur la clé d'aujourd'hui
+  String _consosDay = '';
 
   // Animation controllers
   late AnimationController _gaugeController;
@@ -113,10 +118,43 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeServices();
     _initializeAnimations();
     _initializeShineAnimation();
     _loadState();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Retour au premier plan : si on a changé de jour entre-temps,
+    // recharger le compteur et recalculer santé/XP du nouveau jour
+    if (state == AppLifecycleState.resumed && _consosDay.isNotEmpty) {
+      final today = dateKey(DateTime.now());
+      if (today != _consosDay) {
+        _rolloverToNewDay();
+      }
+    }
+  }
+
+  /// Passage de minuit : repartir du compteur du nouveau jour
+  Future<void> _rolloverToNewDay() async {
+    _consosDay = dateKey(DateTime.now());
+    setState(() {
+      _consos = _storageService.getTodayConsos();
+      _animatedConsos = _consos.toDouble();
+    });
+    await _recomputeHealth(isUserLog: false);
+    await _scheduleDailyNotification();
+  }
+
+  /// Garde-fou avant toute écriture du compteur : si minuit est passé
+  /// pendant que l'app était ouverte, bascule sur le nouveau jour d'abord
+  Future<void> _ensureCurrentDay() async {
+    if (_consosDay.isEmpty) return;
+    if (dateKey(DateTime.now()) != _consosDay) {
+      await _rolloverToNewDay();
+    }
   }
 
   void _initializeServices() {
@@ -211,6 +249,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         _animatedConsos = data.todayConsos.toDouble();
         _characterService.updateProfile(profile);
         _lastBejaunePost = lastBejaunePost;
+        _consosDay = dateKey(DateTime.now());
       });
 
       // Recalcul à l'ouverture : pas une action de log de l'utilisateur
@@ -304,6 +343,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _addConso() async {
+    // Minuit passé pendant que l'app était ouverte ? Nouveau jour d'abord.
+    await _ensureCurrentDay();
+
     HapticFeedback.mediumImpact();
     // Feedback immédiat : le citron penche la tête en arrière et "boit"
     _citronController.triggerEvent('drink_beer');
@@ -339,8 +381,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     // _recomputeHealth persiste consos + profil : pas de double save
     await _recomputeHealth();
 
-    // Réaction visuelle du citron au verre loggé (tipsy puis drunk à partir de 5)
-    _playCitronReaction(_consos >= 5 ? 'drunk' : 'tipsy');
+    // Réaction visuelle du citron au verre loggé. Seuil 'drunk' à 6 verres :
+    // aligné sur la pénalité binge de la formule PV (OMS)
+    _playCitronReaction(_consos >= 6 ? 'drunk' : 'tipsy');
   }
 
   Future<void> _resetTodayConsos() async {
@@ -410,8 +453,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         newLevel: newLevels.last,
         unlocks: unlocks,
       ).then((_) {
-        // Payoff à la fermeture : le citron fait un saut spectaculaire
-        if (mounted) _citronController.triggerEvent('mega_jump');
+        // Payoff à la fermeture : saut spectaculaire + flash d'aura dorée
+        if (mounted) {
+          _citronController.triggerEvent('mega_jump');
+          _citronController.kickGlow();
+        }
       });
     }
 
@@ -457,27 +503,25 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     }
   }
 
-  /// Met à jour l'état Rive basé sur les déblocables et la santé
+  /// Met à jour l'état du citron basé sur la santé
   void _updateRiveState() {
     final hp = _characterService.healthPercent;
 
-    // Map health to animation presets
-    final animationConfig = HealthAnimationMap.getPreset((hp * 100).toInt());
-    _citronController.setAnimation(animationConfig);
+    _citronController.updateHealth((hp * 100).toInt());
 
-    // Humeur pour les micro-comportements d'idle (curiosité, petits sauts…)
+    // Humeur pour les micro-comportements d'idle, alignée sur les presets
+    // d'animation : happy ≥75 %, neutral ≥50 % (citron souriant),
+    // low <50 % (citron fatigué/malade)
     _citronController.idleMood =
         hp >= 0.75
             ? 'happy'
-            : hp >= 0.40
+            : hp >= 0.50
             ? 'neutral'
             : hp > 0
             ? 'low'
             : 'none';
 
-    debugPrint(
-      '🎨 Citron Animation: HP: ${(hp * 100).toStringAsFixed(1)}% → ${animationConfig['bouche']}',
-    );
+    debugPrint('🎨 Citron Animation: HP ${(hp * 100).toStringAsFixed(1)}%');
   }
 
   void _showCalendarDialog() {
@@ -632,6 +676,12 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                         child: AnimatedBuilder(
                           animation: _shadowController,
                           builder: (context, _) {
+                            // Hauteur de saut du citron (0..1) : l'ombre
+                            // rétrécit et s'éclaircit quand il décolle
+                            final jumpHeight =
+                                (-_citronController.engine.frame.translateY)
+                                    .clamp(0.0, 200.0) /
+                                200.0;
                             return CustomPaint(
                               size: Size(
                                 (MediaQuery.of(context).size.width * 0.50)
@@ -648,6 +698,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                 t: _shadowController.value,
                                 squashAmp: 0.06,
                                 shiftAmp: 6.0,
+                                jumpFactor: jumpHeight,
                               ),
                             );
                           },
@@ -1060,6 +1111,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _gaugeController.dispose();
     _bubbleController.dispose();
     _calendarAnimationController.dispose();

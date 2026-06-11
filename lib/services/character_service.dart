@@ -159,7 +159,8 @@ class CharacterProfile {
   String lastAppOpenDate; // jour J : bonus ouverture app
   String lastLogDate; // jour J : bonus enregistrement
   String lastPerfectWeekDate; // clé semaine ISO : bonus semaine parfaite
-  int soberStreakDays; // jours sobres consécutifs courants
+  String firstUseDate; // première utilisation — ancre des streaks
+  int soberStreakDays; // jours sobres consécutifs (dérivé du calendrier)
 
   CharacterProfile({
     this.xp = 0,
@@ -170,6 +171,7 @@ class CharacterProfile {
     this.lastAppOpenDate = '',
     this.lastLogDate = '',
     this.lastPerfectWeekDate = '',
+    this.firstUseDate = '',
     this.soberStreakDays = 0,
   }) : currentPv = currentPv ?? 100;
 
@@ -254,6 +256,7 @@ class CharacterProfile {
     'lastAppOpenDate': lastAppOpenDate,
     'lastLogDate': lastLogDate,
     'lastPerfectWeekDate': lastPerfectWeekDate,
+    'firstUseDate': firstUseDate,
     'soberStreakDays': soberStreakDays,
   };
 
@@ -266,6 +269,7 @@ class CharacterProfile {
     lastAppOpenDate: (p['lastAppOpenDate'] as String?) ?? '',
     lastLogDate: (p['lastLogDate'] as String?) ?? '',
     lastPerfectWeekDate: (p['lastPerfectWeekDate'] as String?) ?? '',
+    firstUseDate: (p['firstUseDate'] as String?) ?? '',
     soberStreakDays: (p['soberStreakDays'] as int?) ?? 0,
   );
 }
@@ -302,6 +306,13 @@ class CharacterService {
                 json.decode(raw) as Map<String, dynamic>,
               )
               : CharacterProfile(maxPv: 100, currentPv: 100);
+
+      // Ancre des streaks : avant cette date, aucune donnée n'existe —
+      // on ne peut rien affirmer sur la sobriété
+      if (_profile.firstUseDate.isEmpty) {
+        _profile.firstUseDate = _dateKey(DateTime.now());
+        await saveProfile();
+      }
       return _profile;
     } catch (e) {
       debugPrint('Error loading profile: $e');
@@ -383,6 +394,11 @@ class CharacterService {
     try {
       final int levelBefore = _profile.level;
 
+      // Le streak est DÉRIVÉ du calendrier à chaque recalcul — source unique
+      // de vérité (l'ancien compteur incrémental dérivait : il survivait aux
+      // jours de conso jamais évalués et sous-comptait les absences sobres)
+      _profile.soberStreakDays = computeSoberStreak(dailyMap);
+
       // Bonus pour l'enregistrement quotidien
       final String today = _dateKey(DateTime.now());
       if (includeLogBonus && _profile.lastLogDate != today) {
@@ -434,13 +450,12 @@ class CharacterService {
 
     final int yesterdayDrinks = drinksAt(1);
 
-    // Journée sobre (hier, journée close)
-    if (yesterdayDrinks == 0) {
-      _profile.soberStreakDays++;
+    // Journée sobre (hier, journée close). Condition sur le streak dérivé :
+    // streak ≥ 1 ⟺ hier était sobre ET couvert par les données (pas un jour
+    // d'avant la première utilisation)
+    if (_profile.soberStreakDays > 0) {
       _addXp(5);
       events.add(const XpEvent(5, 'Journée d\'hier sobre'));
-    } else {
-      _profile.soberStreakDays = 0;
     }
 
     // Journée verte (hier : 1-2 verres + un jour sobre dans la semaine d'avant)
@@ -466,26 +481,56 @@ class CharacterService {
       );
     }
 
-    // Semaine parfaite (1x/semaine) — jugée sur les jours clos de la semaine
-    // (aujourd'hui exclu : la journée peut encore basculer)
-    final String isoWeek = _isoWeekKey(todayDt);
-    if (_profile.lastPerfectWeekDate != isoWeek) {
+    // Semaine parfaite — jugée sur la semaine PRÉCÉDENTE COMPLÈTE
+    // (lundi → dimanche clos). L'ancienne version évaluait la semaine en
+    // cours partielle : sobre lundi-mardi suffisait pour décrocher le bonus
+    // dès mercredi, beuverie libre ensuite.
+    final DateTime lastSunday = todayDt.subtract(
+      Duration(days: todayDt.weekday),
+    );
+    final DateTime lastMonday = lastSunday.subtract(const Duration(days: 6));
+    final String prevWeekKey = _isoWeekKey(lastSunday);
+    final bool weekFullyCovered =
+        _profile.firstUseDate.isNotEmpty &&
+        _profile.firstUseDate.compareTo(_dateKey(lastMonday)) <= 0;
+
+    if (weekFullyCovered && _profile.lastPerfectWeekDate != prevWeekKey) {
       int weekTotal = 0;
       int soberDays = 0;
-      final int dayOfWeek = todayDt.weekday; // 1 = lundi
-      for (int i = 1; i < dayOfWeek; i++) {
-        final int v = drinksAt(i);
+      for (int i = 0; i < 7; i++) {
+        final int v =
+            dailyMap[_dateKey(lastMonday.add(Duration(days: i)))] ?? 0;
         weekTotal += v;
         if (v == 0) soberDays++;
       }
       if (weekTotal <= 7 && soberDays >= 2) {
-        _profile.lastPerfectWeekDate = isoWeek;
+        _profile.lastPerfectWeekDate = prevWeekKey;
         _addXp(15);
         events.add(const XpEvent(15, 'Semaine parfaite'));
       }
     }
 
     return events;
+  }
+
+  /// Jours sobres consécutifs, dérivés du calendrier : marche arrière depuis
+  /// hier tant que la journée est sans conso, bornée par la première
+  /// utilisation de l'app (avant : aucune donnée, on ne compte pas).
+  /// Source unique de vérité pour le badge, les bonus ET la régénération.
+  int computeSoberStreak(Map<String, int> dailyMap) {
+    if (_profile.firstUseDate.isEmpty) return 0;
+
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+
+    int streak = 0;
+    for (int i = 1; i <= 365; i++) {
+      final DateTime day = today.subtract(Duration(days: i));
+      if (_profile.firstUseDate.compareTo(_dateKey(day)) > 0) break;
+      if ((dailyMap[_dateKey(day)] ?? 0) > 0) break;
+      streak++;
+    }
+    return streak;
   }
 
   // --- Formule HP v3 (SPF / OMS 2023) ---
@@ -514,14 +559,6 @@ class CharacterService {
       final int todayDrinks = drinksAt(0);
       final int yesterdayDrinks = drinksAt(1);
 
-      // Dommage à court terme (2 derniers jours)
-      final double shortTermDamage =
-          _dailyDamage(todayDrinks) + _dailyDamage(yesterdayDrinks) * 0.5;
-
-      // Pénalité pour consommation excessive (binge)
-      final double bingePenalty =
-          (todayDrinks >= 6 ? 15.0 : 0.0) + (yesterdayDrinks >= 6 ? 8.0 : 0.0);
-
       // Dommage à long terme (semaine passée)
       int weekSum = 0;
       int soberDaysInWeek = 0;
@@ -536,25 +573,30 @@ class CharacterService {
       final double noPausePenalty =
           soberDaysInWeek < 2 ? (2 - soberDaysInWeek) * 6.0 : 0.0;
 
-      // --- Calcul de la régénération ---
-      int soberStreak = 0;
-      for (int i = 1; i <= 8; i++) {
-        if (drinksAt(i) == 0) {
-          soberStreak++;
-        } else {
-          break;
-        }
-      }
-      final double regeneration = math.min(soberStreak * 4.0, 18.0);
+      // Régénération : streak dérivé du calendrier (source unique de vérité,
+      // le même que le badge 🔥 et les bonus XP)
+      final double regeneration = math.min(
+        computeSoberStreak(dailyMap) * 4.0,
+        18.0,
+      );
 
-      // --- Calcul final ---
+      // --- Calcul en deux temps ---
+      // 1. Baseline : l'état AVANT la journée en cours, régénération incluse,
+      //    plafonnée à 100. La résilience accumulée efface les dégâts passés…
+      final double baseline = (100.0 -
+              _dailyDamage(yesterdayDrinks) * 0.5 -
+              (yesterdayDrinks >= 6 ? 8.0 : 0.0) -
+              longTermDamage -
+              noPausePenalty +
+              regeneration)
+          .clamp(0.0, 100.0);
+
+      // 2. …mais ne peut JAMAIS masquer les verres d'aujourd'hui : chaque
+      //    conso du jour se voit immédiatement sur la barre de vie.
       final double finalHealth =
-          100.0 -
-          shortTermDamage -
-          bingePenalty -
-          longTermDamage -
-          noPausePenalty +
-          regeneration;
+          baseline -
+          _dailyDamage(todayDrinks) -
+          (todayDrinks >= 6 ? 15.0 : 0.0);
 
       return (finalHealth.clamp(0.0, 100.0)) / 100.0;
     } catch (e) {

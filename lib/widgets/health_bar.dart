@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 
+import '../theme/jaune_design.dart';
+
 class HealthBar extends StatelessWidget {
   final double percent;
   final int level;
@@ -95,13 +97,10 @@ class HealthBar extends StatelessWidget {
                 height: 20,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
+                  // 5 paliers alignés sur les émotions du citron : la barre
+                  // change de couleur quand le personnage change d'humeur
                   gradient: LinearGradient(
-                    colors:
-                        animatedPercent > 0.75
-                            ? [Color(0xFF43e97b), Color(0xFF38f9d7)]
-                            : (animatedPercent > 0.25
-                                ? [Color(0xFFf7971e), Color(0xFFffd200)]
-                                : [Color(0xFFf85757), Color(0xFFf857a6)]),
+                    colors: JauneColors.healthGradient(animatedPercent),
                   ),
                   boxShadow: [
                     BoxShadow(

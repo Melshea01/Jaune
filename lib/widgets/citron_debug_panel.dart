@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../controllers/citron_animation_controller.dart';
-import '../models/animation_layer_state.dart';
+import '../animation/poses/pose_catalog.dart';
 
 /// A simple debug panel to visually test animations.
 /// - Choose a special preset
@@ -64,12 +64,14 @@ class _CitronDebugPanelState extends State<CitronDebugPanel> {
   String? _selectedLayerState;
   double _localSpeed = 0.35;
 
+  final Map<String, List<String>> _layerStates = PoseCatalog.layerStateNames;
+
   @override
   void initState() {
     super.initState();
     _selectedSpecial = _specials.first;
-    _selectedLayer = layerStates.keys.first;
-    _selectedLayerState = layerStates[_selectedLayer]!.keys.first;
+    _selectedLayer = _layerStates.keys.first;
+    _selectedLayerState = _layerStates[_selectedLayer]!.first;
     _localSpeed = widget.controller.speedFactor;
   }
 
@@ -159,7 +161,7 @@ class _CitronDebugPanelState extends State<CitronDebugPanel> {
                   value: _selectedLayer,
                   isExpanded: true,
                   items:
-                      layerStates.keys
+                      _layerStates.keys
                           .map(
                             (k) => DropdownMenuItem(value: k, child: Text(k)),
                           )
@@ -167,7 +169,7 @@ class _CitronDebugPanelState extends State<CitronDebugPanel> {
                   onChanged: (v) {
                     setState(() {
                       _selectedLayer = v;
-                      _selectedLayerState = layerStates[v]!.keys.first;
+                      _selectedLayerState = _layerStates[v]!.first;
                     });
                   },
                 ),
@@ -183,7 +185,7 @@ class _CitronDebugPanelState extends State<CitronDebugPanel> {
                     value: _selectedLayerState,
                     isExpanded: true,
                     items:
-                        layerStates[_selectedLayer]!.keys
+                        _layerStates[_selectedLayer]!
                             .map(
                               (s) => DropdownMenuItem(value: s, child: Text(s)),
                             )
