@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import '../utils/date_keys.dart';
+import 'jaune_health_model.dart';
 
 // ---------------------------------------------------------------------------
 // XP curve — coût en XP pour passer au niveau suivant
@@ -508,72 +509,20 @@ class CharacterService {
     return streak;
   }
 
-  // --- Formule HP v3 (SPF / OMS 2023) ---
+  // --- Modèle de santé « santé de fond » (cf. jaune_health_model.dart) ---
 
-  double _dailyDamage(int drinks) {
-    if (drinks <= 0) return 0;
-    double dmg = math.min(drinks, 2) * 5.0;
-    if (drinks > 2) dmg += math.min(drinks - 2, 3) * 9.0;
-    if (drinks > 5) dmg += (drinks - 5) * 13.0;
-    return dmg;
-  }
-
+  /// Santé de l'utilisateur en fraction [0, 1], dérivée de l'historique de
+  /// consommation via le modèle PV « santé de fond ». Délègue toute la logique
+  /// de calibration à [JauneHealthModel] ; ici on se contente d'adapter
+  /// l'historique (dailyMap + première utilisation) et de normaliser en [0, 1].
   double computeHealthFromRisk(Map<String, int> dailyMap) {
     try {
       if (dailyMap.isEmpty) return 1.0;
-
-      final DateTime now = DateTime.now();
-      final DateTime today = DateTime(now.year, now.month, now.day);
-
-      int drinksAt(int offsetDays) {
-        final String k = _dateKey(today.subtract(Duration(days: offsetDays)));
-        return dailyMap[k] ?? 0;
-      }
-
-      // --- Calcul des dommages ---
-      final int todayDrinks = drinksAt(0);
-      final int yesterdayDrinks = drinksAt(1);
-
-      // Dommage à long terme (semaine passée)
-      int weekSum = 0;
-      int soberDaysInWeek = 0;
-      for (int i = 2; i <= 8; i++) {
-        final int v = drinksAt(i);
-        weekSum += v;
-        if (v == 0) soberDaysInWeek++;
-      }
-      final double longTermDamage = math.max(0, weekSum - 7) * 2.2;
-
-      // Pénalité pour absence de pause
-      final double noPausePenalty =
-          soberDaysInWeek < 2 ? (2 - soberDaysInWeek) * 6.0 : 0.0;
-
-      // Régénération : streak dérivé du calendrier (source unique de vérité,
-      // le même que le badge 🔥 et les bonus XP)
-      final double regeneration = math.min(
-        computeSoberStreak(dailyMap) * 4.0,
-        18.0,
+      final double pv = JauneHealthModel.currentHpFromHistory(
+        dailyMap,
+        firstUseDateKey: _profile.firstUseDate,
       );
-
-      // --- Calcul en deux temps ---
-      // 1. Baseline : l'état AVANT la journée en cours, régénération incluse,
-      //    plafonnée à 100. La résilience accumulée efface les dégâts passés…
-      final double baseline = (100.0 -
-              _dailyDamage(yesterdayDrinks) * 0.5 -
-              (yesterdayDrinks >= 6 ? 8.0 : 0.0) -
-              longTermDamage -
-              noPausePenalty +
-              regeneration)
-          .clamp(0.0, 100.0);
-
-      // 2. …mais ne peut JAMAIS masquer les verres d'aujourd'hui : chaque
-      //    conso du jour se voit immédiatement sur la barre de vie.
-      final double finalHealth =
-          baseline -
-          _dailyDamage(todayDrinks) -
-          (todayDrinks >= 6 ? 15.0 : 0.0);
-
-      return (finalHealth.clamp(0.0, 100.0)) / 100.0;
+      return (pv / 100.0).clamp(0.0, 1.0);
     } catch (e) {
       debugPrint('Error in computeHealthFromRisk: $e');
       return 1.0;

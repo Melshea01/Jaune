@@ -35,6 +35,35 @@ void main() {
     });
   });
 
+  group('hpTrajectory', () {
+    test('historique >30j : fenêtre plafonnée à [days] points, bornés [0,100]', () {
+      final map = mapOf({
+        DateTime(2026, 6, 6): 8, // un binge isolé
+        DateTime(2026, 6, 10): 3,
+      });
+      // Première utilisation bien antérieure à la fenêtre de 30 jours.
+      final traj = StatsService.hpTrajectory(map, '2026-04-01', today, days: 30);
+      expect(traj.length, 30);
+      for (final v in traj) {
+        expect(v, inInclusiveRange(0.0, 100.0));
+      }
+    });
+
+    test('fenêtre plus longue que l\'historique : tronquée aux jours dispo', () {
+      // Première utilisation seulement 5 jours avant aujourd'hui.
+      final map = mapOf({today: 2});
+      final firstUse = dateKey(today.subtract(const Duration(days: 4)));
+      final traj = StatsService.hpTrajectory(map, firstUse, today, days: 30);
+      expect(traj.length, 5); // J-4 → aujourd'hui inclus
+      expect(traj.every((v) => v >= 0 && v <= 100), isTrue);
+    });
+
+    test('abstinence totale → courbe plate à 100', () {
+      final traj = StatsService.hpTrajectory(const {}, '2026-05-01', today, days: 14);
+      expect(traj.every((v) => v == 100.0), isTrue);
+    });
+  });
+
   group('longestSoberStreak', () {
     test('trouve la plus longue série close', () {
       // Première utilisation le 1er juin ; verres les 3 et 8 juin.

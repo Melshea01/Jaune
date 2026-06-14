@@ -179,6 +179,8 @@
   "statsTrendDown": "−{percent}% vs last week 💪",
   "statsTrendUp": "+{percent}% vs last week",
   "statsTrendFlat": "Steady vs last week",
+  "statsHealthTrend": "Your health trend",
+  "statsHealthTrendHint": "Background health over the last 30 days",
   "statsRecords": "Records",
   "statsLongestStreak": "Longest sober streak",
   "statsLightestWeek": "Lightest week",

@@ -565,6 +565,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsTrendFlat => 'Steady vs last week';
 
   @override
+  String get statsHealthTrend => 'Your health trend';
+
+  @override
+  String get statsHealthTrendHint => 'Background health over the last 30 days';
+
+  @override
   String get statsRecords => 'Records';
 
   @override

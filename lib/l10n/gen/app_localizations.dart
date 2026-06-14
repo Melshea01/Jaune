@@ -1028,6 +1028,18 @@ abstract class AppLocalizations {
   /// **'Stable vs semaine dernière'**
   String get statsTrendFlat;
 
+  /// No description provided for @statsHealthTrend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Évolution de ta santé'**
+  String get statsHealthTrend;
+
+  /// No description provided for @statsHealthTrendHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Santé de fond sur les 30 derniers jours'**
+  String get statsHealthTrendHint;
+
   /// No description provided for @statsRecords.
   ///
   /// In fr, this message translates to:

@@ -303,6 +303,8 @@
     }
   },
   "statsTrendFlat": "Stable vs semaine dernière",
+  "statsHealthTrend": "Évolution de ta santé",
+  "statsHealthTrendHint": "Santé de fond sur les 30 derniers jours",
   "statsRecords": "Records",
   "statsLongestStreak": "Plus longue série sobre",
   "statsLightestWeek": "Semaine la plus légère",

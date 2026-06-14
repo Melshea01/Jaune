@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../utils/date_keys.dart';
+import 'jaune_health_model.dart';
 
 /// Calculs de statistiques — fonctions pures sur la map { date → verres },
 /// testables sans plateforme. La présentation vit dans stats_sheet.dart.
@@ -91,6 +92,45 @@ abstract class StatsService {
       monday = monday.add(const Duration(days: 7));
     }
     return best;
+  }
+
+  /// Trajectoire des PV « santé de fond » via [JauneHealthModel], pour la
+  /// courbe d'évolution. Du plus ancien à aujourd'hui, au plus [days] points.
+  ///
+  /// La simulation démarre à la première utilisation (et non au début de la
+  /// fenêtre affichée) : l'équilibre est ainsi déjà convergé sur le segment
+  /// montré, et on n'invente jamais de santé pour la période d'avant l'app.
+  /// Un utilisateur récent obtient donc une courbe plus courte (honnête), qui
+  /// s'allonge jusqu'à [days] points à mesure que l'historique grandit.
+  static List<double> hpTrajectory(
+    Map<String, int> dailyMap,
+    String firstUseDate,
+    DateTime today, {
+    int days = 30,
+  }) {
+    final DateTime day0 = DateTime(today.year, today.month, today.day);
+
+    // Départ de la simulation : première utilisation si connue, sinon le
+    // début de la fenêtre affichée.
+    final DateTime windowStart = day0.subtract(Duration(days: days - 1));
+    DateTime start = windowStart;
+    final DateTime? first = DateTime.tryParse(firstUseDate);
+    if (first != null) {
+      start = DateTime(first.year, first.month, first.day);
+    }
+    if (start.isAfter(day0)) return const [];
+
+    final int total = day0.difference(start).inDays + 1;
+    final history = List<int>.generate(total, (i) {
+      return dailyMap[dateKey(start.add(Duration(days: i)))] ?? 0;
+    });
+
+    final trajectory =
+        JauneHealthModel.simulate(history).map((d) => d.hp).toList();
+
+    // Ne garder que les [days] derniers points (la fenêtre affichée).
+    if (trajectory.length <= days) return trajectory;
+    return trajectory.sublist(trajectory.length - days);
   }
 
   /// Verres « évités » : écart entre le rythme des 4 premières semaines

@@ -52,6 +52,11 @@ class _StatsSheetContent extends StatelessWidget {
     final now = DateTime.now();
 
     final List<int> week = StatsService.last7Days(dailyMap, now);
+    final List<double> healthTrend = StatsService.hpTrajectory(
+      dailyMap,
+      character.profile.firstUseDate,
+      now,
+    );
     final comparison = StatsService.weekComparison(dailyMap, now);
     final int longestStreak = StatsService.longestSoberStreak(
       dailyMap,
@@ -123,6 +128,21 @@ class _StatsSheetContent extends StatelessWidget {
                     now: now,
                     barColor: _barColor,
                   ),
+                  const SizedBox(height: 24),
+
+                  // --- Courbe de santé de fond (PV) ---
+                  _SectionTitle(l10n.statsHealthTrend),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.statsHealthTrendHint,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: JauneColors.inkSoft,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _HealthCurve(values: healthTrend),
                   const SizedBox(height: 24),
 
                   // --- Tendance semaine vs semaine ---
@@ -388,6 +408,199 @@ class _TrendCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Courbe de la santé de fond (PV 0–100) sur les 30 derniers jours.
+///
+/// La couleur encode l'altitude : un dégradé vertical vert (haut, plein de
+/// vie) → rouge (bas) — exactement les paliers de [JauneColors.healthGradient].
+/// Le tracé se dessine à l'ouverture et la pastille affiche le PV courant.
+class _HealthCurve extends StatelessWidget {
+  final List<double> values;
+  const _HealthCurve({required this.values});
+
+  @override
+  Widget build(BuildContext context) {
+    final double current = values.isNotEmpty ? values.last : 100.0;
+    final List<Color> pill = JauneColors.healthGradient(current / 100.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // PV courant, gros, dans la couleur de sa zone.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              '${current.round()}',
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+                color: pill.last,
+              ),
+            ),
+            const SizedBox(width: 3),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 4),
+              child: Text(
+                'PV',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: JauneColors.inkSoft,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 120,
+          width: double.infinity,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: JauneMotion.emphasized,
+            curve: JauneMotion.smooth,
+            builder: (context, progress, _) => CustomPaint(
+              painter: _HealthCurvePainter(values: values, progress: progress),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HealthCurvePainter extends CustomPainter {
+  final List<double> values;
+  final double progress;
+
+  _HealthCurvePainter({required this.values, required this.progress});
+
+  // Marges verticales : laisse respirer le 100 et le 0.
+  static const double _padTop = 10;
+  static const double _padBottom = 10;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+
+    final double usableH = size.height - _padTop - _padBottom;
+    double xAt(int i) => values.length == 1
+        ? size.width / 2
+        : size.width * i / (values.length - 1);
+    double yAt(double hp) =>
+        _padTop + usableH * (1 - (hp.clamp(0.0, 100.0) / 100.0));
+
+    // Ligne de base discrète à 100 PV (objectif santé pleine).
+    final gridPaint = Paint()
+      ..color = JauneColors.inkSoft.withValues(alpha: 0.12)
+      ..strokeWidth = 1;
+    final double yFull = yAt(100);
+    canvas.drawLine(Offset(0, yFull), Offset(size.width, yFull), gridPaint);
+
+    // Construit le chemin lissé (béziers quadratiques via les milieux).
+    final points = [
+      for (int i = 0; i < values.length; i++) Offset(xAt(i), yAt(values[i])),
+    ];
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    if (points.length == 1) {
+      path.lineTo(points.first.dx, points.first.dy);
+    } else {
+      for (int i = 0; i < points.length - 1; i++) {
+        final p0 = points[i];
+        final p1 = points[i + 1];
+        final mid = Offset((p0.dx + p1.dx) / 2, (p0.dy + p1.dy) / 2);
+        path.quadraticBezierTo(p0.dx, p0.dy, mid.dx, mid.dy);
+      }
+      path.lineTo(points.last.dx, points.last.dy);
+    }
+
+    // Dégradé vertical vert (haut) → rouge (bas) = paliers de santé.
+    final shader = const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Color(0xFF43E97B), // ≥90 vibrant
+        Color(0xFFA8E063), // ≥75 high
+        Color(0xFFFFD200), // ≥50 mid
+        Color(0xFFFF8C42), // ≥25 warm
+        Color(0xFFF85757), // <25 low
+      ],
+      stops: [0.0, 0.18, 0.45, 0.72, 1.0],
+    ).createShader(Offset.zero & size);
+
+    // Anime le tracé : on n'extrait que la fraction [progress] du chemin.
+    final metric = path.computeMetrics().fold<Path>(
+      Path(),
+      (acc, m) => acc..addPath(m.extractPath(0, m.length * progress), Offset.zero),
+    );
+
+    // Aire sous la courbe : même dégradé mais translucide (l'alpha est dans
+    // les couleurs, car un shader ignore Paint.color).
+    final fillShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        const Color(0xFF43E97B).withValues(alpha: 0.22),
+        const Color(0xFFFFD200).withValues(alpha: 0.12),
+        const Color(0xFFF85757).withValues(alpha: 0.04),
+      ],
+      stops: const [0.0, 0.5, 1.0],
+    ).createShader(Offset.zero & size);
+
+    final lastDrawn = _pointAt(path, progress);
+    if (lastDrawn != null) {
+      final fill = Path.from(metric)
+        ..lineTo(lastDrawn.dx, size.height)
+        ..lineTo(points.first.dx, size.height)
+        ..close();
+      canvas.drawPath(
+        fill,
+        Paint()
+          ..shader = fillShader
+          ..style = PaintingStyle.fill,
+      );
+    }
+
+    // La ligne elle-même.
+    canvas.drawPath(
+      metric,
+      Paint()
+        ..shader = shader
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    // Pastille sur le point courant.
+    if (lastDrawn != null) {
+      canvas.drawCircle(lastDrawn, 5, Paint()..color = Colors.white);
+      canvas.drawCircle(
+        lastDrawn,
+        5,
+        Paint()
+          ..shader = shader
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5,
+      );
+    }
+  }
+
+  /// Position du point situé à la fraction [t] de la longueur du chemin.
+  Offset? _pointAt(Path path, double t) {
+    for (final m in path.computeMetrics()) {
+      final tan = m.getTangentForOffset(m.length * t.clamp(0.0, 1.0));
+      if (tan != null) return tan.position;
+    }
+    return null;
+  }
+
+  @override
+  bool shouldRepaint(_HealthCurvePainter old) =>
+      old.progress != progress || old.values != values;
 }
 
 class _RecordRow extends StatelessWidget {
