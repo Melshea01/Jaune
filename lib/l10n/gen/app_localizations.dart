@@ -1081,6 +1081,144 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Partager'**
   String get shareAction;
+
+  /// No description provided for @leaderboardTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Classement'**
+  String get leaderboardTitle;
+
+  /// No description provided for @leaderboardTabRanking.
+  ///
+  /// In fr, this message translates to:
+  /// **'Classement'**
+  String get leaderboardTabRanking;
+
+  /// No description provided for @leaderboardTabRequests.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demandes'**
+  String get leaderboardTabRequests;
+
+  /// No description provided for @leaderboardAddFriend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un ami'**
+  String get leaderboardAddFriend;
+
+  /// No description provided for @leaderboardAccept.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accepter'**
+  String get leaderboardAccept;
+
+  /// No description provided for @leaderboardIgnore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ignorer'**
+  String get leaderboardIgnore;
+
+  /// No description provided for @leaderboardEmptyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne au classement'**
+  String get leaderboardEmptyTitle;
+
+  /// No description provided for @leaderboardEmptySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoute un ami pour comparer vos jauges et vos séries.'**
+  String get leaderboardEmptySubtitle;
+
+  /// No description provided for @leaderboardNoRequestsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune demande'**
+  String get leaderboardNoRequestsTitle;
+
+  /// No description provided for @leaderboardNoRequestsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les demandes d\'amitié reçues apparaîtront ici.'**
+  String get leaderboardNoRequestsSubtitle;
+
+  /// No description provided for @a11yLeaderboardButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir le classement entre amis'**
+  String get a11yLeaderboardButton;
+
+  /// No description provided for @addFriendTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoute un ami'**
+  String get addFriendTitle;
+
+  /// No description provided for @addFriendSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fais scanner ton QR code, ou partage ton lien d\'invitation.'**
+  String get addFriendSubtitle;
+
+  /// No description provided for @addFriendShare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager mon lien'**
+  String get addFriendShare;
+
+  /// No description provided for @addFriendScan.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scanner un QR code'**
+  String get addFriendScan;
+
+  /// No description provided for @addFriendScanTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scanne le code d\'un ami'**
+  String get addFriendScanTitle;
+
+  /// No description provided for @addFriendScanHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aligne le QR code dans le cadre'**
+  String get addFriendScanHint;
+
+  /// No description provided for @addFriendScanTorch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lampe torche'**
+  String get addFriendScanTorch;
+
+  /// No description provided for @addFriendShareMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejoins-moi sur Jaune et comparons nos jauges ! {link}'**
+  String addFriendShareMessage(String link);
+
+  /// No description provided for @usernamePromptTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis ton pseudo'**
+  String get usernamePromptTitle;
+
+  /// No description provided for @usernamePromptSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est le nom que verront tes amis dans le classement.'**
+  String get usernamePromptSubtitle;
+
+  /// No description provided for @usernamePromptHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton pseudo'**
+  String get usernamePromptHint;
+
+  /// No description provided for @usernamePromptSave.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider'**
+  String get usernamePromptSave;
 }
 
 class _AppLocalizationsDelegate

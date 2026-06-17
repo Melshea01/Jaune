@@ -1,0 +1,615 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../l10n/gen/app_localizations.dart';
+import '../services/audio_service.dart';
+import '../theme/jaune_design.dart';
+import 'citron_avatar.dart';
+import 'pressable.dart';
+
+/// Schéma du lien d'invitation. La cible web/deep-link réelle sera branchée
+/// en Phase 2 (app_links). En Phase 1, le code transite tel quel.
+String friendLinkFor(String code) => 'https://jaune.app/add-friend?code=$code';
+
+/// Carte d'invitation : QR code (avatar citron au centre), partage natif du
+/// lien, et accès au scanner. Réutilise [share_plus] (déjà au projet) et le
+/// pattern de bottom sheet de l'app.
+class AddFriendSheet {
+  static Future<void> show(
+    BuildContext context, {
+    required String myCode,
+    required String mySkin,
+    required Future<void> Function(String code) onCodeReceived,
+  }) {
+    HapticFeedback.selectionClick();
+    AudioService.instance.playUiPop();
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AddFriendSheetContent(
+        myCode: myCode,
+        mySkin: mySkin,
+        onCodeReceived: onCodeReceived,
+      ),
+    );
+  }
+}
+
+class _AddFriendSheetContent extends StatelessWidget {
+  final String myCode;
+  final String mySkin;
+  final Future<void> Function(String code) onCodeReceived;
+
+  const _AddFriendSheetContent({
+    required this.myCode,
+    required this.mySkin,
+    required this.onCodeReceived,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final link = friendLinkFor(myCode);
+
+    return Container(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 12,
+        bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(JauneRadii.sheet)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Poignée de glissement
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            l10n.addFriendTitle,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: JauneColors.ink,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l10n.addFriendSubtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: JauneColors.inkSoft,
+            ),
+          ),
+          const SizedBox(height: 22),
+          // QR code avec avatar citron au centre
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(JauneRadii.card),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: QrImageView(
+              data: link,
+              version: QrVersions.auto,
+              size: 220,
+              backgroundColor: Colors.white,
+              eyeStyle: const QrEyeStyle(
+                eyeShape: QrEyeShape.circle,
+                color: JauneColors.ink,
+              ),
+              dataModuleStyle: const QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.circle,
+                color: JauneColors.ink,
+              ),
+              embeddedImage: null,
+              embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(56, 56)),
+              embeddedImageEmitsError: false,
+            ),
+          ),
+          const SizedBox(height: 14),
+          // Avatar citron sous le QR (identité visuelle)
+          CitronAvatar(size: 52, skin: mySkin),
+          const SizedBox(height: 22),
+          // Partage natif
+          _PrimaryButton(
+            icon: CupertinoIcons.share,
+            label: l10n.addFriendShare,
+            onTap: () {
+              Share.share(l10n.addFriendShareMessage(link));
+            },
+          ),
+          const SizedBox(height: 10),
+          // Scanner
+          _SecondaryButton(
+            icon: CupertinoIcons.qrcode_viewfinder,
+            label: l10n.addFriendScan,
+            onTap: () async {
+              final code = await Navigator.of(context).push<String>(
+                MaterialPageRoute(builder: (_) => const _QrScannerPage()),
+              );
+              if (code == null || code.isEmpty) return;
+              await onCodeReceived(_extractCode(code));
+              if (context.mounted) Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Extrait le `code` d'un lien d'invitation, ou renvoie la valeur brute.
+  static String _extractCode(String raw) {
+    final uri = Uri.tryParse(raw);
+    final fromQuery = uri?.queryParameters['code'];
+    return (fromQuery != null && fromQuery.isNotEmpty) ? fromQuery : raw;
+  }
+}
+
+class _PrimaryButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _PrimaryButton({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      semanticLabel: label,
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [JauneColors.lemon, JauneColors.lemonDeep],
+          ),
+          borderRadius: BorderRadius.circular(JauneRadii.pill),
+          boxShadow: [
+            BoxShadow(
+              color: JauneColors.lemonDeep.withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: JauneColors.ink, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: JauneColors.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SecondaryButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _SecondaryButton({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      semanticLabel: label,
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: JauneColors.skyLight.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(JauneRadii.pill),
+          border: Border.all(color: JauneColors.skyDeep.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: JauneColors.skyDeep, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: JauneColors.skyDeep,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Plein écran de scan QR. Renvoie la première valeur détectée via [Navigator.pop].
+class _QrScannerPage extends StatefulWidget {
+  const _QrScannerPage();
+
+  @override
+  State<_QrScannerPage> createState() => _QrScannerPageState();
+}
+
+class _QrScannerPageState extends State<_QrScannerPage>
+    with TickerProviderStateMixin {
+  final MobileScannerController _controller = MobileScannerController();
+  late final AnimationController _scanLine; // balayage continu de la ligne
+  late final AnimationController _success; // pulse de validation
+  bool _handled = false;
+  bool _torchOn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scanLine = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+    _success = AnimationController(
+      vsync: this,
+      duration: JauneMotion.standard,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scanLine.dispose();
+    _success.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onDetect(BarcodeCapture capture) async {
+    if (_handled) return;
+    final raw = capture.barcodes
+        .map((b) => b.rawValue)
+        .firstWhere((v) => v != null && v.isNotEmpty, orElse: () => null);
+    if (raw == null) return;
+    _handled = true;
+    HapticFeedback.mediumImpact();
+    AudioService.instance.playUiPop();
+    _scanLine.stop();
+    // Brève célébration du cadre avant de fermer.
+    await _success.forward();
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    if (!mounted) return;
+    Navigator.of(context).pop(raw);
+  }
+
+  void _toggleTorch() {
+    HapticFeedback.selectionClick();
+    _controller.toggleTorch();
+    setState(() => _torchOn = !_torchOn);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final media = MediaQuery.of(context);
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
+          // Fenêtre de visée carrée, centrée légèrement au-dessus du milieu.
+          final window = (w * 0.72).clamp(220.0, 300.0);
+          final left = (w - window) / 2;
+          final top = (h - window) / 2 - h * 0.05;
+          final frame = Rect.fromLTWH(left, top, window, window);
+
+          return Stack(
+            children: [
+              // Caméra
+              Positioned.fill(
+                child: MobileScanner(
+                  controller: _controller,
+                  onDetect: _onDetect,
+                ),
+              ),
+
+              // Voile sombre avec découpe sur la fenêtre de visée
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _ScannerScrimPainter(frame),
+                  ),
+                ),
+              ),
+
+              // Cadre : coins animés + ligne de balayage
+              Positioned.fromRect(
+                rect: frame,
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: Listenable.merge([_scanLine, _success]),
+                    builder: (context, _) {
+                      final success = _success.value;
+                      final cornerColor = Color.lerp(
+                        JauneColors.lemon,
+                        JauneColors.healthVibrant.first,
+                        success,
+                      )!;
+                      return Transform.scale(
+                        scale: 1 + 0.04 * Curves.easeOut.transform(success),
+                        child: CustomPaint(
+                          painter: _ScannerFramePainter(
+                            cornerColor: cornerColor,
+                            scanProgress: _scanLine.value,
+                            showScanLine: !_handled,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+
+              // Bouton de fermeture (haut gauche)
+              Positioned(
+                top: media.padding.top + 8,
+                left: 12,
+                child: _ScannerCircleButton(
+                  icon: CupertinoIcons.xmark,
+                  semanticLabel: MaterialLocalizations.of(context)
+                      .closeButtonTooltip,
+                  onTap: () => Navigator.of(context).maybePop(),
+                ),
+              ),
+
+              // Titre (haut centre)
+              Positioned(
+                top: media.padding.top + 16,
+                left: 64,
+                right: 64,
+                child: Text(
+                  l10n.addFriendScanTitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+
+              // Aide sous le cadre
+              Positioned(
+                top: frame.bottom + 28,
+                left: 32,
+                right: 32,
+                child: Text(
+                  l10n.addFriendScanHint,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.3,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ),
+
+              // Torche (bas centre)
+              Positioned(
+                bottom: media.padding.bottom + 36,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: _ScannerCircleButton(
+                    icon: _torchOn
+                        ? CupertinoIcons.bolt_fill
+                        : CupertinoIcons.bolt_slash,
+                    semanticLabel: l10n.addFriendScanTorch,
+                    large: true,
+                    active: _torchOn,
+                    onTap: _toggleTorch,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Bouton circulaire translucide pour les overlays du scanner.
+class _ScannerCircleButton extends StatelessWidget {
+  final IconData icon;
+  final String semanticLabel;
+  final VoidCallback onTap;
+  final bool large;
+  final bool active;
+
+  const _ScannerCircleButton({
+    required this.icon,
+    required this.semanticLabel,
+    required this.onTap,
+    this.large = false,
+    this.active = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final size = large ? 60.0 : 44.0;
+    final bg = active
+        ? JauneColors.lemon
+        : Colors.black.withValues(alpha: 0.45);
+    final fg = active ? JauneColors.ink : Colors.white;
+    return PressableScale(
+      semanticLabel: semanticLabel,
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: bg,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: JauneColors.lemonDeep.withValues(alpha: 0.5),
+                    blurRadius: 16,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: Icon(icon, color: fg, size: large ? 26 : 20),
+      ),
+    );
+  }
+}
+
+/// Assombrit tout l'écran sauf la fenêtre de visée (découpe arrondie).
+class _ScannerScrimPainter extends CustomPainter {
+  final Rect frame;
+  const _ScannerScrimPainter(this.frame);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius(
+      frame,
+      const Radius.circular(JauneRadii.card + 6),
+    );
+    final scrim = Path()..addRect(Offset.zero & size);
+    final hole = Path()..addRRect(rrect);
+    final overlay = Path.combine(PathOperation.difference, scrim, hole);
+    canvas.drawPath(
+      overlay,
+      Paint()..color = Colors.black.withValues(alpha: 0.6),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ScannerScrimPainter old) => old.frame != frame;
+}
+
+/// Dessine les 4 coins du cadre et la ligne de balayage.
+class _ScannerFramePainter extends CustomPainter {
+  final Color cornerColor;
+  final double scanProgress;
+  final bool showScanLine;
+
+  const _ScannerFramePainter({
+    required this.cornerColor,
+    required this.scanProgress,
+    required this.showScanLine,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const arm = 30.0;
+    const inset = 2.0;
+    const r = JauneRadii.card + 6;
+    final paint = Paint()
+      ..color = cornerColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+
+    final l = inset, t = inset;
+    final right = size.width - inset, bottom = size.height - inset;
+
+    // Coin haut-gauche
+    canvas.drawPath(
+      Path()
+        ..moveTo(l, t + arm)
+        ..lineTo(l, t + r)
+        ..arcToPoint(Offset(l + r, t), radius: const Radius.circular(r))
+        ..lineTo(l + arm, t),
+      paint,
+    );
+    // Coin haut-droit
+    canvas.drawPath(
+      Path()
+        ..moveTo(right - arm, t)
+        ..lineTo(right - r, t)
+        ..arcToPoint(Offset(right, t + r), radius: const Radius.circular(r))
+        ..lineTo(right, t + arm),
+      paint,
+    );
+    // Coin bas-droit
+    canvas.drawPath(
+      Path()
+        ..moveTo(right, bottom - arm)
+        ..lineTo(right, bottom - r)
+        ..arcToPoint(Offset(right - r, bottom),
+            radius: const Radius.circular(r))
+        ..lineTo(right - arm, bottom),
+      paint,
+    );
+    // Coin bas-gauche
+    canvas.drawPath(
+      Path()
+        ..moveTo(l + arm, bottom)
+        ..lineTo(l + r, bottom)
+        ..arcToPoint(Offset(l, bottom - r), radius: const Radius.circular(r))
+        ..lineTo(l, bottom - arm),
+      paint,
+    );
+
+    // Ligne de balayage
+    if (showScanLine) {
+      final y = (size.height - 24) * scanProgress + 12;
+      final glow = Paint()
+        ..shader = LinearGradient(
+          colors: [
+            JauneColors.lemon.withValues(alpha: 0),
+            JauneColors.lemon.withValues(alpha: 0.9),
+            JauneColors.lemon.withValues(alpha: 0),
+          ],
+        ).createShader(Rect.fromLTWH(14, y - 6, size.width - 28, 12));
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(14, y - 1.5, size.width - 28, 3),
+          const Radius.circular(2),
+        ),
+        glow,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ScannerFramePainter old) =>
+      old.scanProgress != scanProgress ||
+      old.cornerColor != cornerColor ||
+      old.showScanLine != showScanLine;
+}

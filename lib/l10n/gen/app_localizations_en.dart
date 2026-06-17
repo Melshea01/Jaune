@@ -590,4 +590,79 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareAction => 'Share';
+
+  @override
+  String get leaderboardTitle => 'Leaderboard';
+
+  @override
+  String get leaderboardTabRanking => 'Ranking';
+
+  @override
+  String get leaderboardTabRequests => 'Requests';
+
+  @override
+  String get leaderboardAddFriend => 'Add a friend';
+
+  @override
+  String get leaderboardAccept => 'Accept';
+
+  @override
+  String get leaderboardIgnore => 'Ignore';
+
+  @override
+  String get leaderboardEmptyTitle => 'No one here yet';
+
+  @override
+  String get leaderboardEmptySubtitle =>
+      'Add a friend to compare your gauges and streaks.';
+
+  @override
+  String get leaderboardNoRequestsTitle => 'No requests';
+
+  @override
+  String get leaderboardNoRequestsSubtitle =>
+      'Incoming friend requests will show up here.';
+
+  @override
+  String get a11yLeaderboardButton => 'Open friends leaderboard';
+
+  @override
+  String get addFriendTitle => 'Add a friend';
+
+  @override
+  String get addFriendSubtitle =>
+      'Let a friend scan your QR code, or share your invite link.';
+
+  @override
+  String get addFriendShare => 'Share my link';
+
+  @override
+  String get addFriendScan => 'Scan a QR code';
+
+  @override
+  String get addFriendScanTitle => 'Scan a friend\'s code';
+
+  @override
+  String get addFriendScanHint => 'Line up the QR code inside the frame';
+
+  @override
+  String get addFriendScanTorch => 'Flashlight';
+
+  @override
+  String addFriendShareMessage(String link) {
+    return 'Join me on Jaune and let\'s compare our gauges! $link';
+  }
+
+  @override
+  String get usernamePromptTitle => 'Choose your nickname';
+
+  @override
+  String get usernamePromptSubtitle =>
+      'This is the name your friends will see in the leaderboard.';
+
+  @override
+  String get usernamePromptHint => 'Your nickname';
+
+  @override
+  String get usernamePromptSave => 'Confirm';
 }

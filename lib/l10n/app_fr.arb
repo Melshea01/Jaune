@@ -311,5 +311,36 @@
   "statsDrinksAvoided": "Verres évités",
   "statsAvoidedHint": "vs ton rythme des 4 premières semaines",
   "a11yStatsButton": "Ouvrir les statistiques",
-  "shareAction": "Partager"
+  "shareAction": "Partager",
+
+  "leaderboardTitle": "Classement",
+  "leaderboardTabRanking": "Classement",
+  "leaderboardTabRequests": "Demandes",
+  "leaderboardAddFriend": "Ajouter un ami",
+  "leaderboardAccept": "Accepter",
+  "leaderboardIgnore": "Ignorer",
+  "leaderboardEmptyTitle": "Personne au classement",
+  "leaderboardEmptySubtitle": "Ajoute un ami pour comparer vos jauges et vos séries.",
+  "leaderboardNoRequestsTitle": "Aucune demande",
+  "leaderboardNoRequestsSubtitle": "Les demandes d'amitié reçues apparaîtront ici.",
+  "a11yLeaderboardButton": "Ouvrir le classement entre amis",
+
+  "addFriendTitle": "Ajoute un ami",
+  "addFriendSubtitle": "Fais scanner ton QR code, ou partage ton lien d'invitation.",
+  "addFriendShare": "Partager mon lien",
+  "addFriendScan": "Scanner un QR code",
+  "addFriendScanTitle": "Scanne le code d'un ami",
+  "addFriendScanHint": "Aligne le QR code dans le cadre",
+  "addFriendScanTorch": "Lampe torche",
+  "addFriendShareMessage": "Rejoins-moi sur Jaune et comparons nos jauges ! {link}",
+  "@addFriendShareMessage": {
+    "placeholders": {
+      "link": {"type": "String"}
+    }
+  },
+
+  "usernamePromptTitle": "Choisis ton pseudo",
+  "usernamePromptSubtitle": "C'est le nom que verront tes amis dans le classement.",
+  "usernamePromptHint": "Ton pseudo",
+  "usernamePromptSave": "Valider"
 }

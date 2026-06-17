@@ -591,4 +591,79 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get shareAction => 'Partager';
+
+  @override
+  String get leaderboardTitle => 'Classement';
+
+  @override
+  String get leaderboardTabRanking => 'Classement';
+
+  @override
+  String get leaderboardTabRequests => 'Demandes';
+
+  @override
+  String get leaderboardAddFriend => 'Ajouter un ami';
+
+  @override
+  String get leaderboardAccept => 'Accepter';
+
+  @override
+  String get leaderboardIgnore => 'Ignorer';
+
+  @override
+  String get leaderboardEmptyTitle => 'Personne au classement';
+
+  @override
+  String get leaderboardEmptySubtitle =>
+      'Ajoute un ami pour comparer vos jauges et vos séries.';
+
+  @override
+  String get leaderboardNoRequestsTitle => 'Aucune demande';
+
+  @override
+  String get leaderboardNoRequestsSubtitle =>
+      'Les demandes d\'amitié reçues apparaîtront ici.';
+
+  @override
+  String get a11yLeaderboardButton => 'Ouvrir le classement entre amis';
+
+  @override
+  String get addFriendTitle => 'Ajoute un ami';
+
+  @override
+  String get addFriendSubtitle =>
+      'Fais scanner ton QR code, ou partage ton lien d\'invitation.';
+
+  @override
+  String get addFriendShare => 'Partager mon lien';
+
+  @override
+  String get addFriendScan => 'Scanner un QR code';
+
+  @override
+  String get addFriendScanTitle => 'Scanne le code d\'un ami';
+
+  @override
+  String get addFriendScanHint => 'Aligne le QR code dans le cadre';
+
+  @override
+  String get addFriendScanTorch => 'Lampe torche';
+
+  @override
+  String addFriendShareMessage(String link) {
+    return 'Rejoins-moi sur Jaune et comparons nos jauges ! $link';
+  }
+
+  @override
+  String get usernamePromptTitle => 'Choisis ton pseudo';
+
+  @override
+  String get usernamePromptSubtitle =>
+      'C\'est le nom que verront tes amis dans le classement.';
+
+  @override
+  String get usernamePromptHint => 'Ton pseudo';
+
+  @override
+  String get usernamePromptSave => 'Valider';
 }

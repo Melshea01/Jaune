@@ -187,5 +187,36 @@
   "statsDrinksAvoided": "Drinks avoided",
   "statsAvoidedHint": "vs your pace in the first 4 weeks",
   "a11yStatsButton": "Open statistics",
-  "shareAction": "Share"
+  "shareAction": "Share",
+
+  "leaderboardTitle": "Leaderboard",
+  "leaderboardTabRanking": "Ranking",
+  "leaderboardTabRequests": "Requests",
+  "leaderboardAddFriend": "Add a friend",
+  "leaderboardAccept": "Accept",
+  "leaderboardIgnore": "Ignore",
+  "leaderboardEmptyTitle": "No one here yet",
+  "leaderboardEmptySubtitle": "Add a friend to compare your gauges and streaks.",
+  "leaderboardNoRequestsTitle": "No requests",
+  "leaderboardNoRequestsSubtitle": "Incoming friend requests will show up here.",
+  "a11yLeaderboardButton": "Open friends leaderboard",
+
+  "addFriendTitle": "Add a friend",
+  "addFriendSubtitle": "Let a friend scan your QR code, or share your invite link.",
+  "addFriendShare": "Share my link",
+  "addFriendScan": "Scan a QR code",
+  "addFriendScanTitle": "Scan a friend's code",
+  "addFriendScanHint": "Line up the QR code inside the frame",
+  "addFriendScanTorch": "Flashlight",
+  "addFriendShareMessage": "Join me on Jaune and let's compare our gauges! {link}",
+  "@addFriendShareMessage": {
+    "placeholders": {
+      "link": {"type": "String"}
+    }
+  },
+
+  "usernamePromptTitle": "Choose your nickname",
+  "usernamePromptSubtitle": "This is the name your friends will see in the leaderboard.",
+  "usernamePromptHint": "Your nickname",
+  "usernamePromptSave": "Confirm"
 }
