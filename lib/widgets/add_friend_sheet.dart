@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -264,16 +266,21 @@ class _QrScannerPage extends StatefulWidget {
 }
 
 class _QrScannerPageState extends State<_QrScannerPage>
-    with TickerProviderStateMixin {
-  final MobileScannerController _controller = MobileScannerController();
+    with TickerProviderStateMixin, WidgetsBindingObserver {
+  // autoStart: false — on pilote nous-mêmes le démarrage et le cycle de vie,
+  // sinon la caméra peut rester noire et la torche sans effet.
+  final MobileScannerController _controller =
+      MobileScannerController(autoStart: false);
   late final AnimationController _scanLine; // balayage continu de la ligne
   late final AnimationController _success; // pulse de validation
   bool _handled = false;
-  bool _torchOn = false;
+  bool _starting = false;
+  MobileScannerErrorCode? _error;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _scanLine = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
@@ -282,14 +289,46 @@ class _QrScannerPageState extends State<_QrScannerPage>
       vsync: this,
       duration: JauneMotion.standard,
     );
+    // Démarre après la première frame, une fois la vue caméra montée.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _start());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scanLine.dispose();
     _success.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_controller.value.isInitialized) return;
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _start();
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        unawaited(_controller.stop());
+    }
+  }
+
+  Future<void> _start() async {
+    if (_starting || _handled) return;
+    _starting = true;
+    if (_error != null && mounted) setState(() => _error = null);
+    try {
+      await _controller.start();
+    } on MobileScannerException catch (e) {
+      if (mounted) setState(() => _error = e.errorCode);
+    } catch (_) {
+      if (mounted) setState(() => _error = MobileScannerErrorCode.genericError);
+    } finally {
+      _starting = false;
+    }
   }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
@@ -309,16 +348,18 @@ class _QrScannerPageState extends State<_QrScannerPage>
     Navigator.of(context).pop(raw);
   }
 
-  void _toggleTorch() {
-    HapticFeedback.selectionClick();
-    _controller.toggleTorch();
-    setState(() => _torchOn = !_torchOn);
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final media = MediaQuery.of(context);
+
+    if (_error != null) {
+      return _ScannerErrorView(
+        code: _error!,
+        onRetry: _start,
+        onClose: () => Navigator.of(context).maybePop(),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -339,6 +380,15 @@ class _QrScannerPageState extends State<_QrScannerPage>
                 child: MobileScanner(
                   controller: _controller,
                   onDetect: _onDetect,
+                  errorBuilder: (context, error, child) {
+                    // Surface l'erreur via notre vue dédiée au prochain build.
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && _error != error.errorCode) {
+                        setState(() => _error = error.errorCode);
+                      }
+                    });
+                    return const ColoredBox(color: Colors.black);
+                  },
                 ),
               ),
 
@@ -424,26 +474,143 @@ class _QrScannerPageState extends State<_QrScannerPage>
                 ),
               ),
 
-              // Torche (bas centre)
+              // Torche (bas centre) — reflète l'état réel du matériel
               Positioned(
                 bottom: media.padding.bottom + 36,
                 left: 0,
                 right: 0,
                 child: Center(
-                  child: _ScannerCircleButton(
-                    icon: _torchOn
-                        ? CupertinoIcons.bolt_fill
-                        : CupertinoIcons.bolt_slash,
-                    semanticLabel: l10n.addFriendScanTorch,
-                    large: true,
-                    active: _torchOn,
-                    onTap: _toggleTorch,
+                  child: ValueListenableBuilder<MobileScannerState>(
+                    valueListenable: _controller,
+                    builder: (context, state, _) {
+                      final available =
+                          state.torchState != TorchState.unavailable;
+                      if (!state.isRunning || !available) {
+                        return const SizedBox(height: 60);
+                      }
+                      final on = state.torchState == TorchState.on;
+                      return _ScannerCircleButton(
+                        icon: on
+                            ? CupertinoIcons.bolt_fill
+                            : CupertinoIcons.bolt_slash,
+                        semanticLabel: l10n.addFriendScanTorch,
+                        large: true,
+                        active: on,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          _controller.toggleTorch();
+                        },
+                      );
+                    },
                   ),
                 ),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// État affiché quand la caméra ne peut pas démarrer (permission, simulateur,
+/// appareil non supporté). Donne une issue claire plutôt qu'un écran noir.
+class _ScannerErrorView extends StatelessWidget {
+  final MobileScannerErrorCode code;
+  final Future<void> Function() onRetry;
+  final VoidCallback onClose;
+
+  const _ScannerErrorView({
+    required this.code,
+    required this.onRetry,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final media = MediaQuery.of(context);
+    final isPermission = code == MobileScannerErrorCode.permissionDenied;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned(
+            top: media.padding.top + 8,
+            left: 12,
+            child: _ScannerCircleButton(
+              icon: CupertinoIcons.xmark,
+              semanticLabel:
+                  MaterialLocalizations.of(context).closeButtonTooltip,
+              onTap: onClose,
+            ),
+          ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isPermission
+                        ? CupertinoIcons.camera_circle
+                        : CupertinoIcons.exclamationmark_triangle,
+                    size: 56,
+                    color: JauneColors.lemon,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    l10n.addFriendScanError,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (isPermission) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.addFriendScanPermission,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 26),
+                  PressableScale(
+                    semanticLabel: l10n.addFriendScanRetry,
+                    onTap: onRetry,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [JauneColors.lemon, JauneColors.lemonDeep],
+                        ),
+                        borderRadius: BorderRadius.circular(JauneRadii.pill),
+                      ),
+                      child: Text(
+                        l10n.addFriendScanRetry,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: JauneColors.ink,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

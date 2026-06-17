@@ -332,6 +332,9 @@
   "addFriendScanTitle": "Scanne le code d'un ami",
   "addFriendScanHint": "Aligne le QR code dans le cadre",
   "addFriendScanTorch": "Lampe torche",
+  "addFriendScanError": "Impossible d'ouvrir la caméra",
+  "addFriendScanPermission": "Autorise l'accès à la caméra dans les réglages de ton téléphone pour scanner un code.",
+  "addFriendScanRetry": "Réessayer",
   "addFriendShareMessage": "Rejoins-moi sur Jaune et comparons nos jauges ! {link}",
   "@addFriendShareMessage": {
     "placeholders": {

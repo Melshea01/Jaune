@@ -650,6 +650,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addFriendScanTorch => 'Lampe torche';
 
   @override
+  String get addFriendScanError => 'Impossible d\'ouvrir la caméra';
+
+  @override
+  String get addFriendScanPermission =>
+      'Autorise l\'accès à la caméra dans les réglages de ton téléphone pour scanner un code.';
+
+  @override
+  String get addFriendScanRetry => 'Réessayer';
+
+  @override
   String addFriendShareMessage(String link) {
     return 'Rejoins-moi sur Jaune et comparons nos jauges ! $link';
   }

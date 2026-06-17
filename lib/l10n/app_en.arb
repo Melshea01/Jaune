@@ -208,6 +208,9 @@
   "addFriendScanTitle": "Scan a friend's code",
   "addFriendScanHint": "Line up the QR code inside the frame",
   "addFriendScanTorch": "Flashlight",
+  "addFriendScanError": "Can't open the camera",
+  "addFriendScanPermission": "Allow camera access in your phone settings to scan a code.",
+  "addFriendScanRetry": "Try again",
   "addFriendShareMessage": "Join me on Jaune and let's compare our gauges! {link}",
   "@addFriendShareMessage": {
     "placeholders": {

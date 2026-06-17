@@ -1190,6 +1190,24 @@ abstract class AppLocalizations {
   /// **'Lampe torche'**
   String get addFriendScanTorch;
 
+  /// No description provided for @addFriendScanError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir la caméra'**
+  String get addFriendScanError;
+
+  /// No description provided for @addFriendScanPermission.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autorise l\'accès à la caméra dans les réglages de ton téléphone pour scanner un code.'**
+  String get addFriendScanPermission;
+
+  /// No description provided for @addFriendScanRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get addFriendScanRetry;
+
   /// No description provided for @addFriendShareMessage.
   ///
   /// In fr, this message translates to:
