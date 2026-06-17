@@ -456,7 +456,9 @@ class _QrScannerPageState extends State<_QrScannerPage>
                 ),
               ),
 
-              // Torche (bas centre) — reflète l'état réel du matériel
+              // Torche (bas centre) — reflète l'état réel du matériel.
+              // Le bouton reste visible tant que la caméra tourne ; il est
+              // simplement désactivé si l'appareil ne fournit pas de torche.
               Positioned(
                 bottom: media.padding.bottom + 36,
                 left: 0,
@@ -465,12 +467,12 @@ class _QrScannerPageState extends State<_QrScannerPage>
                   child: ValueListenableBuilder<MobileScannerState>(
                     valueListenable: _controller,
                     builder: (context, state, _) {
-                      final available =
-                          state.torchState != TorchState.unavailable;
-                      if (!state.isRunning || !available) {
+                      if (!state.isInitialized || !state.isRunning) {
                         return const SizedBox(height: 60);
                       }
-                      final on = state.torchState == TorchState.on;
+                      final torch = state.torchState;
+                      final unavailable = torch == TorchState.unavailable;
+                      final on = torch == TorchState.on;
                       return _ScannerCircleButton(
                         icon:
                             on
@@ -479,9 +481,14 @@ class _QrScannerPageState extends State<_QrScannerPage>
                         semanticLabel: l10n.addFriendScanTorch,
                         large: true,
                         active: on,
-                        onTap: () {
+                        disabled: unavailable,
+                        onTap: () async {
                           HapticFeedback.selectionClick();
-                          _controller.toggleTorch();
+                          try {
+                            await _controller.toggleTorch();
+                          } catch (_) {
+                            // Torche indisponible : on ignore silencieusement.
+                          }
                         },
                       );
                     },
@@ -606,6 +613,7 @@ class _ScannerCircleButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool large;
   final bool active;
+  final bool disabled;
 
   const _ScannerCircleButton({
     required this.icon,
@@ -613,6 +621,7 @@ class _ScannerCircleButton extends StatelessWidget {
     required this.onTap,
     this.large = false,
     this.active = false,
+    this.disabled = false,
   });
 
   @override
@@ -621,28 +630,31 @@ class _ScannerCircleButton extends StatelessWidget {
     final bg =
         active ? JauneColors.lemon : Colors.black.withValues(alpha: 0.45);
     final fg = active ? JauneColors.ink : Colors.white;
-    return PressableScale(
-      semanticLabel: semanticLabel,
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: bg,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-          boxShadow:
-              active
-                  ? [
-                    BoxShadow(
-                      color: JauneColors.lemonDeep.withValues(alpha: 0.5),
-                      blurRadius: 16,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                  : null,
+    return Opacity(
+      opacity: disabled ? 0.4 : 1,
+      child: PressableScale(
+        semanticLabel: semanticLabel,
+        onTap: disabled ? null : onTap,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: bg,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+            boxShadow:
+                active
+                    ? [
+                      BoxShadow(
+                        color: JauneColors.lemonDeep.withValues(alpha: 0.5),
+                        blurRadius: 16,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                    : null,
+          ),
+          child: Icon(icon, color: fg, size: large ? 26 : 20),
         ),
-        child: Icon(icon, color: fg, size: large ? 26 : 20),
       ),
     );
   }
