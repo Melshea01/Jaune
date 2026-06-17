@@ -483,6 +483,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
             right: 0,
             child: Text(
               'JAUNE',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18 * 2.4,
                 fontWeight: FontWeight.w800,

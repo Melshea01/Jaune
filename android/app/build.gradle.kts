@@ -27,8 +27,8 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion // Requis pour workmanager et notifications Android modernes
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     buildTypes {

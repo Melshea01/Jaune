@@ -64,336 +64,340 @@ class _LevelSheetContent extends StatelessWidget {
     final xpToNextKeyUnlock =
         nextUnlock != null ? ((nextUnlock.level - level) * xpToNext) - xp : 0;
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(JauneRadii.sheet),
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 10),
-          // Poignée de drag
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(JauneRadii.sheet),
           ),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 20,
-                bottom: MediaQuery.of(context).padding.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            // Poignée de drag
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // --- En-tête : ring + rang ---
-                  Row(
-                    children: [
-                      _ProgressRing(
-                        progress: progress,
-                        color: phaseColor,
-                        level: level,
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 20,
+                  bottom: MediaQuery.of(context).padding.bottom + 24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // --- En-tête : ring + rang ---
+                    Row(
+                      children: [
+                        _ProgressRing(
+                          progress: progress,
+                          color: phaseColor,
+                          level: level,
+                        ),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                rankTitle,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: JauneColors.ink,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              _PhaseChip(
+                                label:
+                                    '$phaseLabel  ·  $levelInPhase/$phaseLevels',
+                                color: phaseColor,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                l10n.xpProgress(xp, xpToNext),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: JauneColors.inkSoft,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // --- Streak ---
+                    if (streak > 0) ...[
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              JauneColors.flameLight.withValues(alpha: 0.15),
+                              JauneColors.flame.withValues(alpha: 0.10),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(JauneRadii.card),
+                          border: Border.all(
+                            color: JauneColors.flame.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              rankTitle,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: JauneColors.ink,
+                            const Text('🔥', style: TextStyle(fontSize: 26)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.soberStreakInARow(streak),
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: JauneColors.ink,
+                                    ),
+                                  ),
+                                  Text(
+                                    _streakSubtitle(l10n, streak),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: JauneColors.inkSoft,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            _PhaseChip(
-                              label:
-                                  '$phaseLabel  ·  $levelInPhase/$phaseLevels',
-                              color: phaseColor,
-                            ),
-                            const SizedBox(height: 8),
+                            // Aux paliers, le streak se partage en carte brandée
+                            if (MilestoneScheduler.streakMilestones.contains(
+                              streak,
+                            )) ...[
+                              const SizedBox(width: 8),
+                              PressableScale(
+                                semanticLabel: l10n.shareAction,
+                                onTap:
+                                    () => ShareCard.shareStreak(
+                                      context,
+                                      days: streak,
+                                      skin: service.profile.equippedSkin,
+                                    ),
+                                child: Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: JauneColors.flame.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.ios_share,
+                                    size: 18,
+                                    color: JauneColors.flame,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // --- Déblocables de ce niveau ---
+                    if (currentLevelUnlocks.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      _SectionTitle(l10n.unlockedAtThisLevel),
+                      const SizedBox(height: 10),
+                      ...currentLevelUnlocks.map(
+                        (u) => _UnlockRow(unlock: u, accent: phaseColor),
+                      ),
+                    ],
+
+                    // --- Prochain défi (mis en avant) ---
+                    if (nextUnlock != null) ...[
+                      const SizedBox(height: 24),
+                      _SectionTitle(l10n.nextChallenge),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: phaseColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(JauneRadii.card),
+                          border: Border.all(color: phaseColor, width: 1.5),
+                        ),
+                        child: Row(
+                          children: [
                             Text(
-                              l10n.xpProgress(xp, xpToNext),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: JauneColors.inkSoft,
+                              _unlockIcon(nextUnlock.type),
+                              style: const TextStyle(fontSize: 28),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n_helpers.unlockTitle(l10n, nextUnlock),
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: JauneColors.ink,
+                                    ),
+                                  ),
+                                  Text(
+                                    l10n.levelWithDescription(
+                                      nextUnlock.level,
+                                      l10n_helpers.unlockDescription(
+                                        l10n,
+                                        nextUnlock,
+                                      ),
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: JauneColors.inkSoft,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: phaseColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                l10n.xpReward(xpToNextKeyUnlock),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                     ],
-                  ),
 
-                  // --- Streak ---
-                  if (streak > 0) ...[
+                    // --- Toute la collection ---
                     const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            JauneColors.flameLight.withValues(alpha: 0.15),
-                            JauneColors.flame.withValues(alpha: 0.10),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(JauneRadii.card),
-                        border: Border.all(
-                          color: JauneColors.flame.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Text('🔥', style: TextStyle(fontSize: 26)),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  l10n.soberStreakInARow(streak),
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: JauneColors.ink,
-                                  ),
-                                ),
-                                Text(
-                                  _streakSubtitle(l10n, streak),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: JauneColors.inkSoft,
-                                  ),
-                                ),
-                              ],
-                            ),
+                    PressableScale(
+                      semanticLabel: l10n.badgeGalleryViewAll,
+                      onTap: () => BadgeGallerySheet.show(context, service),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: JauneColors.lemon.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(JauneRadii.card),
+                          border: Border.all(
+                            color: JauneColors.lemonDeep.withValues(alpha: 0.4),
                           ),
-                          // Aux paliers, le streak se partage en carte brandée
-                          if (MilestoneScheduler.streakMilestones
-                              .contains(streak)) ...[
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('🏅', style: TextStyle(fontSize: 16)),
                             const SizedBox(width: 8),
-                            PressableScale(
-                              semanticLabel: l10n.shareAction,
-                              onTap:
-                                  () => ShareCard.shareStreak(
-                                    context,
-                                    days: streak,
-                                    skin: service.profile.equippedSkin,
-                                  ),
-                              child: Container(
-                                width: 38,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  color: JauneColors.flame.withValues(
-                                    alpha: 0.15,
-                                  ),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.ios_share,
-                                  size: 18,
-                                  color: JauneColors.flame,
-                                ),
+                            Text(
+                              l10n.badgeGalleryViewAll,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: JauneColors.ink,
                               ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                  ],
 
-                  // --- Déblocables de ce niveau ---
-                  if (currentLevelUnlocks.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    _SectionTitle(l10n.unlockedAtThisLevel),
-                    const SizedBox(height: 10),
-                    ...currentLevelUnlocks.map(
-                      (u) => _UnlockRow(unlock: u, accent: phaseColor),
-                    ),
-                  ],
-
-                  // --- Prochain défi (mis en avant) ---
-                  if (nextUnlock != null) ...[
-                    const SizedBox(height: 24),
-                    _SectionTitle(l10n.nextChallenge),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: phaseColor.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(JauneRadii.card),
-                        border: Border.all(color: phaseColor, width: 1.5),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            _unlockIcon(nextUnlock.type),
-                            style: const TextStyle(fontSize: 28),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  l10n_helpers.unlockTitle(l10n, nextUnlock),
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: JauneColors.ink,
-                                  ),
-                                ),
-                                Text(
-                                  l10n.levelWithDescription(
-                                    nextUnlock.level,
-                                    l10n_helpers.unlockDescription(
-                                      l10n,
-                                      nextUnlock,
+                    // --- Autres déblocables à venir ---
+                    if (nextUnlocks.length > 1) ...[
+                      const SizedBox(height: 24),
+                      _SectionTitle(l10n.andThen),
+                      const SizedBox(height: 10),
+                      ...nextUnlocks
+                          .skip(1)
+                          .map(
+                            (u) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 38,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      '${u.level}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.grey.shade600,
+                                      ),
                                     ),
                                   ),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: JauneColors.inkSoft,
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    _unlockIcon(u.type),
+                                    style: const TextStyle(fontSize: 16),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: phaseColor,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              l10n.xpReward(xpToNextKeyUnlock),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      l10n_helpers.unlockTitle(l10n, u),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: JauneColors.inkSoft,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ],
-
-                  // --- Toute la collection ---
-                  const SizedBox(height: 20),
-                  PressableScale(
-                    semanticLabel: l10n.badgeGalleryViewAll,
-                    onTap: () => BadgeGallerySheet.show(context, service),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: JauneColors.lemon.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(JauneRadii.card),
-                        border: Border.all(
-                          color: JauneColors.lemonDeep.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('🏅', style: TextStyle(fontSize: 16)),
-                          const SizedBox(width: 8),
-                          Text(
-                            l10n.badgeGalleryViewAll,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: JauneColors.ink,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // --- Autres déblocables à venir ---
-                  if (nextUnlocks.length > 1) ...[
-                    const SizedBox(height: 24),
-                    _SectionTitle(l10n.andThen),
-                    const SizedBox(height: 10),
-                    ...nextUnlocks
-                        .skip(1)
-                        .map(
-                          (u) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 38,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    '${u.level}',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  _unlockIcon(u.type),
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    l10n_helpers.unlockTitle(l10n, u),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: JauneColors.inkSoft,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                  ],
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
