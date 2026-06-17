@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -33,11 +31,12 @@ class AddFriendSheet {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _AddFriendSheetContent(
-        myCode: myCode,
-        mySkin: mySkin,
-        onCodeReceived: onCodeReceived,
-      ),
+      builder:
+          (_) => _AddFriendSheetContent(
+            myCode: myCode,
+            mySkin: mySkin,
+            onCodeReceived: onCodeReceived,
+          ),
     );
   }
 }
@@ -63,11 +62,13 @@ class _AddFriendSheetContent extends StatelessWidget {
         left: 20,
         right: 20,
         top: 12,
-        bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
+        bottom: 32 + MediaQuery.of(context).viewInsets.bottom,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(JauneRadii.sheet)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(JauneRadii.sheet),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -94,10 +95,7 @@ class _AddFriendSheetContent extends StatelessWidget {
           Text(
             l10n.addFriendSubtitle,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: JauneColors.inkSoft,
-            ),
+            style: TextStyle(fontSize: 14, color: JauneColors.inkSoft),
           ),
           const SizedBox(height: 22),
           // QR code avec avatar citron au centre
@@ -128,7 +126,9 @@ class _AddFriendSheetContent extends StatelessWidget {
                 color: JauneColors.ink,
               ),
               embeddedImage: null,
-              embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(56, 56)),
+              embeddedImageStyle: const QrEmbeddedImageStyle(
+                size: Size(56, 56),
+              ),
               embeddedImageEmitsError: false,
             ),
           ),
@@ -175,7 +175,11 @@ class _PrimaryButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _PrimaryButton({required this.icon, required this.label, required this.onTap});
+  const _PrimaryButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +226,11 @@ class _SecondaryButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _SecondaryButton({required this.icon, required this.label, required this.onTap});
+  const _SecondaryButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -235,7 +243,9 @@ class _SecondaryButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: JauneColors.skyLight.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(JauneRadii.pill),
-          border: Border.all(color: JauneColors.skyDeep.withValues(alpha: 0.25)),
+          border: Border.all(
+            color: JauneColors.skyDeep.withValues(alpha: 0.25),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -266,68 +276,41 @@ class _QrScannerPage extends StatefulWidget {
 }
 
 class _QrScannerPageState extends State<_QrScannerPage>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
-  // autoStart: false — on pilote nous-mêmes le démarrage et le cycle de vie,
-  // sinon la caméra peut rester noire et la torche sans effet.
-  final MobileScannerController _controller =
-      MobileScannerController(autoStart: false);
+    with TickerProviderStateMixin {
+  // autoStart laissé par défaut : c'est le widget MobileScanner qui démarre et
+  // gère le cycle de vie de la caméra (chemin éprouvé). On ne pilote pas
+  // start()/stop() à la main pour ne pas casser l'ouverture de la caméra.
+  final MobileScannerController _controller = MobileScannerController();
   late final AnimationController _scanLine; // balayage continu de la ligne
   late final AnimationController _success; // pulse de validation
   bool _handled = false;
-  bool _starting = false;
   MobileScannerErrorCode? _error;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _scanLine = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
     )..repeat(reverse: true);
-    _success = AnimationController(
-      vsync: this,
-      duration: JauneMotion.standard,
-    );
-    // Démarre après la première frame, une fois la vue caméra montée.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+    _success = AnimationController(vsync: this, duration: JauneMotion.standard);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _scanLine.dispose();
     _success.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_controller.value.isInitialized) return;
-    switch (state) {
-      case AppLifecycleState.resumed:
-        _start();
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.paused:
-      case AppLifecycleState.hidden:
-      case AppLifecycleState.detached:
-        unawaited(_controller.stop());
-    }
-  }
-
-  Future<void> _start() async {
-    if (_starting || _handled) return;
-    _starting = true;
-    if (_error != null && mounted) setState(() => _error = null);
+  /// Relance la caméra après une erreur (bouton « Réessayer »).
+  Future<void> _retry() async {
+    if (mounted) setState(() => _error = null);
     try {
       await _controller.start();
-    } on MobileScannerException catch (e) {
-      if (mounted) setState(() => _error = e.errorCode);
     } catch (_) {
-      if (mounted) setState(() => _error = MobileScannerErrorCode.genericError);
-    } finally {
-      _starting = false;
+      // L'errorBuilder de MobileScanner ré-affichera l'erreur si besoin.
     }
   }
 
@@ -356,7 +339,7 @@ class _QrScannerPageState extends State<_QrScannerPage>
     if (_error != null) {
       return _ScannerErrorView(
         code: _error!,
-        onRetry: _start,
+        onRetry: _retry,
         onClose: () => Navigator.of(context).maybePop(),
       );
     }
@@ -395,9 +378,7 @@ class _QrScannerPageState extends State<_QrScannerPage>
               // Voile sombre avec découpe sur la fenêtre de visée
               Positioned.fill(
                 child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: _ScannerScrimPainter(frame),
-                  ),
+                  child: CustomPaint(painter: _ScannerScrimPainter(frame)),
                 ),
               ),
 
@@ -409,11 +390,12 @@ class _QrScannerPageState extends State<_QrScannerPage>
                     animation: Listenable.merge([_scanLine, _success]),
                     builder: (context, _) {
                       final success = _success.value;
-                      final cornerColor = Color.lerp(
-                        JauneColors.lemon,
-                        JauneColors.healthVibrant.first,
-                        success,
-                      )!;
+                      final cornerColor =
+                          Color.lerp(
+                            JauneColors.lemon,
+                            JauneColors.healthVibrant.first,
+                            success,
+                          )!;
                       return Transform.scale(
                         scale: 1 + 0.04 * Curves.easeOut.transform(success),
                         child: CustomPaint(
@@ -435,8 +417,8 @@ class _QrScannerPageState extends State<_QrScannerPage>
                 left: 12,
                 child: _ScannerCircleButton(
                   icon: CupertinoIcons.xmark,
-                  semanticLabel: MaterialLocalizations.of(context)
-                      .closeButtonTooltip,
+                  semanticLabel:
+                      MaterialLocalizations.of(context).closeButtonTooltip,
                   onTap: () => Navigator.of(context).maybePop(),
                 ),
               ),
@@ -490,9 +472,10 @@ class _QrScannerPageState extends State<_QrScannerPage>
                       }
                       final on = state.torchState == TorchState.on;
                       return _ScannerCircleButton(
-                        icon: on
-                            ? CupertinoIcons.bolt_fill
-                            : CupertinoIcons.bolt_slash,
+                        icon:
+                            on
+                                ? CupertinoIcons.bolt_fill
+                                : CupertinoIcons.bolt_slash,
                         semanticLabel: l10n.addFriendScanTorch,
                         large: true,
                         active: on,
@@ -635,9 +618,8 @@ class _ScannerCircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = large ? 60.0 : 44.0;
-    final bg = active
-        ? JauneColors.lemon
-        : Colors.black.withValues(alpha: 0.45);
+    final bg =
+        active ? JauneColors.lemon : Colors.black.withValues(alpha: 0.45);
     final fg = active ? JauneColors.ink : Colors.white;
     return PressableScale(
       semanticLabel: semanticLabel,
@@ -649,15 +631,16 @@ class _ScannerCircleButton extends StatelessWidget {
           color: bg,
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: JauneColors.lemonDeep.withValues(alpha: 0.5),
-                    blurRadius: 16,
-                    spreadRadius: 1,
-                  ),
-                ]
-              : null,
+          boxShadow:
+              active
+                  ? [
+                    BoxShadow(
+                      color: JauneColors.lemonDeep.withValues(alpha: 0.5),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                  : null,
         ),
         child: Icon(icon, color: fg, size: large ? 26 : 20),
       ),
@@ -706,11 +689,12 @@ class _ScannerFramePainter extends CustomPainter {
     const arm = 30.0;
     const inset = 2.0;
     const r = JauneRadii.card + 6;
-    final paint = Paint()
-      ..color = cornerColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
+    final paint =
+        Paint()
+          ..color = cornerColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4
+          ..strokeCap = StrokeCap.round;
 
     final l = inset, t = inset;
     final right = size.width - inset, bottom = size.height - inset;
@@ -738,8 +722,10 @@ class _ScannerFramePainter extends CustomPainter {
       Path()
         ..moveTo(right, bottom - arm)
         ..lineTo(right, bottom - r)
-        ..arcToPoint(Offset(right - r, bottom),
-            radius: const Radius.circular(r))
+        ..arcToPoint(
+          Offset(right - r, bottom),
+          radius: const Radius.circular(r),
+        )
         ..lineTo(right - arm, bottom),
       paint,
     );
@@ -756,14 +742,15 @@ class _ScannerFramePainter extends CustomPainter {
     // Ligne de balayage
     if (showScanLine) {
       final y = (size.height - 24) * scanProgress + 12;
-      final glow = Paint()
-        ..shader = LinearGradient(
-          colors: [
-            JauneColors.lemon.withValues(alpha: 0),
-            JauneColors.lemon.withValues(alpha: 0.9),
-            JauneColors.lemon.withValues(alpha: 0),
-          ],
-        ).createShader(Rect.fromLTWH(14, y - 6, size.width - 28, 12));
+      final glow =
+          Paint()
+            ..shader = LinearGradient(
+              colors: [
+                JauneColors.lemon.withValues(alpha: 0),
+                JauneColors.lemon.withValues(alpha: 0.9),
+                JauneColors.lemon.withValues(alpha: 0),
+              ],
+            ).createShader(Rect.fromLTWH(14, y - 6, size.width - 28, 12));
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(14, y - 1.5, size.width - 28, 3),
