@@ -268,6 +268,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
+  String get settingsUsername => 'My nickname';
+
+  @override
+  String get settingsUsernameSubtitle => 'Visible in the friends leaderboard';
+
+  @override
+  String get settingsUsernameEmpty => 'Not set';
+
+  @override
   String get settingsNotifications => 'Reminders';
 
   @override
@@ -290,7 +299,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsPrivacyBody =>
-      'Your data stays on your phone: nothing is sent to the Internet, no account, no tracking.\n\nThe health bar is a playful indicator inspired by WHO guidelines — it is not medical advice. If your drinking worries you, talk to a health professional.';
+      'Your drink logs and history stay on your phone only.\n\nIf you use the friends leaderboard, your username, health gauge, sober streak, and equipped skin are synced to our servers (Supabase) via an anonymous identifier — no email or password required. You can delete this data at any time below.\n\nThe health bar is a playful indicator inspired by WHO guidelines — it is not medical advice. If your drinking worries you, talk to a health professional.';
 
   @override
   String get settingsVersion => 'Version';

@@ -34,10 +34,13 @@ class LevelUpCelebration {
       barrierColor: Colors.transparent,
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder:
-          (context, _, __) => _CelebrationView(
-            newLevel: newLevel,
-            unlocks: unlocks,
-            skin: skin,
+          (context, _, __) => Material(
+            type: MaterialType.transparency,
+            child: _CelebrationView(
+              newLevel: newLevel,
+              unlocks: unlocks,
+              skin: skin,
+            ),
           ),
     );
   }

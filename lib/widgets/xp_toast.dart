@@ -130,54 +130,57 @@ class _XpToastWidgetState extends State<_XpToastWidget>
           ),
         );
       },
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFF7D83F), Color(0xFFF6B73F)],
-            ),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: Colors.white.withAlpha((0.5 * 255).round()),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFF7D83F).withAlpha((0.45 * 255).round()),
-                offset: const Offset(0, 4),
-                blurRadius: 14,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFF7D83F), Color(0xFFF6B73F)],
               ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('⚡', style: TextStyle(fontSize: 18)),
-              const SizedBox(width: 8),
-              Text(
-                AppLocalizations.of(context).xpToastAmount(widget.event.amount),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.black87,
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(
+                color: Colors.white.withAlpha((0.5 * 255).round()),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFF7D83F).withAlpha((0.45 * 255).round()),
+                  offset: const Offset(0, 4),
+                  blurRadius: 14,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  xpReasonLabel(AppLocalizations.of(context), widget.event),
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black.withAlpha((0.55 * 255).round()),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('⚡', style: TextStyle(fontSize: 18)),
+                const SizedBox(width: 8),
+                Text(
+                  AppLocalizations.of(context).xpToastAmount(widget.event.amount),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black87,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    xpReasonLabel(AppLocalizations.of(context), widget.event),
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black.withAlpha((0.55 * 255).round()),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

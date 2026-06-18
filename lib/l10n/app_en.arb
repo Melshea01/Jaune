@@ -85,6 +85,9 @@
   "sharedFromJaune": "Shared from Jaune!",
 
   "settingsTitle": "Settings",
+  "settingsUsername": "My nickname",
+  "settingsUsernameSubtitle": "Visible in the friends leaderboard",
+  "settingsUsernameEmpty": "Not set",
   "settingsNotifications": "Reminders",
   "settingsNotificationsSubtitle": "Daily happy-hour notification",
   "settingsSound": "Sounds",
@@ -92,7 +95,7 @@
   "settingsLanguage": "Language",
   "settingsLanguageSystem": "System",
   "settingsPrivacy": "Privacy & health",
-  "settingsPrivacyBody": "Your data stays on your phone: nothing is sent to the Internet, no account, no tracking.\n\nThe health bar is a playful indicator inspired by WHO guidelines — it is not medical advice. If your drinking worries you, talk to a health professional.",
+  "settingsPrivacyBody": "Your drink logs and history stay on your phone only.\n\nIf you use the friends leaderboard, your username, health gauge, sober streak, and equipped skin are synced to our servers (Supabase) via an anonymous identifier — no email or password required. You can delete this data at any time below.\n\nThe health bar is a playful indicator inspired by WHO guidelines — it is not medical advice. If your drinking worries you, talk to a health professional.",
   "settingsVersion": "Version",
   "settingsDeleteData": "Delete my data",
   "deleteDataTitle": "Delete everything?",

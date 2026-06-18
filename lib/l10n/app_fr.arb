@@ -152,6 +152,9 @@
   "sharedFromJaune": "Partagé depuis Jaune !",
 
   "settingsTitle": "Réglages",
+  "settingsUsername": "Mon pseudo",
+  "settingsUsernameSubtitle": "Visible dans le classement entre amis",
+  "settingsUsernameEmpty": "Non défini",
   "settingsNotifications": "Rappels",
   "settingsNotificationsSubtitle": "Notification quotidienne à l'apéro",
   "settingsSound": "Sons",
@@ -159,7 +162,7 @@
   "settingsLanguage": "Langue",
   "settingsLanguageSystem": "Système",
   "settingsPrivacy": "Confidentialité & santé",
-  "settingsPrivacyBody": "Tes données restent sur ton téléphone : rien n'est envoyé sur Internet, aucun compte, aucun tracking.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l'OMS — ce n'est pas un avis médical. Si ta consommation t'inquiète, parles-en à un professionnel de santé.",
+  "settingsPrivacyBody": "Tes consommations et ton historique restent uniquement sur ton téléphone.\n\nSi tu utilises le classement entre amis, ton pseudo, ta jauge de santé, ta série sobre et ton skin sont synchronisés sur nos serveurs (Supabase) via un identifiant anonyme — sans email ni mot de passe. Tu peux effacer ces données à tout moment ci-dessous.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l'OMS — ce n'est pas un avis médical. Si ta consommation t'inquiète, parles-en à un professionnel de santé.",
   "settingsVersion": "Version",
   "settingsDeleteData": "Effacer mes données",
   "deleteDataTitle": "Tout effacer ?",

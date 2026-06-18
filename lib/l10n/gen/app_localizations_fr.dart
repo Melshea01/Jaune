@@ -268,6 +268,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsTitle => 'Réglages';
 
   @override
+  String get settingsUsername => 'Mon pseudo';
+
+  @override
+  String get settingsUsernameSubtitle =>
+      'Visible dans le classement entre amis';
+
+  @override
+  String get settingsUsernameEmpty => 'Non défini';
+
+  @override
   String get settingsNotifications => 'Rappels';
 
   @override
@@ -291,7 +301,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsPrivacyBody =>
-      'Tes données restent sur ton téléphone : rien n\'est envoyé sur Internet, aucun compte, aucun tracking.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l\'OMS — ce n\'est pas un avis médical. Si ta consommation t\'inquiète, parles-en à un professionnel de santé.';
+      'Tes consommations et ton historique restent uniquement sur ton téléphone.\n\nSi tu utilises le classement entre amis, ton pseudo, ta jauge de santé, ta série sobre et ton skin sont synchronisés sur nos serveurs (Supabase) via un identifiant anonyme — sans email ni mot de passe. Tu peux effacer ces données à tout moment ci-dessous.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l\'OMS — ce n\'est pas un avis médical. Si ta consommation t\'inquiète, parles-en à un professionnel de santé.';
 
   @override
   String get settingsVersion => 'Version';
