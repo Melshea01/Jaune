@@ -506,6 +506,24 @@ abstract class AppLocalizations {
   /// **'Réglages'**
   String get settingsTitle;
 
+  /// No description provided for @settingsUsername.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon pseudo'**
+  String get settingsUsername;
+
+  /// No description provided for @settingsUsernameSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visible dans le classement entre amis'**
+  String get settingsUsernameSubtitle;
+
+  /// No description provided for @settingsUsernameEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non défini'**
+  String get settingsUsernameEmpty;
+
   /// No description provided for @settingsNotifications.
   ///
   /// In fr, this message translates to:
@@ -551,7 +569,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPrivacyBody.
   ///
   /// In fr, this message translates to:
-  /// **'Tes données restent sur ton téléphone : rien n\'est envoyé sur Internet, aucun compte, aucun tracking.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l\'OMS — ce n\'est pas un avis médical. Si ta consommation t\'inquiète, parles-en à un professionnel de santé.'**
+  /// **'Tes consommations et ton historique restent uniquement sur ton téléphone.\n\nSi tu utilises le classement entre amis, ton pseudo, ta jauge de santé, ta série sobre et ton skin sont synchronisés sur nos serveurs (Supabase) via un identifiant anonyme — sans email ni mot de passe. Tu peux effacer ces données à tout moment ci-dessous.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l\'OMS — ce n\'est pas un avis médical. Si ta consommation t\'inquiète, parles-en à un professionnel de santé.'**
   String get settingsPrivacyBody;
 
   /// No description provided for @settingsVersion.

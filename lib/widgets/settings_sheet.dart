@@ -10,6 +10,7 @@ import '../services/audio_service.dart';
 import '../services/settings_service.dart';
 import '../theme/jaune_design.dart';
 import 'confirm_sheet.dart';
+import 'leaderboard_sheet.dart';
 import 'pressable.dart';
 
 /// Bottom sheet des réglages : rappels, sons, langue, confidentialité,
@@ -17,7 +18,9 @@ import 'pressable.dart';
 class SettingsSheet {
   static void show(
     BuildContext context, {
+    required String username,
     required Future<void> Function(bool enabled) onNotificationsChanged,
+    required Future<void> Function(String name) onUsernameChanged,
     required Future<void> Function() onDeleteData,
   }) {
     HapticFeedback.selectionClick();
@@ -28,7 +31,9 @@ class SettingsSheet {
       backgroundColor: Colors.transparent,
       builder:
           (_) => _SettingsSheetContent(
+            username: username,
             onNotificationsChanged: onNotificationsChanged,
+            onUsernameChanged: onUsernameChanged,
             onDeleteData: onDeleteData,
           ),
     );
@@ -36,11 +41,15 @@ class SettingsSheet {
 }
 
 class _SettingsSheetContent extends StatefulWidget {
+  final String username;
   final Future<void> Function(bool enabled) onNotificationsChanged;
+  final Future<void> Function(String name) onUsernameChanged;
   final Future<void> Function() onDeleteData;
 
   const _SettingsSheetContent({
+    required this.username,
     required this.onNotificationsChanged,
+    required this.onUsernameChanged,
     required this.onDeleteData,
   });
 
@@ -52,10 +61,12 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
   final SettingsService _settings = SettingsService.instance;
   bool _privacyExpanded = false;
   String _version = '';
+  late String _username;
 
   @override
   void initState() {
     super.initState();
+    _username = widget.username;
     PackageInfo.fromPlatform().then((info) {
       if (mounted) {
         setState(() => _version = '${info.version} (${info.buildNumber})');
@@ -112,6 +123,32 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // --- Pseudo ---
+                  PressableScale(
+                    onTap: () async {
+                      final name = await UsernamePrompt.show(
+                        context,
+                        initial: _username,
+                      );
+                      if (name == null || name.trim().isEmpty) return;
+                      setState(() => _username = name.trim());
+                      await widget.onUsernameChanged(name.trim());
+                    },
+                    child: _SettingsRow(
+                      emoji: '✏️',
+                      title: l10n.settingsUsername,
+                      subtitle: _username.isEmpty
+                          ? l10n.settingsUsernameEmpty
+                          : _username,
+                      trailing: const Icon(
+                        CupertinoIcons.chevron_right,
+                        size: 18,
+                        color: JauneColors.inkSoft,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
 
                   // --- Rappels ---
                   ValueListenableBuilder<bool>(

@@ -15,9 +15,93 @@ import 'pressable.dart';
 /// en Phase 2 (app_links). En Phase 1, le code transite tel quel.
 String friendLinkFor(String code) => 'https://jaune.app/add-friend?code=$code';
 
-/// Carte d'invitation : QR code (avatar citron au centre), partage natif du
-/// lien, et accès au scanner. Réutilise [share_plus] (déjà au projet) et le
-/// pattern de bottom sheet de l'app.
+/// Extrait le `code` d'un lien d'invitation, ou renvoie la valeur brute.
+String extractFriendCode(String raw) {
+  final uri = Uri.tryParse(raw);
+  final fromQuery = uri?.queryParameters['code'];
+  return (fromQuery != null && fromQuery.isNotEmpty) ? fromQuery : raw;
+}
+
+/// Contenu QR + partage + scan, réutilisable dans un sheet ou en vue embarquée.
+/// [onCodeReceived] est appelé après scan réussi — c'est au appelant de gérer
+/// la navigation post-réception (pop, changement de vue, etc.).
+class AddFriendBody extends StatelessWidget {
+  final String myCode;
+  final String mySkin;
+  final Future<void> Function(String code) onCodeReceived;
+
+  const AddFriendBody({
+    super.key,
+    required this.myCode,
+    required this.mySkin,
+    required this.onCodeReceived,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final link = friendLinkFor(myCode);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(JauneRadii.card),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: QrImageView(
+            data: link,
+            version: QrVersions.auto,
+            size: 220,
+            backgroundColor: Colors.white,
+            eyeStyle: const QrEyeStyle(
+              eyeShape: QrEyeShape.circle,
+              color: JauneColors.ink,
+            ),
+            dataModuleStyle: const QrDataModuleStyle(
+              dataModuleShape: QrDataModuleShape.circle,
+              color: JauneColors.ink,
+            ),
+            embeddedImage: null,
+            embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(56, 56)),
+            embeddedImageEmitsError: false,
+          ),
+        ),
+        const SizedBox(height: 14),
+        CitronAvatar(size: 52, skin: mySkin),
+        const SizedBox(height: 72),
+        _PrimaryButton(
+          icon: CupertinoIcons.share,
+          label: l10n.addFriendShare,
+          onTap: () => Share.share(l10n.addFriendShareMessage(link)),
+        ),
+        const SizedBox(height: 10),
+        _SecondaryButton(
+          icon: CupertinoIcons.qrcode_viewfinder,
+          label: l10n.addFriendScan,
+          onTap: () async {
+            final code = await Navigator.of(context).push<String>(
+              MaterialPageRoute(builder: (_) => const QrScannerPage()),
+            );
+            if (code == null || code.isEmpty) return;
+            await onCodeReceived(extractFriendCode(code));
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// Sheet autonome « Ajouter un ami » (usage hors classement).
 class AddFriendSheet {
   static Future<void> show(
     BuildContext context, {
@@ -55,7 +139,6 @@ class _AddFriendSheetContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final link = friendLinkFor(myCode);
 
     return Container(
       padding: EdgeInsets.only(
@@ -73,7 +156,6 @@ class _AddFriendSheetContent extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Poignée de glissement
           Container(
             width: 40,
             height: 4,
@@ -98,76 +180,17 @@ class _AddFriendSheetContent extends StatelessWidget {
             style: TextStyle(fontSize: 14, color: JauneColors.inkSoft),
           ),
           const SizedBox(height: 22),
-          // QR code avec avatar citron au centre
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(JauneRadii.card),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: QrImageView(
-              data: link,
-              version: QrVersions.auto,
-              size: 220,
-              backgroundColor: Colors.white,
-              eyeStyle: const QrEyeStyle(
-                eyeShape: QrEyeShape.circle,
-                color: JauneColors.ink,
-              ),
-              dataModuleStyle: const QrDataModuleStyle(
-                dataModuleShape: QrDataModuleShape.circle,
-                color: JauneColors.ink,
-              ),
-              embeddedImage: null,
-              embeddedImageStyle: const QrEmbeddedImageStyle(
-                size: Size(56, 56),
-              ),
-              embeddedImageEmitsError: false,
-            ),
-          ),
-          const SizedBox(height: 14),
-          // Avatar citron sous le QR (identité visuelle)
-          CitronAvatar(size: 52, skin: mySkin),
-          const SizedBox(height: 22),
-          // Partage natif
-          _PrimaryButton(
-            icon: CupertinoIcons.share,
-            label: l10n.addFriendShare,
-            onTap: () {
-              Share.share(l10n.addFriendShareMessage(link));
-            },
-          ),
-          const SizedBox(height: 10),
-          // Scanner
-          _SecondaryButton(
-            icon: CupertinoIcons.qrcode_viewfinder,
-            label: l10n.addFriendScan,
-            onTap: () async {
-              final code = await Navigator.of(context).push<String>(
-                MaterialPageRoute(builder: (_) => const _QrScannerPage()),
-              );
-              if (code == null || code.isEmpty) return;
-              await onCodeReceived(_extractCode(code));
+          AddFriendBody(
+            myCode: myCode,
+            mySkin: mySkin,
+            onCodeReceived: (code) async {
+              await onCodeReceived(code);
               if (context.mounted) Navigator.of(context).pop();
             },
           ),
         ],
       ),
     );
-  }
-
-  /// Extrait le `code` d'un lien d'invitation, ou renvoie la valeur brute.
-  static String _extractCode(String raw) {
-    final uri = Uri.tryParse(raw);
-    final fromQuery = uri?.queryParameters['code'];
-    return (fromQuery != null && fromQuery.isNotEmpty) ? fromQuery : raw;
   }
 }
 
@@ -268,14 +291,14 @@ class _SecondaryButton extends StatelessWidget {
 }
 
 /// Plein écran de scan QR. Renvoie la première valeur détectée via [Navigator.pop].
-class _QrScannerPage extends StatefulWidget {
-  const _QrScannerPage();
+class QrScannerPage extends StatefulWidget {
+  const QrScannerPage({super.key});
 
   @override
-  State<_QrScannerPage> createState() => _QrScannerPageState();
+  State<QrScannerPage> createState() => _QrScannerPageState();
 }
 
-class _QrScannerPageState extends State<_QrScannerPage>
+class _QrScannerPageState extends State<QrScannerPage>
     with TickerProviderStateMixin {
   // autoStart laissé par défaut : c'est le widget MobileScanner qui démarre et
   // gère le cycle de vie de la caméra (chemin éprouvé). On ne pilote pas

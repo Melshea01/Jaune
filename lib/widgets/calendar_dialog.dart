@@ -39,7 +39,7 @@ class CalendarDialog {
     final finalRect = Rect.fromCenter(
       center: screenRect.center,
       width: math.min(420, screenRect.width - 32),
-      height: 510,
+      height: 520,
     ).shift(Offset(0, (screenRect.height - 550) / 2 - 40));
 
     final overlay = Overlay.of(context);

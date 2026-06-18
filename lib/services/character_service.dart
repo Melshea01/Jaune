@@ -110,6 +110,9 @@ class CharacterProfile {
   int soberStreakDays; // jours sobres consécutifs (dérivé du calendrier)
   String equippedSkin; // clé du skin porté ('' = citron classique)
 
+  String username; // pseudo affiché dans le classement entre amis ('' = non défini)
+  String userId; // identifiant stable / code ami ('' = pas encore généré)
+
   CharacterProfile({
     this.xp = 0,
     this.level = 1,
@@ -122,6 +125,8 @@ class CharacterProfile {
     this.firstUseDate = '',
     this.soberStreakDays = 0,
     this.equippedSkin = '',
+    this.username = '',
+    this.userId = '',
   }) : currentPv = currentPv ?? 100;
 
   static final Map<String, List<String>> _assetMessages = {};
@@ -220,6 +225,8 @@ class CharacterProfile {
     'firstUseDate': firstUseDate,
     'soberStreakDays': soberStreakDays,
     'equippedSkin': equippedSkin,
+    'username': username,
+    'userId': userId,
   };
 
   static CharacterProfile fromJson(Map<String, dynamic> p) => CharacterProfile(
@@ -234,6 +241,8 @@ class CharacterProfile {
     firstUseDate: (p['firstUseDate'] as String?) ?? '',
     soberStreakDays: (p['soberStreakDays'] as int?) ?? 0,
     equippedSkin: (p['equippedSkin'] as String?) ?? '',
+    username: (p['username'] as String?) ?? '',
+    userId: (p['userId'] as String?) ?? '',
   );
 }
 

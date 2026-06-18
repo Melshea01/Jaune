@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -36,7 +37,12 @@ import 'widgets/level_up_celebration.dart';
 import 'widgets/streak_badge.dart';
 import 'widgets/level_sheet.dart';
 import 'widgets/info_sheet.dart';
+import 'widgets/leaderboard_sheet.dart';
+import 'widgets/notification_dot.dart';
 import 'widgets/pressable.dart';
+import 'models/friend.dart';
+import 'services/friends_service.dart';
+import 'services/supabase_friends_service.dart';
 import 'theme/jaune_design.dart';
 import 'utils/date_keys.dart';
 import 'utils/jaune_haptics.dart';
@@ -51,7 +57,11 @@ Future<void> main() async {
   tz.initializeTimeZones();
 
   // Initialize notifications
-  await NotificationService.initialize();
+  try {
+    await NotificationService.initialize();
+  } catch (e) {
+    debugPrint('Notification init failed: $e');
+  }
 
   // Appliquer le style à la barre de statut
   SystemChrome.setSystemUIOverlayStyle(
@@ -70,6 +80,9 @@ Future<void> main() async {
 
   // Date formatting (TableCalendar / intl) pour toutes les locales supportées
   await initializeDateFormatting();
+
+  // Backend social : Supabase si configuré (--dart-define), sinon mock.
+  await initFriendsBackend();
 
   // Premier lancement : onboarding avant la home
   final prefs = await SharedPreferences.getInstance();
@@ -140,6 +153,10 @@ class _MyHomePageState extends State<MyHomePage>
   final GlobalKey _calendarButtonKey = GlobalKey();
   bool _showDebugPanel = false;
 
+  // Deep linking (invitations d'amis : jaune://add-friend?code=...)
+  final AppLinks _appLinks = AppLinks();
+  StreamSubscription<Uri>? _linkSub;
+
   // Citron interaction state
   Timer? _citronReactionTimer;
   final List<DateTime> _citronTaps = [];
@@ -178,6 +195,7 @@ class _MyHomePageState extends State<MyHomePage>
     _initializeAnimations();
     _initializeShineAnimation();
     _loadState();
+    _initDeepLinks();
   }
 
   @override
@@ -222,6 +240,10 @@ class _MyHomePageState extends State<MyHomePage>
         await _openBeRealCapture();
       }
     };
+
+    // Préchauffe le compteur de demandes d'amis pour afficher la pastille
+    // du header dès le démarrage, sans attendre l'ouverture du classement.
+    friendsService.refresh();
   }
 
   /// Ouvre la page de capture BeJaune et marque le post si une photo
@@ -313,6 +335,9 @@ class _MyHomePageState extends State<MyHomePage>
 
       // Recalcul à l'ouverture : pas une action de log de l'utilisateur
       await _recomputeHealth(isUserLog: false);
+
+      // Publie les stats sociales à jour (no-op en mock / sans pseudo)
+      unawaited(_syncSocialProfile());
 
       // Programmer la notification BeReal du jour si pas encore envoyée
       await _scheduleDailyNotification();
@@ -690,10 +715,101 @@ class _MyHomePageState extends State<MyHomePage>
     InfoSheet.show(context);
   }
 
+  /// Écoute les liens d'invitation entrants (lien à froid + à chaud).
+  /// Schéma custom `jaune://add-friend?code=...` ou lien web équivalent.
+  Future<void> _initDeepLinks() async {
+    try {
+      final initial = await _appLinks.getInitialLink();
+      if (initial != null) _handleIncomingLink(initial);
+      _linkSub = _appLinks.uriLinkStream.listen(
+        _handleIncomingLink,
+        onError: (_) {},
+      );
+    } catch (e) {
+      debugPrint('Deep link init: $e');
+    }
+  }
+
+  /// Traite un lien d'ajout d'ami : extrait le code, s'assure d'un pseudo,
+  /// envoie la demande, puis ouvre le classement.
+  Future<void> _handleIncomingLink(Uri uri) async {
+    final isAddFriend =
+        uri.host == 'add-friend' || uri.path.contains('add-friend');
+    if (!isAddFriend) return;
+    final code = uri.queryParameters['code'];
+    if (code == null || code.trim().isEmpty) return;
+
+    if (_characterService.profile.username.trim().isEmpty) {
+      if (!mounted) return;
+      final name = await UsernamePrompt.show(context);
+      if (name == null || name.trim().isEmpty) return;
+      _characterService.profile.username = name.trim();
+      await _characterService.saveProfile();
+    }
+    await _syncSocialProfile();
+    await friendsService.sendRequest(code.trim());
+    if (mounted) _showLeaderboard();
+  }
+
+  /// Ouvre le classement entre amis. Demande le pseudo à la première
+  /// ouverture (requis pour figurer au classement), puis présente la sheet.
+  Future<void> _showLeaderboard() async {
+    if (_characterService.profile.username.trim().isEmpty) {
+      final name = await UsernamePrompt.show(context);
+      if (name == null || name.trim().isEmpty) return;
+      _characterService.profile.username = name.trim();
+      await _characterService.saveProfile();
+    }
+    if (!mounted) return;
+
+    // Mémorise l'identifiant backend (uid Supabase) la première fois.
+    final backendCode = friendsService.myCode;
+    if (_characterService.profile.userId.isEmpty && backendCode.isNotEmpty) {
+      _characterService.profile.userId = backendCode;
+      await _characterService.saveProfile();
+    }
+
+    // Publie des stats fraîches avant l'affichage (no-op en mock).
+    await _syncSocialProfile();
+
+    if (!mounted) return;
+    final p = _characterService.profile;
+    final me = LeaderboardEntry(
+      userId: p.userId.isEmpty ? backendCode : p.userId,
+      username: p.username,
+      healthPercent: _characterService.healthPercent,
+      streakDays: _characterService.soberStreakDays,
+      equippedSkin: p.equippedSkin,
+      isMe: true,
+    );
+    await LeaderboardSheet.show(context, me: me);
+    if (mounted) setState(() {}); // rafraîchit la pastille au retour
+  }
+
+  /// Publie le profil social courant vers le backend (si pseudo défini).
+  /// Tolérant aux erreurs réseau et no-op tant qu'aucun pseudo n'est choisi.
+  Future<void> _syncSocialProfile() async {
+    final p = _characterService.profile;
+    if (p.username.trim().isEmpty) return;
+    await friendsService.syncProfile(
+      username: p.username,
+      healthPercent: _characterService.healthPercent,
+      streakDays: _characterService.soberStreakDays,
+      equippedSkin: p.equippedSkin,
+    );
+  }
+
   void _showSettingsSheet() {
     SettingsSheet.show(
       context,
+      username: _characterService.profile.username,
       onNotificationsChanged: _onNotificationsChanged,
+      onUsernameChanged: (name) async {
+        _characterService.profile.username = name;
+        await _characterService.saveProfile();
+        await _syncSocialProfile();
+        if (mounted) setState(() {});
+      },
       onDeleteData: _deleteAllData,
     );
   }
@@ -828,6 +944,40 @@ class _MyHomePageState extends State<MyHomePage>
                     ),
                     const SizedBox(width: 8),
                   ],
+                  // Classement entre amis : pastille si demandes en attente
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: _showLeaderboard,
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: friendsService.pendingCount,
+                      builder: (context, pending, child) {
+                        final icon = Icon(
+                          Icons.emoji_events_outlined,
+                          color: Colors.grey.shade100.withAlpha(
+                            (0.7 * 255).round(),
+                          ),
+                          size: 24,
+                          semanticLabel:
+                              AppLocalizations.of(
+                                context,
+                              ).a11yLeaderboardButton,
+                        );
+                        if (pending <= 0) return icon;
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            icon,
+                            Positioned(
+                              top: -6,
+                              right: -8,
+                              child: NotificationDot(count: pending),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   CupertinoButton(
                     padding: EdgeInsets.zero,
                     onPressed: _showInfoDialog,
@@ -1385,6 +1535,7 @@ class _MyHomePageState extends State<MyHomePage>
     _shineController.dispose();
     _citronReactionTimer?.cancel();
     _bubbleTimer?.cancel();
+    _linkSub?.cancel();
     _citronController.dispose();
     super.dispose();
   }
