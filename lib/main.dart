@@ -736,7 +736,9 @@ class _MyHomePageState extends State<MyHomePage>
     final isAddFriend =
         uri.host == 'add-friend' || uri.path.contains('add-friend');
     if (!isAddFriend) return;
-    final code = uri.queryParameters['code'];
+    // `friend` est le paramètre courant ; `code` est conservé en repli pour
+    // les anciens liens/QR (cf. friendLinkFor — collision avec l'auth Supabase).
+    final code = uri.queryParameters['friend'] ?? uri.queryParameters['code'];
     if (code == null || code.trim().isEmpty) return;
 
     if (_characterService.profile.username.trim().isEmpty) {

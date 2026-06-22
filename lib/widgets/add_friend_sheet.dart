@@ -15,12 +15,19 @@ import 'pressable.dart';
 /// enregistré côté natif (iOS `CFBundleURLSchemes`, Android intent-filter) et
 /// écouté par `app_links` dans `main.dart`. Ainsi le lien ouvre directement
 /// l'app au lieu de tomber sur un site web inexistant.
-String friendLinkFor(String code) => 'jaune://add-friend?code=$code';
+///
+/// Le paramètre s'appelle `friend` (et NON `code`) : `supabase_flutter`
+/// intercepte tout deep link contenant `?code=` comme un callback d'auth PKCE,
+/// ce qui provoquait « Code verifier could not be found ». En utilisant un
+/// autre nom, Supabase ignore le lien et notre handler le reçoit normalement.
+String friendLinkFor(String code) => 'jaune://add-friend?friend=$code';
 
-/// Extrait le `code` d'un lien d'invitation, ou renvoie la valeur brute.
+/// Extrait le code ami d'un lien d'invitation, ou renvoie la valeur brute.
+/// On lit `friend` en priorité, avec repli sur `code` (anciens liens/QR).
 String extractFriendCode(String raw) {
   final uri = Uri.tryParse(raw);
-  final fromQuery = uri?.queryParameters['code'];
+  final fromQuery =
+      uri?.queryParameters['friend'] ?? uri?.queryParameters['code'];
   return (fromQuery != null && fromQuery.isNotEmpty) ? fromQuery : raw;
 }
 
