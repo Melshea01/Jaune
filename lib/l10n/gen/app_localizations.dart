@@ -62,8 +62,7 @@ import 'app_localizations_fr.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -71,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -84,18 +82,17 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('fr'),
+    Locale('fr')
   ];
 
   /// No description provided for @appTitle.
@@ -167,19 +164,19 @@ abstract class AppLocalizations {
   /// No description provided for @dayDetailModerate.
   ///
   /// In fr, this message translates to:
-  /// **'{count, plural, =1{1 verre — modéré} other{{count} verres — modéré}}'**
+  /// **'{count, plural, =1{1 verre · modéré} other{{count} verres · modéré}}'**
   String dayDetailModerate(int count);
 
   /// No description provided for @dayDetailRising.
   ///
   /// In fr, this message translates to:
-  /// **'{count} verres — ça monte'**
+  /// **'{count} verres · ça monte'**
   String dayDetailRising(int count);
 
   /// No description provided for @dayDetailHeavy.
   ///
   /// In fr, this message translates to:
-  /// **'{count} verres — grosse soirée'**
+  /// **'{count} verres · grosse soirée'**
   String dayDetailHeavy(int count);
 
   /// No description provided for @xpToastAmount.
@@ -299,7 +296,7 @@ abstract class AppLocalizations {
   /// No description provided for @levelWithDescription.
   ///
   /// In fr, this message translates to:
-  /// **'Niveau {level} — {description}'**
+  /// **'Niveau {level} · {description}'**
   String levelWithDescription(int level, String description);
 
   /// No description provided for @xpReward.
@@ -569,7 +566,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPrivacyBody.
   ///
   /// In fr, this message translates to:
-  /// **'Tes consommations et ton historique restent uniquement sur ton téléphone.\n\nSi tu utilises le classement entre amis, ton pseudo, ta jauge de santé, ta série sobre et ton skin sont synchronisés sur nos serveurs (Supabase) via un identifiant anonyme — sans email ni mot de passe. Tu peux effacer ces données à tout moment ci-dessous.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l\'OMS — ce n\'est pas un avis médical. Si ta consommation t\'inquiète, parles-en à un professionnel de santé.'**
+  /// **'Tes consommations et ton historique restent uniquement sur ton téléphone.\n\nSi tu utilises le classement entre amis, ton pseudo, ta jauge de santé, ta série sobre et ton skin sont synchronisés sur nos serveurs (Supabase) via un identifiant anonyme, sans email ni mot de passe. Tu peux effacer ces données à tout moment ci-dessous.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l\'OMS, pas un avis médical. Si ta consommation t\'inquiète, parles-en à un professionnel de santé.'**
   String get settingsPrivacyBody;
 
   /// No description provided for @settingsVersion.
@@ -577,6 +574,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Version'**
   String get settingsVersion;
+
+  /// No description provided for @settingsRedoTutorial.
+  ///
+  /// In fr, this message translates to:
+  /// **'Revoir le tutoriel'**
+  String get settingsRedoTutorial;
+
+  /// No description provided for @settingsRedoTutorialSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reprends la présentation depuis le début'**
+  String get settingsRedoTutorialSubtitle;
 
   /// No description provided for @settingsDeleteData.
   ///
@@ -647,7 +656,7 @@ abstract class AppLocalizations {
   /// No description provided for @unlockStateHappyDesc.
   ///
   /// In fr, this message translates to:
-  /// **'Nouvel état visuel — bonne conso'**
+  /// **'Nouvel état visuel · bonne conso'**
   String get unlockStateHappyDesc;
 
   /// No description provided for @unlockWeeklyInsightTitle.
@@ -827,7 +836,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding1Text.
   ///
   /// In fr, this message translates to:
-  /// **'Ton citron vit au rythme de ta consommation d\'alcool. Prends soin de lui — il te le rendra.'**
+  /// **'Ton citron vit au rythme de ta consommation d\'alcool. Prends soin de lui, il te le rendra.'**
   String get onboarding1Text;
 
   /// No description provided for @onboarding2Title.
@@ -845,7 +854,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingDisclaimer.
   ///
   /// In fr, this message translates to:
-  /// **'Indicateur ludique inspiré des repères de l\'OMS — pas un avis médical.'**
+  /// **'Indicateur ludique inspiré des repères de l\'OMS, pas un avis médical.'**
   String get onboardingDisclaimer;
 
   /// No description provided for @onboardingDisclaimerAck.
@@ -1001,7 +1010,7 @@ abstract class AppLocalizations {
   /// No description provided for @notifLevelTeaserBody.
   ///
   /// In fr, this message translates to:
-  /// **'Plus que {xp} XP — une journée sobre et c\'est dans la poche.'**
+  /// **'Plus que {xp} XP, une journée sobre et c\'est dans la poche.'**
   String notifLevelTeaserBody(int xp);
 
   /// No description provided for @badgeGalleryTitle.
@@ -1193,7 +1202,7 @@ abstract class AppLocalizations {
   /// No description provided for @leaderboardManageTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Amis & demandes'**
+  /// **'Amis'**
   String get leaderboardManageTitle;
 
   /// No description provided for @leaderboardYourFriends.
@@ -1323,8 +1332,7 @@ abstract class AppLocalizations {
   String get usernamePromptSave;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -1333,26 +1341,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'fr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'fr':
-      return AppLocalizationsFr();
+    case 'en': return AppLocalizationsEn();
+    case 'fr': return AppLocalizationsFr();
   }
 
   throw FlutterError(
     'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
     'an issue with the localizations generation tool. Please file an issue '
     'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
+    'that was used.'
   );
 }

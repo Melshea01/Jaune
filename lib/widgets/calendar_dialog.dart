@@ -187,6 +187,9 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
   }
 
   Widget _buildCalendarContent() {
+    // Le calendrier ET le détail du jour vivent dans le MÊME scroll : ainsi le
+    // détail s'affiche toujours sous la grille (jamais par-dessus) et, s'il
+    // manque de place, tout l'ensemble défile au lieu de déborder.
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -194,10 +197,17 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
         const SizedBox(height: 8),
         Flexible(
           fit: FlexFit.loose,
-          child: SingleChildScrollView(child: _buildCalendar()),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildCalendar(),
+                if (widget.dailyMap.isEmpty) _buildEmptyState(),
+                _buildSelectedDayDetail(),
+              ],
+            ),
+          ),
         ),
-        if (widget.dailyMap.isEmpty) _buildEmptyState(),
-        _buildSelectedDayDetail(),
       ],
     );
   }

@@ -10,6 +10,7 @@ import '../services/character_service.dart';
 import '../services/milestone_scheduler.dart';
 import '../theme/jaune_design.dart';
 import 'badge_gallery_sheet.dart';
+import 'draggable_sheet.dart';
 import 'pressable.dart';
 import 'share_card.dart';
 
@@ -64,42 +65,8 @@ class _LevelSheetContent extends StatelessWidget {
     final xpToNextKeyUnlock =
         nextUnlock != null ? ((nextUnlock.level - level) * xpToNext) - xp : 0;
 
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(JauneRadii.sheet),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            // Poignée de drag
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(
-                  left: 24,
-                  right: 24,
-                  top: 20,
-                  bottom: MediaQuery.of(context).padding.bottom + 24,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+    return DraggableSheet(
+      children: [
                     // --- En-tête : ring + rang ---
                     Row(
                       children: [
@@ -392,13 +359,7 @@ class _LevelSheetContent extends StatelessWidget {
                             ),
                           ),
                     ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 

@@ -22,19 +22,19 @@
   "calendarClose": "Fermer",
 
   "dayDetailSober": "Journée sobre",
-  "dayDetailModerate": "{count, plural, =1{1 verre — modéré} other{{count} verres — modéré}}",
+  "dayDetailModerate": "{count, plural, =1{1 verre · modéré} other{{count} verres · modéré}}",
   "@dayDetailModerate": {
     "placeholders": {
       "count": {"type": "int"}
     }
   },
-  "dayDetailRising": "{count} verres — ça monte",
+  "dayDetailRising": "{count} verres · ça monte",
   "@dayDetailRising": {
     "placeholders": {
       "count": {"type": "int"}
     }
   },
-  "dayDetailHeavy": "{count} verres — grosse soirée",
+  "dayDetailHeavy": "{count} verres · grosse soirée",
   "@dayDetailHeavy": {
     "placeholders": {
       "count": {"type": "int"}
@@ -80,7 +80,7 @@
   "streakKeepGoing": "Continue, ton citron rayonne !",
   "unlockedAtThisLevel": "✨ Débloqué à ce niveau",
   "nextChallenge": "🎯 Prochain défi",
-  "levelWithDescription": "Niveau {level} — {description}",
+  "levelWithDescription": "Niveau {level} · {description}",
   "@levelWithDescription": {
     "placeholders": {
       "level": {"type": "int"},
@@ -162,8 +162,10 @@
   "settingsLanguage": "Langue",
   "settingsLanguageSystem": "Système",
   "settingsPrivacy": "Confidentialité & santé",
-  "settingsPrivacyBody": "Tes consommations et ton historique restent uniquement sur ton téléphone.\n\nSi tu utilises le classement entre amis, ton pseudo, ta jauge de santé, ta série sobre et ton skin sont synchronisés sur nos serveurs (Supabase) via un identifiant anonyme — sans email ni mot de passe. Tu peux effacer ces données à tout moment ci-dessous.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l'OMS — ce n'est pas un avis médical. Si ta consommation t'inquiète, parles-en à un professionnel de santé.",
+  "settingsPrivacyBody": "Tes consommations et ton historique restent uniquement sur ton téléphone.\n\nSi tu utilises le classement entre amis, ton pseudo, ta jauge de santé, ta série sobre et ton skin sont synchronisés sur nos serveurs (Supabase) via un identifiant anonyme, sans email ni mot de passe. Tu peux effacer ces données à tout moment ci-dessous.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l'OMS, pas un avis médical. Si ta consommation t'inquiète, parles-en à un professionnel de santé.",
   "settingsVersion": "Version",
+  "settingsRedoTutorial": "Revoir le tutoriel",
+  "settingsRedoTutorialSubtitle": "Reprends la présentation depuis le début",
   "settingsDeleteData": "Effacer mes données",
   "deleteDataTitle": "Tout effacer ?",
   "deleteDataMessage": "Consommations, progression et réglages seront définitivement supprimés de cet appareil.",
@@ -176,7 +178,7 @@
   "unlockBadgeFirstStepTitle": "Badge « Premier pas »",
   "unlockBadgeFirstStepDesc": "Tu as commencé ton parcours",
   "unlockStateHappyTitle": "Citron heureux",
-  "unlockStateHappyDesc": "Nouvel état visuel — bonne conso",
+  "unlockStateHappyDesc": "Nouvel état visuel · bonne conso",
   "unlockWeeklyInsightTitle": "Insight hebdomadaire",
   "unlockWeeklyInsightDesc": "Analyse de ta semaine",
   "unlockStateTiredTitle": "Citron fatigué",
@@ -207,10 +209,10 @@
   "unlockGenericDesc": "Nouveau déblocage",
 
   "onboarding1Title": "Voici Jaune",
-  "onboarding1Text": "Ton citron vit au rythme de ta consommation d'alcool. Prends soin de lui — il te le rendra.",
+  "onboarding1Text": "Ton citron vit au rythme de ta consommation d'alcool. Prends soin de lui, il te le rendra.",
   "onboarding2Title": "Ta santé en un coup d'œil",
   "onboarding2Text": "Loggue chaque verre d'un tap. La barre de vie réagit, et les journées sobres te font gagner de l'XP et des surprises.",
-  "onboardingDisclaimer": "Indicateur ludique inspiré des repères de l'OMS — pas un avis médical.",
+  "onboardingDisclaimer": "Indicateur ludique inspiré des repères de l'OMS, pas un avis médical.",
   "onboardingDisclaimerAck": "J'ai compris",
   "onboardingScoringTitle": "Comment ça marche",
   "onboardingScoringText": "Chaque verre fait baisser les PV de ton citron. Les journées sobres lui rendent des PV, te font gagner de l'XP et allongent ta série 🔥.",
@@ -265,7 +267,7 @@
       "level": {"type": "int"}
     }
   },
-  "notifLevelTeaserBody": "Plus que {xp} XP — une journée sobre et c'est dans la poche.",
+  "notifLevelTeaserBody": "Plus que {xp} XP, une journée sobre et c'est dans la poche.",
   "@notifLevelTeaserBody": {
     "placeholders": {
       "xp": {"type": "int"}
@@ -331,7 +333,7 @@
   "leaderboardEmptySubtitle": "Ajoute un ami pour comparer vos jauges et vos séries.",
   "leaderboardNoRequestsTitle": "Aucune demande",
   "leaderboardNoRequestsSubtitle": "Les demandes d'amitié reçues apparaîtront ici.",
-  "leaderboardManageTitle": "Amis & demandes",
+  "leaderboardManageTitle": "Amis",
   "leaderboardYourFriends": "Mes amis",
   "leaderboardRemoveFriend": "Retirer",
   "leaderboardRemoveFriendTitle": "Retirer cet ami ?",

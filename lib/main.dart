@@ -813,6 +813,24 @@ class _MyHomePageState extends State<MyHomePage>
         if (mounted) setState(() {});
       },
       onDeleteData: _deleteAllData,
+      onRedoTutorial: _redoTutorial,
+    );
+  }
+
+  /// Relance le tutoriel d'accueil sans toucher aux données : on remet le
+  /// marqueur d'onboarding à zéro et on rouvre l'écran de présentation.
+  Future<void> _redoTutorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kOnboardingDoneKey, false);
+    navigatorKey.currentState?.pushAndRemoveUntil(
+      PageRouteBuilder(
+        transitionDuration: JauneMotion.standard,
+        pageBuilder: (_, __, ___) => const OnboardingFlow(),
+        transitionsBuilder:
+            (_, animation, __, child) =>
+                FadeTransition(opacity: animation, child: child),
+      ),
+      (route) => false,
     );
   }
 
@@ -1232,17 +1250,24 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   Widget _buildBottomControls() {
+    // Le groupe de gauche (calendrier + stats) occupe toute la place laissée
+    // par les contrôles de consommation, ancrés à droite. Le bouton calendrier
+    // est `Flexible` à l'intérieur : il garde sa taille naturelle quand il y a
+    // de la place, et ne se rétrécit (avec ellipse) que sur écran étroit — au
+    // lieu de disparaître comme avec un Flexible en concurrence d'un Spacer.
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Calendar button — compressible pour ne jamais pousser les contrôles
-        // de consommation hors de l'écran sur les petits téléphones.
-        Flexible(child: _buildCalendarButton()),
+        Expanded(
+          child: Row(
+            children: [
+              Flexible(child: _buildCalendarButton()),
+              const SizedBox(width: 10),
+              _buildStatsButton(),
+            ],
+          ),
+        ),
         const SizedBox(width: 10),
-        // Stats button
-        _buildStatsButton(),
-        const Spacer(),
-        // Consumption controls
         _buildConsumptionControls(),
       ],
     );

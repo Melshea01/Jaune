@@ -165,7 +165,7 @@ class _LeaderboardSheetContentState extends State<_LeaderboardSheetContent> {
       children: [
         _Header(
           title: l10n.leaderboardTitle,
-          requestsLabel: l10n.leaderboardTabRequests,
+          requestsLabel: l10n.leaderboardManageTitle,
           pendingCount: _pendingCount,
           onRequests: () => _navigate(_View.requests),
           onAddFriend: () => _navigate(_View.addFriend),
@@ -254,6 +254,7 @@ class _LeaderboardSheetContentState extends State<_LeaderboardSheetContent> {
                   : ListView(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                     children: [
+                      // Section « Demandes » : seulement s'il y en a.
                       if (hasRequests) ...[
                         _ManageSectionTitle(
                           l10n.leaderboardTabRequests,
@@ -267,11 +268,15 @@ class _LeaderboardSheetContentState extends State<_LeaderboardSheetContent> {
                           ),
                       ],
                       if (hasFriends) ...[
-                        if (hasRequests) const SizedBox(height: 14),
-                        _ManageSectionTitle(
-                          l10n.leaderboardYourFriends,
-                          count: _friends.length,
-                        ),
+                        // Un sous-titre « Mes amis » n'est utile que pour
+                        // séparer des demandes affichées au-dessus.
+                        if (hasRequests) ...[
+                          const SizedBox(height: 14),
+                          _ManageSectionTitle(
+                            l10n.leaderboardYourFriends,
+                            count: _friends.length,
+                          ),
+                        ],
                         for (final f in _friends)
                           _FriendManageRow(
                             friend: f,
@@ -396,7 +401,7 @@ class _Header extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
-                    CupertinoIcons.tray_arrow_down,
+                    CupertinoIcons.person_2_fill,
                     size: 18,
                     color: JauneColors.inkSoft,
                   ),

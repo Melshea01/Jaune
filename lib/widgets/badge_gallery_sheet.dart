@@ -8,6 +8,7 @@ import '../services/character_service.dart';
 import '../services/citron_skins.dart';
 import '../theme/jaune_design.dart';
 import '../utils/jaune_haptics.dart';
+import 'draggable_sheet.dart';
 import 'pressable.dart';
 
 /// Galerie de tous les déblocables : les acquis en couleur, les verrouillés
@@ -57,31 +58,10 @@ class _BadgeGalleryContentState extends State<_BadgeGalleryContent> {
     final l10n = AppLocalizations.of(context);
     final int level = service.level;
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(JauneRadii.sheet),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 10),
-          // Poignée de drag
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
+    return DraggableSheet(
+      children: [
+        Center(
+          child: Text(
             l10n.badgeGalleryTitle,
             style: const TextStyle(
               fontSize: 20,
@@ -89,16 +69,13 @@ class _BadgeGalleryContentState extends State<_BadgeGalleryContent> {
               color: JauneColors.ink,
             ),
           ),
-          Flexible(
-            child: GridView.builder(
-              shrinkWrap: true,
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 20,
-                bottom: MediaQuery.of(context).padding.bottom + 24,
-              ),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        ),
+        const SizedBox(height: 20),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
@@ -137,9 +114,7 @@ class _BadgeGalleryContentState extends State<_BadgeGalleryContent> {
                 );
               },
             ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }

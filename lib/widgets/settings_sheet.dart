@@ -10,6 +10,7 @@ import '../services/audio_service.dart';
 import '../services/settings_service.dart';
 import '../theme/jaune_design.dart';
 import 'confirm_sheet.dart';
+import 'draggable_sheet.dart';
 import 'leaderboard_sheet.dart';
 import 'pressable.dart';
 
@@ -22,6 +23,7 @@ class SettingsSheet {
     required Future<void> Function(bool enabled) onNotificationsChanged,
     required Future<void> Function(String name) onUsernameChanged,
     required Future<void> Function() onDeleteData,
+    required Future<void> Function() onRedoTutorial,
   }) {
     HapticFeedback.selectionClick();
     AudioService.instance.playUiPop();
@@ -35,6 +37,7 @@ class SettingsSheet {
             onNotificationsChanged: onNotificationsChanged,
             onUsernameChanged: onUsernameChanged,
             onDeleteData: onDeleteData,
+            onRedoTutorial: onRedoTutorial,
           ),
     );
   }
@@ -45,12 +48,14 @@ class _SettingsSheetContent extends StatefulWidget {
   final Future<void> Function(bool enabled) onNotificationsChanged;
   final Future<void> Function(String name) onUsernameChanged;
   final Future<void> Function() onDeleteData;
+  final Future<void> Function() onRedoTutorial;
 
   const _SettingsSheetContent({
     required this.username,
     required this.onNotificationsChanged,
     required this.onUsernameChanged,
     required this.onDeleteData,
+    required this.onRedoTutorial,
   });
 
   @override
@@ -78,40 +83,8 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(JauneRadii.sheet),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 10),
-          // Poignée de drag
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 20,
-                bottom: MediaQuery.of(context).padding.bottom + 24,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+    return DraggableSheet(
+      children: [
                   Center(
                     child: Text(
                       l10n.settingsTitle,
@@ -284,6 +257,25 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 14),
+
+                  // --- Revoir le tutoriel ---
+                  PressableScale(
+                    onTap: () async {
+                      Navigator.of(context).pop();
+                      await widget.onRedoTutorial();
+                    },
+                    child: _SettingsRow(
+                      emoji: '🎓',
+                      title: l10n.settingsRedoTutorial,
+                      subtitle: l10n.settingsRedoTutorialSubtitle,
+                      trailing: const Icon(
+                        CupertinoIcons.chevron_right,
+                        size: 18,
+                        color: JauneColors.inkSoft,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 20),
 
                   // --- Version ---
@@ -333,12 +325,7 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }

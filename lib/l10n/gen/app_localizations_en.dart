@@ -20,8 +20,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifAperoTitle => '🍋 Happy hour with Jaune!';
 
   @override
-  String get notifAperoBody =>
-      'Time to capture your happy-hour moment. Show us your glass!';
+  String get notifAperoBody => 'Time to capture your happy-hour moment. Show us your glass!';
 
   @override
   String get postBejaune => 'Post a JAUNE';
@@ -49,20 +48,20 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count drinks — moderate',
-      one: '1 drink — moderate',
+      other: '$count drinks · moderate',
+      one: '1 drink · moderate',
     );
     return '$_temp0';
   }
 
   @override
   String dayDetailRising(int count) {
-    return '$count drinks — heating up';
+    return '$count drinks · heating up';
   }
 
   @override
   String dayDetailHeavy(int count) {
-    return '$count drinks — big night';
+    return '$count drinks · big night';
   }
 
   @override
@@ -136,7 +135,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String levelWithDescription(int level, String description) {
-    return 'Level $level — $description';
+    return 'Level $level · $description';
   }
 
   @override
@@ -165,29 +164,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get infoStep1Title => 'Log your drinks';
 
   @override
-  String get infoStep1Text =>
-      'Each time you drink, tap the \"🍻\" button. 1 standard drink = 1 tap (e.g. a pint = 2 taps).';
+  String get infoStep1Text => 'Each time you drink, tap the \"🍻\" button. 1 standard drink = 1 tap (e.g. a pint = 2 taps).';
 
   @override
   String get infoStep2Title => 'Your lemon lives with you';
 
   @override
-  String get infoStep2Text =>
-      'Your lemon has health points that rise or fall with your drinking. Take good care of it!';
+  String get infoStep2Text => 'Your lemon has health points that rise or fall with your drinking. Take good care of it!';
 
   @override
   String get infoStep3Title => 'Earn XP';
 
   @override
-  String get infoStep3Text =>
-      'Sober days, balanced weeks and consistency level you up and unlock surprises.';
+  String get infoStep3Text => 'Sober days, balanced weeks and consistency level you up and unlock surprises.';
 
   @override
   String get resetDayTitle => 'Reset today?';
 
   @override
-  String get resetDayMessage =>
-      'This will reset today\'s drinks to zero. Are you sure?';
+  String get resetDayMessage => 'This will reset today\'s drinks to zero. Are you sure?';
 
   @override
   String get cancel => 'Cancel';
@@ -298,11 +293,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPrivacy => 'Privacy & health';
 
   @override
-  String get settingsPrivacyBody =>
-      'Your drink logs and history stay on your phone only.\n\nIf you use the friends leaderboard, your username, health gauge, sober streak, and equipped skin are synced to our servers (Supabase) via an anonymous identifier — no email or password required. You can delete this data at any time below.\n\nThe health bar is a playful indicator inspired by WHO guidelines — it is not medical advice. If your drinking worries you, talk to a health professional.';
+  String get settingsPrivacyBody => 'Your drink logs and history stay on your phone only.\n\nIf you use the friends leaderboard, your username, health gauge, sober streak, and equipped skin are synced to our servers (Supabase) via an anonymous identifier, no email or password required. You can delete this data at any time below.\n\nThe health bar is a playful indicator inspired by WHO guidelines, not medical advice. If your drinking worries you, talk to a health professional.';
 
   @override
   String get settingsVersion => 'Version';
+
+  @override
+  String get settingsRedoTutorial => 'Replay the tutorial';
+
+  @override
+  String get settingsRedoTutorialSubtitle => 'Go through the intro again from the start';
 
   @override
   String get settingsDeleteData => 'Delete my data';
@@ -311,8 +311,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteDataTitle => 'Delete everything?';
 
   @override
-  String get deleteDataMessage =>
-      'Drinks, progress and settings will be permanently deleted from this device.';
+  String get deleteDataMessage => 'Drinks, progress and settings will be permanently deleted from this device.';
 
   @override
   String get deleteAction => 'Delete';
@@ -339,7 +338,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unlockStateHappyTitle => 'Happy lemon';
 
   @override
-  String get unlockStateHappyDesc => 'New visual state — healthy habits';
+  String get unlockStateHappyDesc => 'New visual state · healthy habits';
 
   @override
   String get unlockWeeklyInsightTitle => 'Weekly insight';
@@ -429,19 +428,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboarding1Title => 'Meet Jaune';
 
   @override
-  String get onboarding1Text =>
-      'Your lemon lives to the rhythm of your drinking. Take care of it — it will return the favor.';
+  String get onboarding1Text => 'Your lemon lives to the rhythm of your drinking. Take care of it and it will return the favor.';
 
   @override
   String get onboarding2Title => 'Your health at a glance';
 
   @override
-  String get onboarding2Text =>
-      'Log every drink with one tap. The health bar reacts, and sober days earn you XP and surprises.';
+  String get onboarding2Text => 'Log every drink with one tap. The health bar reacts, and sober days earn you XP and surprises.';
 
   @override
-  String get onboardingDisclaimer =>
-      'A playful indicator inspired by WHO guidelines — not medical advice.';
+  String get onboardingDisclaimer => 'A playful indicator inspired by WHO guidelines, not medical advice.';
 
   @override
   String get onboardingDisclaimerAck => 'Got it';
@@ -450,26 +446,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingScoringTitle => 'How it works';
 
   @override
-  String get onboardingScoringText =>
-      'Every drink lowers your lemon\'s HP. Sober days restore HP, earn you XP and grow your streak 🔥.';
+  String get onboardingScoringText => 'Every drink lowers your lemon\'s HP. Sober days restore HP, earn you XP and grow your streak 🔥.';
 
   @override
   String get onboardingRankingTitle => 'Challenge your friends';
 
   @override
-  String get onboardingRankingText =>
-      'Add friends and compare your gauges and streaks. The healthiest one tops the leaderboard.';
+  String get onboardingRankingText => 'Add friends and compare your gauges and streaks. The healthiest one tops the leaderboard.';
 
   @override
   String get onboarding3Title => 'The BeJaune';
 
   @override
-  String get onboarding3Text =>
-      'Every day at happy hour, a window opens to capture your moment and share it.';
+  String get onboarding3Text => 'Every day at happy hour, a window opens to capture your moment and share it.';
 
   @override
-  String get onboardingRemindersBenefit =>
-      'A notification pings you right at happy hour, so you never miss your BeJaune or your streak.';
+  String get onboardingRemindersBenefit => 'A notification pings you right at happy hour, so you never miss your BeJaune or your streak.';
 
   @override
   String get onboardingEnableReminders => 'Turn on reminders';
@@ -490,8 +482,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarEmptyTitle => 'Your first day starts here';
 
   @override
-  String get calendarEmptyText =>
-      'Log your drinks and watch your month fill with color.';
+  String get calendarEmptyText => 'Log your drinks and watch your month fill with color.';
 
   @override
   String a11yAddDrink(int count) {
@@ -535,7 +526,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String notifLevelTeaserBody(int xp) {
-    return 'Only $xp XP left — one sober day and it\'s yours.';
+    return 'Only $xp XP left, one sober day and it\'s yours.';
   }
 
   @override
@@ -640,18 +631,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardEmptyTitle => 'No one here yet';
 
   @override
-  String get leaderboardEmptySubtitle =>
-      'Add a friend to compare your gauges and streaks.';
+  String get leaderboardEmptySubtitle => 'Add a friend to compare your gauges and streaks.';
 
   @override
   String get leaderboardNoRequestsTitle => 'No requests';
 
   @override
-  String get leaderboardNoRequestsSubtitle =>
-      'Incoming friend requests will show up here.';
+  String get leaderboardNoRequestsSubtitle => 'Incoming friend requests will show up here.';
 
   @override
-  String get leaderboardManageTitle => 'Friends & requests';
+  String get leaderboardManageTitle => 'Friends';
 
   @override
   String get leaderboardYourFriends => 'Your friends';
@@ -677,8 +666,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addFriendTitle => 'Add a friend';
 
   @override
-  String get addFriendSubtitle =>
-      'Let a friend scan your QR code, or share your invite link.';
+  String get addFriendSubtitle => 'Let a friend scan your QR code, or share your invite link.';
 
   @override
   String get addFriendShare => 'Share my link';
@@ -699,8 +687,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addFriendScanError => 'Can\'t open the camera';
 
   @override
-  String get addFriendScanPermission =>
-      'Allow camera access in your phone settings to scan a code.';
+  String get addFriendScanPermission => 'Allow camera access in your phone settings to scan a code.';
 
   @override
   String get addFriendScanRetry => 'Try again';
@@ -714,8 +701,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get usernamePromptTitle => 'Choose your nickname';
 
   @override
-  String get usernamePromptSubtitle =>
-      'This is the name your friends will see in the leaderboard.';
+  String get usernamePromptSubtitle => 'This is the name your friends will see in the leaderboard.';
 
   @override
   String get usernamePromptHint => 'Your nickname';

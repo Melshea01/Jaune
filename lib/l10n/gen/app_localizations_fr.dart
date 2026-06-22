@@ -20,8 +20,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notifAperoTitle => '🍋 Moment apéro avec Jaune !';
 
   @override
-  String get notifAperoBody =>
-      'C\'est l\'heure de capturer ton moment à l\'apéro. Montre-nous ton verre !';
+  String get notifAperoBody => 'C\'est l\'heure de capturer ton moment à l\'apéro. Montre-nous ton verre !';
 
   @override
   String get postBejaune => 'Poste un JAUNE';
@@ -49,20 +48,20 @@ class AppLocalizationsFr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count verres — modéré',
-      one: '1 verre — modéré',
+      other: '$count verres · modéré',
+      one: '1 verre · modéré',
     );
     return '$_temp0';
   }
 
   @override
   String dayDetailRising(int count) {
-    return '$count verres — ça monte';
+    return '$count verres · ça monte';
   }
 
   @override
   String dayDetailHeavy(int count) {
-    return '$count verres — grosse soirée';
+    return '$count verres · grosse soirée';
   }
 
   @override
@@ -136,7 +135,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String levelWithDescription(int level, String description) {
-    return 'Niveau $level — $description';
+    return 'Niveau $level · $description';
   }
 
   @override
@@ -165,29 +164,25 @@ class AppLocalizationsFr extends AppLocalizations {
   String get infoStep1Title => 'Loggue tes verres';
 
   @override
-  String get infoStep1Text =>
-      'Chaque fois que tu bois, appuie sur le bouton « 🍻 ». 1 verre standard = 1 clic (ex : une pinte = 2 clics).';
+  String get infoStep1Text => 'Chaque fois que tu bois, appuie sur le bouton « 🍻 ». 1 verre standard = 1 clic (ex : une pinte = 2 clics).';
 
   @override
   String get infoStep2Title => 'Ton citron vit avec toi';
 
   @override
-  String get infoStep2Text =>
-      'Ton citron a des points de vie qui montent ou descendent selon ta consommation. Prends soin de lui !';
+  String get infoStep2Text => 'Ton citron a des points de vie qui montent ou descendent selon ta consommation. Prends soin de lui !';
 
   @override
   String get infoStep3Title => 'Gagne de l\'XP';
 
   @override
-  String get infoStep3Text =>
-      'Journées sobres, semaines équilibrées et régularité te font monter de niveau et débloquer des surprises.';
+  String get infoStep3Text => 'Journées sobres, semaines équilibrées et régularité te font monter de niveau et débloquer des surprises.';
 
   @override
   String get resetDayTitle => 'Réinitialiser la journée ?';
 
   @override
-  String get resetDayMessage =>
-      'Cela remettra à zéro tes consommations d\'aujourd\'hui. Tu confirmes ?';
+  String get resetDayMessage => 'Cela remettra à zéro tes consommations d\'aujourd\'hui. Tu confirmes ?';
 
   @override
   String get cancel => 'Annuler';
@@ -271,8 +266,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsUsername => 'Mon pseudo';
 
   @override
-  String get settingsUsernameSubtitle =>
-      'Visible dans le classement entre amis';
+  String get settingsUsernameSubtitle => 'Visible dans le classement entre amis';
 
   @override
   String get settingsUsernameEmpty => 'Non défini';
@@ -281,8 +275,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsNotifications => 'Rappels';
 
   @override
-  String get settingsNotificationsSubtitle =>
-      'Notification quotidienne à l\'apéro';
+  String get settingsNotificationsSubtitle => 'Notification quotidienne à l\'apéro';
 
   @override
   String get settingsSound => 'Sons';
@@ -300,11 +293,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsPrivacy => 'Confidentialité & santé';
 
   @override
-  String get settingsPrivacyBody =>
-      'Tes consommations et ton historique restent uniquement sur ton téléphone.\n\nSi tu utilises le classement entre amis, ton pseudo, ta jauge de santé, ta série sobre et ton skin sont synchronisés sur nos serveurs (Supabase) via un identifiant anonyme — sans email ni mot de passe. Tu peux effacer ces données à tout moment ci-dessous.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l\'OMS — ce n\'est pas un avis médical. Si ta consommation t\'inquiète, parles-en à un professionnel de santé.';
+  String get settingsPrivacyBody => 'Tes consommations et ton historique restent uniquement sur ton téléphone.\n\nSi tu utilises le classement entre amis, ton pseudo, ta jauge de santé, ta série sobre et ton skin sont synchronisés sur nos serveurs (Supabase) via un identifiant anonyme, sans email ni mot de passe. Tu peux effacer ces données à tout moment ci-dessous.\n\nLa barre de vie est un indicateur ludique inspiré des repères de l\'OMS, pas un avis médical. Si ta consommation t\'inquiète, parles-en à un professionnel de santé.';
 
   @override
   String get settingsVersion => 'Version';
+
+  @override
+  String get settingsRedoTutorial => 'Revoir le tutoriel';
+
+  @override
+  String get settingsRedoTutorialSubtitle => 'Reprends la présentation depuis le début';
 
   @override
   String get settingsDeleteData => 'Effacer mes données';
@@ -313,8 +311,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get deleteDataTitle => 'Tout effacer ?';
 
   @override
-  String get deleteDataMessage =>
-      'Consommations, progression et réglages seront définitivement supprimés de cet appareil.';
+  String get deleteDataMessage => 'Consommations, progression et réglages seront définitivement supprimés de cet appareil.';
 
   @override
   String get deleteAction => 'Effacer';
@@ -341,7 +338,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get unlockStateHappyTitle => 'Citron heureux';
 
   @override
-  String get unlockStateHappyDesc => 'Nouvel état visuel — bonne conso';
+  String get unlockStateHappyDesc => 'Nouvel état visuel · bonne conso';
 
   @override
   String get unlockWeeklyInsightTitle => 'Insight hebdomadaire';
@@ -431,19 +428,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get onboarding1Title => 'Voici Jaune';
 
   @override
-  String get onboarding1Text =>
-      'Ton citron vit au rythme de ta consommation d\'alcool. Prends soin de lui — il te le rendra.';
+  String get onboarding1Text => 'Ton citron vit au rythme de ta consommation d\'alcool. Prends soin de lui, il te le rendra.';
 
   @override
   String get onboarding2Title => 'Ta santé en un coup d\'œil';
 
   @override
-  String get onboarding2Text =>
-      'Loggue chaque verre d\'un tap. La barre de vie réagit, et les journées sobres te font gagner de l\'XP et des surprises.';
+  String get onboarding2Text => 'Loggue chaque verre d\'un tap. La barre de vie réagit, et les journées sobres te font gagner de l\'XP et des surprises.';
 
   @override
-  String get onboardingDisclaimer =>
-      'Indicateur ludique inspiré des repères de l\'OMS — pas un avis médical.';
+  String get onboardingDisclaimer => 'Indicateur ludique inspiré des repères de l\'OMS, pas un avis médical.';
 
   @override
   String get onboardingDisclaimerAck => 'J\'ai compris';
@@ -452,26 +446,22 @@ class AppLocalizationsFr extends AppLocalizations {
   String get onboardingScoringTitle => 'Comment ça marche';
 
   @override
-  String get onboardingScoringText =>
-      'Chaque verre fait baisser les PV de ton citron. Les journées sobres lui rendent des PV, te font gagner de l\'XP et allongent ta série 🔥.';
+  String get onboardingScoringText => 'Chaque verre fait baisser les PV de ton citron. Les journées sobres lui rendent des PV, te font gagner de l\'XP et allongent ta série 🔥.';
 
   @override
   String get onboardingRankingTitle => 'Défie tes amis';
 
   @override
-  String get onboardingRankingText =>
-      'Ajoute tes amis et comparez vos jauges et vos séries. Le plus en forme prend la tête du classement.';
+  String get onboardingRankingText => 'Ajoute tes amis et comparez vos jauges et vos séries. Le plus en forme prend la tête du classement.';
 
   @override
   String get onboarding3Title => 'Le BeJaune';
 
   @override
-  String get onboarding3Text =>
-      'Chaque jour à l\'apéro, une fenêtre s\'ouvre pour capturer ton moment et le partager.';
+  String get onboarding3Text => 'Chaque jour à l\'apéro, une fenêtre s\'ouvre pour capturer ton moment et le partager.';
 
   @override
-  String get onboardingRemindersBenefit =>
-      'Une notif te prévient pile à l\'apéro : tu ne rates jamais ton BeJaune ni ta série.';
+  String get onboardingRemindersBenefit => 'Une notif te prévient pile à l\'apéro : tu ne rates jamais ton BeJaune ni ta série.';
 
   @override
   String get onboardingEnableReminders => 'Activer les rappels';
@@ -492,8 +482,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get calendarEmptyTitle => 'Ton premier jour commence ici';
 
   @override
-  String get calendarEmptyText =>
-      'Loggue tes verres et reviens voir ton mois prendre des couleurs.';
+  String get calendarEmptyText => 'Loggue tes verres et reviens voir ton mois prendre des couleurs.';
 
   @override
   String a11yAddDrink(int count) {
@@ -537,7 +526,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String notifLevelTeaserBody(int xp) {
-    return 'Plus que $xp XP — une journée sobre et c\'est dans la poche.';
+    return 'Plus que $xp XP, une journée sobre et c\'est dans la poche.';
   }
 
   @override
@@ -642,18 +631,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get leaderboardEmptyTitle => 'Personne au classement';
 
   @override
-  String get leaderboardEmptySubtitle =>
-      'Ajoute un ami pour comparer vos jauges et vos séries.';
+  String get leaderboardEmptySubtitle => 'Ajoute un ami pour comparer vos jauges et vos séries.';
 
   @override
   String get leaderboardNoRequestsTitle => 'Aucune demande';
 
   @override
-  String get leaderboardNoRequestsSubtitle =>
-      'Les demandes d\'amitié reçues apparaîtront ici.';
+  String get leaderboardNoRequestsSubtitle => 'Les demandes d\'amitié reçues apparaîtront ici.';
 
   @override
-  String get leaderboardManageTitle => 'Amis & demandes';
+  String get leaderboardManageTitle => 'Amis';
 
   @override
   String get leaderboardYourFriends => 'Mes amis';
@@ -679,8 +666,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addFriendTitle => 'Ajoute un ami';
 
   @override
-  String get addFriendSubtitle =>
-      'Fais scanner ton QR code, ou partage ton lien d\'invitation.';
+  String get addFriendSubtitle => 'Fais scanner ton QR code, ou partage ton lien d\'invitation.';
 
   @override
   String get addFriendShare => 'Partager mon lien';
@@ -701,8 +687,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addFriendScanError => 'Impossible d\'ouvrir la caméra';
 
   @override
-  String get addFriendScanPermission =>
-      'Autorise l\'accès à la caméra dans les réglages de ton téléphone pour scanner un code.';
+  String get addFriendScanPermission => 'Autorise l\'accès à la caméra dans les réglages de ton téléphone pour scanner un code.';
 
   @override
   String get addFriendScanRetry => 'Réessayer';
@@ -716,8 +701,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get usernamePromptTitle => 'Choisis ton pseudo';
 
   @override
-  String get usernamePromptSubtitle =>
-      'C\'est le nom que verront tes amis dans le classement.';
+  String get usernamePromptSubtitle => 'C\'est le nom que verront tes amis dans le classement.';
 
   @override
   String get usernamePromptHint => 'Ton pseudo';
