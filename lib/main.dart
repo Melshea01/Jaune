@@ -720,9 +720,12 @@ class _MyHomePageState extends State<MyHomePage>
   Future<void> _initDeepLinks() async {
     try {
       final initial = await _appLinks.getInitialLink();
-      if (initial != null) _handleIncomingLink(initial);
+      // Le lien initial est rejoué par l'OS à CHAQUE démarrage à froid : sans
+      // garde, on rouvrait le classement à chaque ouverture de l'app. On ne
+      // traite donc le lien à froid qu'une fois (dédupe persistée).
+      if (initial != null) _handleIncomingLink(initial, fromColdStart: true);
       _linkSub = _appLinks.uriLinkStream.listen(
-        _handleIncomingLink,
+        (uri) => _handleIncomingLink(uri),
         onError: (_) {},
       );
     } catch (e) {
@@ -732,10 +735,20 @@ class _MyHomePageState extends State<MyHomePage>
 
   /// Traite un lien d'ajout d'ami : extrait le code, s'assure d'un pseudo,
   /// envoie la demande, puis ouvre le classement.
-  Future<void> _handleIncomingLink(Uri uri) async {
+  Future<void> _handleIncomingLink(Uri uri, {bool fromColdStart = false}) async {
     final isAddFriend =
         uri.host == 'add-friend' || uri.path.contains('add-friend');
     if (!isAddFriend) return;
+
+    // Dédupe du lien à froid : si c'est le même lien que la dernière fois,
+    // l'utilisateur l'a déjà traité — on n'ouvre pas le classement au lancement.
+    if (fromColdStart) {
+      final prefs = await SharedPreferences.getInstance();
+      const key = 'last_cold_invite_link';
+      if (prefs.getString(key) == uri.toString()) return;
+      await prefs.setString(key, uri.toString());
+    }
+
     // `friend` est le paramètre courant ; `code` est conservé en repli pour
     // les anciens liens/QR (cf. friendLinkFor — collision avec l'auth Supabase).
     final code = uri.queryParameters['friend'] ?? uri.queryParameters['code'];
