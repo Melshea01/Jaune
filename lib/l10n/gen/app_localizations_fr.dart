@@ -712,6 +712,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get statsHeatmapMore => 'Chargé';
 
   @override
+  String get statsAllTimeSection => 'Depuis le début';
+
+  @override
   String get statsTotalSoberDays => 'Total de jours sobres';
 
   @override

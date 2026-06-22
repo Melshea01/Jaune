@@ -1268,6 +1268,12 @@ abstract class AppLocalizations {
   /// **'Chargé'**
   String get statsHeatmapMore;
 
+  /// No description provided for @statsAllTimeSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Depuis le début'**
+  String get statsAllTimeSection;
+
   /// No description provided for @statsTotalSoberDays.
   ///
   /// In fr, this message translates to:

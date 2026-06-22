@@ -707,6 +707,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsHeatmapMore => 'Heavy';
 
   @override
+  String get statsAllTimeSection => 'All-time';
+
+  @override
   String get statsTotalSoberDays => 'Total sober days';
 
   @override

@@ -355,6 +355,7 @@
   "statsHeatmapSubtitle": "Chaque carré = un jour. Vert = sobre, rouge = chargé.",
   "statsHeatmapLess": "Sobre",
   "statsHeatmapMore": "Chargé",
+  "statsAllTimeSection": "Depuis le début",
   "statsTotalSoberDays": "Total de jours sobres",
   "statsShareCaption": "{count, plural, =1{1 jour sobre au total} other{{count} jours sobres au total}}",
   "@statsShareCaption": {

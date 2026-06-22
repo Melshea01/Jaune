@@ -542,18 +542,25 @@ class _StatBarChartState extends State<StatBarChart>
         Expanded(
           child: Align(
             alignment: Alignment.bottomCenter,
-            child: d.value <= 0
-                ? Container(
-                    height: 3,
-                    decoration: BoxDecoration(color: color, borderRadius: radius),
-                  )
-                : FractionallySizedBox(
-                    heightFactor: frac.clamp(0.02, 1.0),
-                    widthFactor: 1,
-                    child: Container(
-                      decoration: BoxDecoration(color: color, borderRadius: radius),
+            child: ConstrainedBox(
+              // Largeur plafonnée quand il y a peu de barres (ex. « Tout » sur
+              // un historique court) : pas de barre pleine largeur disgracieuse.
+              constraints: BoxConstraints(maxWidth: thin ? double.infinity : 46),
+              child: d.value <= 0
+                  ? Container(
+                      height: 3,
+                      decoration:
+                          BoxDecoration(color: color, borderRadius: radius),
+                    )
+                  : FractionallySizedBox(
+                      heightFactor: frac.clamp(0.02, 1.0),
+                      widthFactor: 1,
+                      child: Container(
+                        decoration:
+                            BoxDecoration(color: color, borderRadius: radius),
+                      ),
                     ),
-                  ),
+            ),
           ),
         ),
         if (widget.showLabels)
@@ -605,27 +612,92 @@ class StatTrendBadge extends StatelessWidget {
 // Anneau de progression vers le prochain palier de série
 // =====================================================================
 
-/// Anneau « jours sobres » (style anneau d'activité Apple) : proportion de
-/// jours sans verre sur la période, avec gros pourcentage au centre.
-class SoberRing extends StatefulWidget {
-  final double progress; // 0..1
-  final String bigLabel; // ex: "72%"
-  final String smallLabel; // ex: "5 / 7 jours sobres"
-  final List<Color> gradient;
+/// Tuile compacte (demi-largeur) : un grand chiffre animé + libellé, et au
+/// choix un emoji ou un mini-anneau de progression. Pensée pour s'afficher
+/// deux par deux dans une grille (DA dashboard Revolut / apps santé).
+class StatTile extends StatelessWidget {
+  final String emoji;
+  final int value;
+  final String suffix;
+  final String label;
+  final Color accent;
+  final double? ring; // 0..1 → mini-anneau au lieu de l'emoji
 
-  const SoberRing({
+  const StatTile({
     super.key,
-    required this.progress,
-    required this.bigLabel,
-    required this.smallLabel,
-    this.gradient = const [Color(0xFF43E97B), Color(0xFF38F9D7)],
+    this.emoji = '',
+    required this.value,
+    this.suffix = '',
+    required this.label,
+    this.accent = JauneColors.lemonDeep,
+    this.ring,
   });
 
   @override
-  State<SoberRing> createState() => _SoberRingState();
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(JauneRadii.card),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            offset: const Offset(0, 4),
+            blurRadius: 14,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (ring != null)
+            SizedBox(
+              width: 34,
+              height: 34,
+              child: _MiniRing(progress: ring!, color: accent),
+            )
+          else
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+          const SizedBox(height: 12),
+          CountUpInt(
+            value,
+            suffix: suffix,
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              color: accent,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: JauneColors.inkSoft,
+              height: 1.25,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _SoberRingState extends State<SoberRing>
+/// Petit anneau de progression animé (pour les tuiles).
+class _MiniRing extends StatefulWidget {
+  final double progress;
+  final Color color;
+  const _MiniRing({required this.progress, required this.color});
+
+  @override
+  State<_MiniRing> createState() => _MiniRingState();
+}
+
+class _MiniRingState extends State<_MiniRing>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
@@ -640,44 +712,15 @@ class _SoberRingState extends State<SoberRing>
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 96,
-          height: 96,
-          child: AnimatedBuilder(
-            animation: _c,
-            builder: (context, _) => CustomPaint(
-              painter: _RingPainter(
-                widget.progress.clamp(0.0, 1.0) * _c.value,
-                widget.gradient,
-              ),
-              child: Center(
-                child: Text(
-                  widget.bigLabel,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: JauneColors.ink,
-                  ),
-                ),
-              ),
-            ),
-          ),
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) => CustomPaint(
+        painter: _RingPainter(
+          widget.progress.clamp(0.0, 1.0) * _c.value,
+          [widget.color, widget.color],
+          stroke: 5,
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            widget.smallLabel,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: JauneColors.ink,
-              height: 1.35,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -685,13 +728,13 @@ class _SoberRingState extends State<SoberRing>
 class _RingPainter extends CustomPainter {
   final double progress;
   final List<Color> gradient;
-  _RingPainter(this.progress, this.gradient);
+  final double stroke;
+  _RingPainter(this.progress, this.gradient, {this.stroke = 12.0});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    final radius = size.width / 2 - 7;
-    const stroke = 12.0;
+    final radius = size.width / 2 - stroke / 2 - 1;
 
     final bg = Paint()
       ..color = const Color(0xFFEDEFF4)
@@ -808,55 +851,6 @@ class MilestoneTrack extends StatelessWidget {
   }
 }
 
-/// Légende de la heatmap : du sobre (vert) au chargé (rouge).
-class StatHeatmapLegend extends StatelessWidget {
-  final String lessLabel;
-  final String moreLabel;
-  const StatHeatmapLegend({
-    super.key,
-    required this.lessLabel,
-    required this.moreLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const swatches = [0, 2, 4, 5, 6];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Text(
-          lessLabel,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade600,
-          ),
-        ),
-        const SizedBox(width: 6),
-        for (final c in swatches)
-          Container(
-            width: 12,
-            height: 12,
-            margin: const EdgeInsets.symmetric(horizontal: 1),
-            decoration: BoxDecoration(
-              color: jauneStatColor(c).withValues(alpha: c == 0 ? 0.35 : 1.0),
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-        const SizedBox(width: 6),
-        Text(
-          moreLabel,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 // =====================================================================
 // Patterns par jour de la semaine (7 barres, pire jour mis en avant)
 // =====================================================================
@@ -918,120 +912,6 @@ class WeekdayChart extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-// =====================================================================
-// Heatmap (grille type contributions GitHub) — colonnes = semaines
-// =====================================================================
-
-class StatHeatmap extends StatelessWidget {
-  final DateTime start;
-  final DateTime end;
-  final Map<String, int> dailyMap;
-  final DateTime today;
-  final String firstUseDate;
-  final String Function(DateTime day) keyOf;
-  final List<String> weekdayLabels; // L M M J V S D (lundi→dimanche)
-
-  const StatHeatmap({
-    super.key,
-    required this.start,
-    required this.end,
-    required this.dailyMap,
-    required this.today,
-    required this.firstUseDate,
-    required this.keyOf,
-    required this.weekdayLabels,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // On commence le lundi de la semaine de [start] pour aligner les colonnes.
-    DateTime cursor = StatsService.mondayOf(start);
-    final last = DateTime(end.year, end.month, end.day);
-    final d0 = DateTime(today.year, today.month, today.day);
-    final first = DateTime.tryParse(firstUseDate);
-
-    final columns = <Widget>[];
-    while (!cursor.isAfter(last)) {
-      final cells = <Widget>[];
-      for (int wd = 0; wd < 7; wd++) {
-        final day = cursor.add(Duration(days: wd));
-        cells.add(_cell(day, last, d0, first));
-      }
-      columns.add(
-        Padding(
-          padding: const EdgeInsets.only(right: 4),
-          child: Column(children: cells),
-        ),
-      );
-      cursor = cursor.add(const Duration(days: 7));
-    }
-
-    // Colonne fixe des initiales de jours, alignée sur les lignes (cellules
-    // de 14 px + 4 px de marge basse).
-    final labelColumn = Column(
-      children: [
-        for (int i = 0; i < 7; i++)
-          SizedBox(
-            height: 18,
-            child: Center(
-              child: Text(
-                weekdayLabels.length > i ? weekdayLabels[i] : '',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey.shade500,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(right: 6),
-          child: labelColumn,
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            reverse: true, // dernières semaines visibles d'abord
-            child: Row(children: columns),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _cell(DateTime day, DateTime last, DateTime d0, DateTime? first) {
-    const size = 14.0;
-    final inRange = !day.isBefore(StatsService.mondayOf(start)) && !day.isAfter(last);
-    final isFuture = day.isAfter(d0);
-    final beforeFirst = first != null &&
-        day.isBefore(DateTime(first.year, first.month, first.day));
-
-    Color color;
-    if (!inRange || isFuture || beforeFirst) {
-      color = const Color(0xFFEDEFF4);
-    } else {
-      final count = dailyMap[keyOf(day)] ?? 0;
-      color = jauneStatColor(count).withValues(alpha: count == 0 ? 0.35 : 1.0);
-    }
-
-    return Container(
-      width: size,
-      height: size,
-      margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(3),
       ),
     );
   }

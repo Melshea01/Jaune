@@ -219,6 +219,7 @@
   "statsHeatmapSubtitle": "Each square = a day. Green = sober, red = heavy.",
   "statsHeatmapLess": "Sober",
   "statsHeatmapMore": "Heavy",
+  "statsAllTimeSection": "All-time",
   "statsTotalSoberDays": "Total sober days",
   "statsShareCaption": "{count, plural, =1{1 sober day in total} other{{count} sober days in total}}",
   "statsInsightTrendDown": "−{percent}% vs the previous period, keep it up 🎉",

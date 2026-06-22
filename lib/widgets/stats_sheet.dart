@@ -12,7 +12,6 @@ import '../services/character_service.dart';
 import '../services/milestone_scheduler.dart';
 import '../services/stats_service.dart';
 import '../theme/jaune_design.dart';
-import '../utils/date_keys.dart';
 import 'draggable_sheet.dart';
 import 'share_card.dart';
 import 'stats_components.dart';
@@ -113,7 +112,10 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
     final locale = Localizations.localeOf(context).toString();
     final streak = widget.character.soberStreakDays;
 
-    // Sections révélées en cascade.
+    // Sections révélées en cascade. En haut : ce qui décrit l'instant (héros +
+    // objectifs de série, indépendants de la période). Puis le sélecteur, qui
+    // gouverne les cartes juste en dessous (KPI, insight, conso, santé). Enfin
+    // le profil global (habitudes par jour, records).
     final sections = <Widget>[
       _titleRow(l10n),
       StatHeroHeader(
@@ -124,6 +126,7 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         citron: _citron,
         skin: widget.character.profile.equippedSkin,
       ),
+      _milestoneCard(l10n, streak),
       StatPeriodSelector(
         selected: _period,
         onChanged: _setPeriod,
@@ -134,14 +137,13 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
           StatsPeriod.all: l10n.statsPeriodAll,
         },
       ),
+      _kpiRow(l10n),
       _insightCard(l10n, locale, streak),
-      _soberCard(l10n),
       _consumptionCard(l10n, locale),
       _healthCard(l10n),
-      _milestoneCard(l10n, streak),
+      _sectionLabel(l10n.statsAllTimeSection),
       _weekdayCard(l10n, locale),
-      _heatmapCard(l10n, locale),
-      _recordsCard(l10n, streak),
+      _recordsGrid(l10n, streak),
     ];
 
     return DraggableSheet(
@@ -327,7 +329,9 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
     );
   }
 
-  Widget _soberCard(AppLocalizations l10n) {
+  /// Deux tuiles côte à côte, gouvernées par la période : taux de jours sobres
+  /// (mini-anneau) et total de verres.
+  Widget _kpiRow(AppLocalizations l10n) {
     final range = StatsService.periodRange(_period, _now, _firstUse);
     final tracked = StatsService.trackedDaysInRange(
       range.start,
@@ -343,16 +347,61 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
       _firstUse,
     );
     final pct = tracked == 0 ? 0 : (sober * 100 / tracked).round();
-    return StatCard(
-      title: l10n.statsSoberTitle,
-      subtitle: l10n.statsSoberSubtitle,
-      child: SoberRing(
+    final total = StatsService.totalInRange(_map, range.start, range.end);
+    return _grid([
+      StatTile(
         key: ValueKey('sober-${_period.name}'),
-        progress: tracked == 0 ? 0 : sober / tracked,
-        bigLabel: '$pct%',
-        smallLabel: l10n.statsSoberCount(sober, tracked),
+        ring: tracked == 0 ? 0 : sober / tracked,
+        value: pct,
+        suffix: '%',
+        label: l10n.statsSoberTitle,
+        accent: const Color(0xFF43C463),
       ),
-    );
+      StatTile(
+        key: ValueKey('drinks-${_period.name}'),
+        emoji: '🍺',
+        value: total,
+        label: l10n.statsConsumptionTitle,
+        accent: JauneColors.lemonDeep,
+      ),
+    ]);
+  }
+
+  /// Petit intertitre gris pour séparer la zone « depuis le début ».
+  Widget _sectionLabel(String text) => Padding(
+        padding: const EdgeInsets.only(top: 4, left: 4, bottom: 2),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: JauneColors.inkSoft,
+            letterSpacing: 0.3,
+          ),
+        ),
+      );
+
+  /// Dispose des tuiles deux par deux (demi-largeur), hauteurs égalisées.
+  Widget _grid(List<Widget> tiles) {
+    final rows = <Widget>[];
+    for (int i = 0; i < tiles.length; i += 2) {
+      rows.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: tiles[i]),
+              const SizedBox(width: 12),
+              Expanded(
+                child: i + 1 < tiles.length ? tiles[i + 1] : const SizedBox(),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (i + 2 < tiles.length) rows.add(const SizedBox(height: 12));
+    }
+    return Column(children: rows);
   }
 
   Widget _milestoneCard(AppLocalizations l10n, int streak) {
@@ -384,33 +433,6 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
     );
   }
 
-  Widget _heatmapCard(AppLocalizations l10n, String locale) {
-    final range = StatsService.periodRange(_period, _now, _firstUse);
-    return StatCard(
-      title: l10n.statsHeatmapTitle,
-      subtitle: l10n.statsHeatmapSubtitle,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          StatHeatmap(
-            start: range.start,
-            end: range.end,
-            dailyMap: _map,
-            today: _now,
-            firstUseDate: _firstUse,
-            keyOf: dateKey,
-            weekdayLabels: _weekdayInitials(locale),
-          ),
-          const SizedBox(height: 12),
-          StatHeatmapLegend(
-            lessLabel: l10n.statsHeatmapLess,
-            moreLabel: l10n.statsHeatmapMore,
-          ),
-        ],
-      ),
-    );
-  }
-
   List<String> _weekdayInitials(String locale) {
     final monday = StatsService.mondayOf(_now);
     return [
@@ -419,41 +441,39 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
     ];
   }
 
-  Widget _recordsCard(AppLocalizations l10n, int streak) {
+  Widget _recordsGrid(AppLocalizations l10n, int streak) {
     final longest = StatsService.longestSoberStreak(_map, _firstUse, _now);
     final lightest = StatsService.lightestFullWeekTotal(_map, _firstUse, _now);
     final soberTotal = StatsService.totalSoberDays(_map, _firstUse, _now);
     final avoided = StatsService.drinksAvoided(_map, _firstUse, _now);
-    return StatCard(
-      title: l10n.statsRecords,
-      child: Column(
-        children: [
-          StatRecordRow(
-            emoji: '🔥',
-            label: l10n.statsLongestStreak,
-            value: l10n.daysCount(math.max(longest, streak)),
-            highlight: streak >= 3 && streak >= longest,
-          ),
-          StatRecordRow(
-            emoji: '🌿',
-            label: l10n.statsTotalSoberDays,
-            value: l10n.daysCount(soberTotal),
-          ),
-          if (lightest != null)
-            StatRecordRow(
-              emoji: '🪶',
-              label: l10n.statsLightestWeek,
-              value: l10n.statsDrinksCount(lightest),
-            ),
-          if (avoided != null)
-            StatRecordRow(
-              emoji: '🍋',
-              label: l10n.statsDrinksAvoided,
-              value: l10n.statsDrinksCount(avoided),
-            ),
-        ],
+    return _grid([
+      StatTile(
+        emoji: '🔥',
+        value: math.max(longest, streak),
+        label: l10n.statsLongestStreak,
+        accent: JauneColors.flame,
       ),
-    );
+      StatTile(
+        emoji: '🌿',
+        value: soberTotal,
+        label: l10n.statsTotalSoberDays,
+        accent: const Color(0xFF43C463),
+      ),
+      if (lightest != null)
+        StatTile(
+          emoji: '🪶',
+          value: lightest,
+          label: l10n.statsLightestWeek,
+          accent: JauneColors.skyDeep,
+        ),
+      if (avoided != null)
+        StatTile(
+          emoji: '🍋',
+          value: avoided,
+          label: l10n.statsDrinksAvoided,
+          accent: JauneColors.lemonDeep,
+        ),
+    ]);
   }
 
   String _initial(String s) =>
