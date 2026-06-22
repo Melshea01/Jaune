@@ -11,9 +11,11 @@ import '../theme/jaune_design.dart';
 import 'citron_avatar.dart';
 import 'pressable.dart';
 
-/// Schéma du lien d'invitation. La cible web/deep-link réelle sera branchée
-/// en Phase 2 (app_links). En Phase 1, le code transite tel quel.
-String friendLinkFor(String code) => 'https://jaune.app/add-friend?code=$code';
+/// Schéma du lien d'invitation. On utilise le schéma custom `jaune://` —
+/// enregistré côté natif (iOS `CFBundleURLSchemes`, Android intent-filter) et
+/// écouté par `app_links` dans `main.dart`. Ainsi le lien ouvre directement
+/// l'app au lieu de tomber sur un site web inexistant.
+String friendLinkFor(String code) => 'jaune://add-friend?code=$code';
 
 /// Extrait le `code` d'un lien d'invitation, ou renvoie la valeur brute.
 String extractFriendCode(String raw) {

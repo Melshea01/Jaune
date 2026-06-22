@@ -32,6 +32,10 @@ abstract class FriendsService {
   /// Ignore une demande → suppression silencieuse, aucune notification émise.
   Future<void> ignoreRequest(String userId);
 
+  /// Supprime une amitié existante (dans les deux sens). Réversible : il
+  /// faudra une nouvelle demande pour se réajouter.
+  Future<void> removeFriend(String userId);
+
   /// Recharge l'état depuis le stockage (à l'ouverture de l'écran).
   Future<void> refresh();
 

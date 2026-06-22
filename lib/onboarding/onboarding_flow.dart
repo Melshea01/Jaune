@@ -31,6 +31,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   int _page = 0;
   bool _remindersEnabled = false;
 
+  /// Nombre total de pages. La dernière page est toujours l'activation des
+  /// rappels (qui termine l'onboarding).
+  static const int _pageCount = 5;
+  int get _lastPage => _pageCount - 1;
+
   @override
   void initState() {
     super.initState();
@@ -108,7 +113,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               Expanded(
                 child: PageView(
                   controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
+                  // Swipe autorisé : on peut naviguer au doigt comme au bouton.
+                  physics: const BouncingScrollPhysics(),
                   onPageChanged: (page) => setState(() => _page = page),
                   children: [
                     _OnboardingPage(
@@ -160,6 +166,62 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                         ),
                       ),
                     ),
+                    // Le système de scoring : verres → PV, sobriété → XP.
+                    _OnboardingPage(
+                      title: l10n.onboardingScoringTitle,
+                      text: l10n.onboardingScoringText,
+                      illustration: const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _ScoringRow(
+                                emoji: '🍺',
+                                text: '−PV',
+                                color: JauneColors.flame,
+                              ),
+                              SizedBox(height: 14),
+                              _ScoringRow(
+                                emoji: '💧',
+                                text: '+XP',
+                                color: JauneColors.lemonDeep,
+                              ),
+                              SizedBox(height: 14),
+                              _ScoringRow(
+                                emoji: '🔥',
+                                text: 'Série',
+                                color: JauneColors.flame,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Le classement entre amis.
+                    _OnboardingPage(
+                      title: l10n.onboardingRankingTitle,
+                      text: l10n.onboardingRankingText,
+                      illustration: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('🏆', style: TextStyle(fontSize: 64)),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 12,
+                              children: const [
+                                Text('🥇', style: TextStyle(fontSize: 40)),
+                                Text('🥈', style: TextStyle(fontSize: 40)),
+                                Text('🥉', style: TextStyle(fontSize: 40)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // BeJaune + priming de la permission notifications (dernière
+                    // page : son CTA termine l'onboarding).
                     _OnboardingPage(
                       title: l10n.onboarding3Title,
                       text: l10n.onboarding3Text,
@@ -167,7 +229,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text('📸', style: TextStyle(fontSize: 72)),
+                            const Text('🔔', style: TextStyle(fontSize: 72)),
                             const SizedBox(height: 20),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -195,6 +257,31 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                           ],
                         ),
                       ),
+                      footer: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 32),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(JauneRadii.card),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text('✨', style: TextStyle(fontSize: 18)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                l10n.onboardingRemindersBenefit,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: JauneColors.inkSoft,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -203,7 +290,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               // Points de progression
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (i) {
+                children: List.generate(_pageCount, (i) {
                   final active = i == _page;
                   return AnimatedContainer(
                     duration: JauneMotion.quick,
@@ -229,17 +316,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 child: AnimatedSwitcher(
                   duration: JauneMotion.quick,
                   child: switch (_page) {
-                    0 => _PrimaryButton(
-                      key: const ValueKey('next'),
-                      label: l10n.onboardingNext,
-                      onTap: _next,
-                    ),
-                    1 => _PrimaryButton(
-                      key: const ValueKey('ack'),
-                      label: l10n.onboardingDisclaimerAck,
-                      onTap: _next,
-                    ),
-                    _ => Column(
+                    final p when p == _lastPage => Column(
                       key: const ValueKey('reminders'),
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -262,6 +339,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                           ),
                         ),
                       ],
+                    ),
+                    1 => _PrimaryButton(
+                      key: const ValueKey('ack'),
+                      label: l10n.onboardingDisclaimerAck,
+                      onTap: _next,
+                    ),
+                    _ => _PrimaryButton(
+                      key: const ValueKey('next'),
+                      label: l10n.onboardingNext,
+                      onTap: _next,
                     ),
                   },
                 ),
@@ -323,6 +410,46 @@ class _OnboardingPage extends StatelessWidget {
         if (footer != null) footer!,
         const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+/// Ligne illustrant une règle de scoring (emoji + libellé coloré) sur la page
+/// d'explication du système de points.
+class _ScoringRow extends StatelessWidget {
+  final String emoji;
+  final String text;
+  final Color color;
+
+  const _ScoringRow({
+    required this.emoji,
+    required this.text,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(JauneRadii.card),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 30)),
+          const SizedBox(width: 14),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

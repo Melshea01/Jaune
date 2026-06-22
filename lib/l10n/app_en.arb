@@ -145,8 +145,13 @@
   "onboarding2Text": "Log every drink with one tap. The health bar reacts, and sober days earn you XP and surprises.",
   "onboardingDisclaimer": "A playful indicator inspired by WHO guidelines — not medical advice.",
   "onboardingDisclaimerAck": "Got it",
+  "onboardingScoringTitle": "How it works",
+  "onboardingScoringText": "Every drink lowers your lemon's HP. Sober days restore HP, earn you XP and grow your streak 🔥.",
+  "onboardingRankingTitle": "Challenge your friends",
+  "onboardingRankingText": "Add friends and compare your gauges and streaks. The healthiest one tops the leaderboard.",
   "onboarding3Title": "The BeJaune",
-  "onboarding3Text": "Every day at happy hour, a window opens to capture your moment and share it. Turn on reminders so you never miss it.",
+  "onboarding3Text": "Every day at happy hour, a window opens to capture your moment and share it.",
+  "onboardingRemindersBenefit": "A notification pings you right at happy hour, so you never miss your BeJaune or your streak.",
   "onboardingEnableReminders": "Turn on reminders",
   "onboardingRemindersEnabled": "✓ Reminders on",
   "onboardingNext": "Continue",
@@ -202,6 +207,17 @@
   "leaderboardEmptySubtitle": "Add a friend to compare your gauges and streaks.",
   "leaderboardNoRequestsTitle": "No requests",
   "leaderboardNoRequestsSubtitle": "Incoming friend requests will show up here.",
+  "leaderboardManageTitle": "Friends & requests",
+  "leaderboardYourFriends": "Your friends",
+  "leaderboardRemoveFriend": "Remove",
+  "leaderboardRemoveFriendTitle": "Remove this friend?",
+  "leaderboardRemoveFriendMessage": "{name} will no longer be in your leaderboard. You'll need a new request to re-add each other.",
+  "@leaderboardRemoveFriendMessage": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "leaderboardRemoveFriendConfirm": "Remove",
   "a11yLeaderboardButton": "Open friends leaderboard",
 
   "addFriendTitle": "Add a friend",

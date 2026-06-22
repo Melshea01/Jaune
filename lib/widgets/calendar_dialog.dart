@@ -29,18 +29,26 @@ class CalendarDialog {
       buttonSize.height,
     );
 
+    final media = MediaQuery.of(context);
     final screenRect = Rect.fromLTWH(
       0,
       0,
-      MediaQuery.of(context).size.width,
-      MediaQuery.of(context).size.height,
+      media.size.width,
+      media.size.height,
     );
+
+    // Hauteur adaptative : on ne dépasse jamais l'espace disponible entre le
+    // haut sûr (encoche) et le bas du dialogue (ancré à 40 px du bord).
+    const double bottomAnchor = 40;
+    final double availableH =
+        media.size.height - media.padding.top - bottomAnchor - 12;
+    final double dialogHeight = math.min(520.0, availableH);
 
     final finalRect = Rect.fromCenter(
       center: screenRect.center,
       width: math.min(420, screenRect.width - 32),
-      height: 520,
-    ).shift(Offset(0, (screenRect.height - 550) / 2 - 40));
+      height: dialogHeight,
+    ).shift(Offset(0, (screenRect.height - dialogHeight - 30) / 2 - 40));
 
     final overlay = Overlay.of(context);
     late OverlayEntry entry;

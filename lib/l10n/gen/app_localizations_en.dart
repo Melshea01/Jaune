@@ -447,11 +447,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingDisclaimerAck => 'Got it';
 
   @override
+  String get onboardingScoringTitle => 'How it works';
+
+  @override
+  String get onboardingScoringText =>
+      'Every drink lowers your lemon\'s HP. Sober days restore HP, earn you XP and grow your streak 🔥.';
+
+  @override
+  String get onboardingRankingTitle => 'Challenge your friends';
+
+  @override
+  String get onboardingRankingText =>
+      'Add friends and compare your gauges and streaks. The healthiest one tops the leaderboard.';
+
+  @override
   String get onboarding3Title => 'The BeJaune';
 
   @override
   String get onboarding3Text =>
-      'Every day at happy hour, a window opens to capture your moment and share it. Turn on reminders so you never miss it.';
+      'Every day at happy hour, a window opens to capture your moment and share it.';
+
+  @override
+  String get onboardingRemindersBenefit =>
+      'A notification pings you right at happy hour, so you never miss your BeJaune or your streak.';
 
   @override
   String get onboardingEnableReminders => 'Turn on reminders';
@@ -631,6 +649,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get leaderboardNoRequestsSubtitle =>
       'Incoming friend requests will show up here.';
+
+  @override
+  String get leaderboardManageTitle => 'Friends & requests';
+
+  @override
+  String get leaderboardYourFriends => 'Your friends';
+
+  @override
+  String get leaderboardRemoveFriend => 'Remove';
+
+  @override
+  String get leaderboardRemoveFriendTitle => 'Remove this friend?';
+
+  @override
+  String leaderboardRemoveFriendMessage(String name) {
+    return '$name will no longer be in your leaderboard. You\'ll need a new request to re-add each other.';
+  }
+
+  @override
+  String get leaderboardRemoveFriendConfirm => 'Remove';
 
   @override
   String get a11yLeaderboardButton => 'Open friends leaderboard';

@@ -212,8 +212,13 @@
   "onboarding2Text": "Loggue chaque verre d'un tap. La barre de vie réagit, et les journées sobres te font gagner de l'XP et des surprises.",
   "onboardingDisclaimer": "Indicateur ludique inspiré des repères de l'OMS — pas un avis médical.",
   "onboardingDisclaimerAck": "J'ai compris",
+  "onboardingScoringTitle": "Comment ça marche",
+  "onboardingScoringText": "Chaque verre fait baisser les PV de ton citron. Les journées sobres lui rendent des PV, te font gagner de l'XP et allongent ta série 🔥.",
+  "onboardingRankingTitle": "Défie tes amis",
+  "onboardingRankingText": "Ajoute tes amis et comparez vos jauges et vos séries. Le plus en forme prend la tête du classement.",
   "onboarding3Title": "Le BeJaune",
-  "onboarding3Text": "Chaque jour à l'apéro, une fenêtre s'ouvre pour capturer ton moment et le partager. Active les rappels pour ne jamais la rater.",
+  "onboarding3Text": "Chaque jour à l'apéro, une fenêtre s'ouvre pour capturer ton moment et le partager.",
+  "onboardingRemindersBenefit": "Une notif te prévient pile à l'apéro : tu ne rates jamais ton BeJaune ni ta série.",
   "onboardingEnableReminders": "Activer les rappels",
   "onboardingRemindersEnabled": "✓ Rappels activés",
   "onboardingNext": "Continuer",
@@ -326,6 +331,17 @@
   "leaderboardEmptySubtitle": "Ajoute un ami pour comparer vos jauges et vos séries.",
   "leaderboardNoRequestsTitle": "Aucune demande",
   "leaderboardNoRequestsSubtitle": "Les demandes d'amitié reçues apparaîtront ici.",
+  "leaderboardManageTitle": "Amis & demandes",
+  "leaderboardYourFriends": "Mes amis",
+  "leaderboardRemoveFriend": "Retirer",
+  "leaderboardRemoveFriendTitle": "Retirer cet ami ?",
+  "leaderboardRemoveFriendMessage": "{name} ne sera plus dans ton classement. Il faudra une nouvelle demande pour vous réajouter.",
+  "@leaderboardRemoveFriendMessage": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "leaderboardRemoveFriendConfirm": "Retirer",
   "a11yLeaderboardButton": "Ouvrir le classement entre amis",
 
   "addFriendTitle": "Ajoute un ami",

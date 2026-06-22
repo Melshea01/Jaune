@@ -162,6 +162,25 @@ class SupabaseFriendsService implements FriendsService {
   }
 
   @override
+  Future<void> removeFriend(String userId) async {
+    if (_myId.isEmpty) return;
+    try {
+      // L'amitié peut avoir été créée dans un sens ou l'autre : on supprime
+      // la ligne qui relie les deux identités, quel que soit le rôle.
+      await _client
+          .from('friendships')
+          .delete()
+          .or(
+            'and(requester.eq.$_myId,addressee.eq.$userId),'
+            'and(requester.eq.$userId,addressee.eq.$_myId)',
+          );
+    } on PostgrestException catch (e) {
+      debugPrint('SupabaseFriendsService.removeFriend: ${e.message}');
+    }
+    await refresh();
+  }
+
+  @override
   Future<void> syncProfile({
     required String username,
     required double healthPercent,

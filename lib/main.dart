@@ -893,17 +893,25 @@ class _MyHomePageState extends State<MyHomePage>
   @override
   Widget build(BuildContext context) {
     final double percent = _characterService.healthPercent;
+    final media = MediaQuery.of(context);
+    // Sur les petits écrans on resserre les espacements verticaux pour ne
+    // jamais rogner la barre du bas ; on respecte aussi l'inset système
+    // (indicateur d'accueil) pour que les boutons ne passent pas dessous.
+    final bool compact = media.size.height < 720;
+    final double gapBeforeCta = compact ? 16 : 40;
+    final double gapAfterCta = compact ? 16 : 30;
+    final double bottomInset = media.viewPadding.bottom;
 
     return Scaffold(
       body: SafeArea(
         bottom: false,
         top: false,
         child: Container(
-          padding: const EdgeInsets.only(
+          padding: EdgeInsets.only(
             top: 48,
             left: 16,
             right: 16,
-            bottom: 32,
+            bottom: 12 + bottomInset,
           ),
           decoration: const BoxDecoration(
             // Trois stops : le ciel garde de la présence jusqu'à mi-écran
@@ -1106,7 +1114,7 @@ class _MyHomePageState extends State<MyHomePage>
                   ),
                 ),
 
-              const SizedBox(height: 40),
+              SizedBox(height: gapBeforeCta),
               // Capture button with shine effect — le swap actif/verrouillé
               // est animé (fondu + pop) au lieu d'un changement sec
               AnimatedSwitcher(
@@ -1126,7 +1134,7 @@ class _MyHomePageState extends State<MyHomePage>
                     ),
                 child: _buildBejauneCta(),
               ),
-              const SizedBox(height: 30),
+              SizedBox(height: gapAfterCta),
 
               // Bottom controls
               _buildBottomControls(),
@@ -1224,10 +1232,10 @@ class _MyHomePageState extends State<MyHomePage>
   Widget _buildBottomControls() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Calendar button
-        _buildCalendarButton(),
+        // Calendar button — compressible pour ne jamais pousser les contrôles
+        // de consommation hors de l'écran sur les petits téléphones.
+        Flexible(child: _buildCalendarButton()),
         const SizedBox(width: 10),
         // Stats button
         _buildStatsButton(),
@@ -1295,24 +1303,31 @@ class _MyHomePageState extends State<MyHomePage>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppLocalizations.of(context).calendarTitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    AppLocalizations.of(context).calendarTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  AppLocalizations.of(context).calendarSee,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.black54),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    AppLocalizations.of(context).calendarSee,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.black54),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(width: 12),
             Container(

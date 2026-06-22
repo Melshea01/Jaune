@@ -854,6 +854,30 @@ abstract class AppLocalizations {
   /// **'J\'ai compris'**
   String get onboardingDisclaimerAck;
 
+  /// No description provided for @onboardingScoringTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comment ça marche'**
+  String get onboardingScoringTitle;
+
+  /// No description provided for @onboardingScoringText.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque verre fait baisser les PV de ton citron. Les journées sobres lui rendent des PV, te font gagner de l\'XP et allongent ta série 🔥.'**
+  String get onboardingScoringText;
+
+  /// No description provided for @onboardingRankingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Défie tes amis'**
+  String get onboardingRankingTitle;
+
+  /// No description provided for @onboardingRankingText.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoute tes amis et comparez vos jauges et vos séries. Le plus en forme prend la tête du classement.'**
+  String get onboardingRankingText;
+
   /// No description provided for @onboarding3Title.
   ///
   /// In fr, this message translates to:
@@ -863,8 +887,14 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding3Text.
   ///
   /// In fr, this message translates to:
-  /// **'Chaque jour à l\'apéro, une fenêtre s\'ouvre pour capturer ton moment et le partager. Active les rappels pour ne jamais la rater.'**
+  /// **'Chaque jour à l\'apéro, une fenêtre s\'ouvre pour capturer ton moment et le partager.'**
   String get onboarding3Text;
+
+  /// No description provided for @onboardingRemindersBenefit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une notif te prévient pile à l\'apéro : tu ne rates jamais ton BeJaune ni ta série.'**
+  String get onboardingRemindersBenefit;
 
   /// No description provided for @onboardingEnableReminders.
   ///
@@ -1159,6 +1189,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Les demandes d\'amitié reçues apparaîtront ici.'**
   String get leaderboardNoRequestsSubtitle;
+
+  /// No description provided for @leaderboardManageTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Amis & demandes'**
+  String get leaderboardManageTitle;
+
+  /// No description provided for @leaderboardYourFriends.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes amis'**
+  String get leaderboardYourFriends;
+
+  /// No description provided for @leaderboardRemoveFriend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get leaderboardRemoveFriend;
+
+  /// No description provided for @leaderboardRemoveFriendTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer cet ami ?'**
+  String get leaderboardRemoveFriendTitle;
+
+  /// No description provided for @leaderboardRemoveFriendMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} ne sera plus dans ton classement. Il faudra une nouvelle demande pour vous réajouter.'**
+  String leaderboardRemoveFriendMessage(String name);
+
+  /// No description provided for @leaderboardRemoveFriendConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get leaderboardRemoveFriendConfirm;
 
   /// No description provided for @a11yLeaderboardButton.
   ///

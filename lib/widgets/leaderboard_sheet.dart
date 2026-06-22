@@ -8,6 +8,7 @@ import '../services/audio_service.dart';
 import '../services/friends_service.dart';
 import '../theme/jaune_design.dart';
 import 'add_friend_sheet.dart';
+import 'confirm_sheet.dart';
 import 'leaderboard_podium.dart';
 import 'leaderboard_row.dart';
 import 'pressable.dart';
@@ -89,6 +90,21 @@ class _LeaderboardSheetContentState extends State<_LeaderboardSheetContent> {
   Future<void> _ignore(FriendRequest r) async {
     HapticFeedback.selectionClick();
     await friendsService.ignoreRequest(r.userId);
+    await _load();
+  }
+
+  Future<void> _remove(LeaderboardEntry friend) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await ConfirmSheet.show(
+      context,
+      title: l10n.leaderboardRemoveFriendTitle,
+      message: l10n.leaderboardRemoveFriendMessage(friend.username),
+      confirmLabel: l10n.leaderboardRemoveFriendConfirm,
+      cancelLabel: l10n.cancel,
+    );
+    if (!confirmed) return;
+    HapticFeedback.mediumImpact();
+    await friendsService.removeFriend(friend.userId);
     await _load();
   }
 
@@ -190,6 +206,8 @@ class _LeaderboardSheetContentState extends State<_LeaderboardSheetContent> {
 
   Widget _buildRequests(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final hasRequests = _pendingRequests.isNotEmpty;
+    final hasFriends = _friends.isNotEmpty;
 
     return Column(
       children: [
@@ -207,12 +225,16 @@ class _LeaderboardSheetContentState extends State<_LeaderboardSheetContent> {
                 ),
               ),
               const SizedBox(width: 10),
-              Text(
-                l10n.leaderboardTabRequests,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: JauneColors.ink,
+              Expanded(
+                child: Text(
+                  l10n.leaderboardManageTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: JauneColors.ink,
+                  ),
                 ),
               ),
             ],
@@ -223,21 +245,41 @@ class _LeaderboardSheetContentState extends State<_LeaderboardSheetContent> {
           child:
               _loading
                   ? const Center(child: CupertinoActivityIndicator())
-                  : _pendingRequests.isEmpty
+                  : (!hasRequests && !hasFriends)
                   ? _EmptyState(
                     emoji: '📭',
                     title: l10n.leaderboardNoRequestsTitle,
                     subtitle: l10n.leaderboardNoRequestsSubtitle,
                   )
-                  : ListView.builder(
+                  : ListView(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                    itemCount: _pendingRequests.length,
-                    itemBuilder:
-                        (context, i) => _RequestRow(
-                          request: _pendingRequests[i],
-                          onAccept: () => _accept(_pendingRequests[i]),
-                          onIgnore: () => _ignore(_pendingRequests[i]),
+                    children: [
+                      if (hasRequests) ...[
+                        _ManageSectionTitle(
+                          l10n.leaderboardTabRequests,
+                          count: _pendingRequests.length,
                         ),
+                        for (final r in _pendingRequests)
+                          _RequestRow(
+                            request: r,
+                            onAccept: () => _accept(r),
+                            onIgnore: () => _ignore(r),
+                          ),
+                      ],
+                      if (hasFriends) ...[
+                        if (hasRequests) const SizedBox(height: 14),
+                        _ManageSectionTitle(
+                          l10n.leaderboardYourFriends,
+                          count: _friends.length,
+                        ),
+                        for (final f in _friends)
+                          _FriendManageRow(
+                            friend: f,
+                            removeLabel: l10n.leaderboardRemoveFriend,
+                            onRemove: () => _remove(f),
+                          ),
+                      ],
+                    ],
                   ),
         ),
       ],
@@ -502,6 +544,113 @@ class _RequestRow extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                   color: JauneColors.ink,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Petit titre de section dans la vue de gestion (« Demandes », « Mes amis »),
+/// avec un compteur discret.
+class _ManageSectionTitle extends StatelessWidget {
+  final String label;
+  final int count;
+  const _ManageSectionTitle(this.label, {required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: JauneColors.ink,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: JauneColors.inkSoft,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Ligne « ami existant » dans la vue de gestion : avatar, pseudo, et un
+/// bouton discret pour retirer l'ami (confirmation gérée par l'appelant).
+class _FriendManageRow extends StatelessWidget {
+  final LeaderboardEntry friend;
+  final String removeLabel;
+  final VoidCallback onRemove;
+
+  const _FriendManageRow({
+    required this.friend,
+    required this.removeLabel,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(JauneRadii.card),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            offset: const Offset(0, 3),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          LeaderboardMonogram(name: friend.username, size: 42),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              friend.username,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: JauneColors.ink,
+              ),
+            ),
+          ),
+          PressableScale(
+            semanticLabel: removeLabel,
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE63946).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(JauneRadii.pill),
+              ),
+              child: Text(
+                removeLabel,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFFE63946),
                 ),
               ),
             ),

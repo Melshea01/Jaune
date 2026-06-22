@@ -449,11 +449,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String get onboardingDisclaimerAck => 'J\'ai compris';
 
   @override
+  String get onboardingScoringTitle => 'Comment ça marche';
+
+  @override
+  String get onboardingScoringText =>
+      'Chaque verre fait baisser les PV de ton citron. Les journées sobres lui rendent des PV, te font gagner de l\'XP et allongent ta série 🔥.';
+
+  @override
+  String get onboardingRankingTitle => 'Défie tes amis';
+
+  @override
+  String get onboardingRankingText =>
+      'Ajoute tes amis et comparez vos jauges et vos séries. Le plus en forme prend la tête du classement.';
+
+  @override
   String get onboarding3Title => 'Le BeJaune';
 
   @override
   String get onboarding3Text =>
-      'Chaque jour à l\'apéro, une fenêtre s\'ouvre pour capturer ton moment et le partager. Active les rappels pour ne jamais la rater.';
+      'Chaque jour à l\'apéro, une fenêtre s\'ouvre pour capturer ton moment et le partager.';
+
+  @override
+  String get onboardingRemindersBenefit =>
+      'Une notif te prévient pile à l\'apéro : tu ne rates jamais ton BeJaune ni ta série.';
 
   @override
   String get onboardingEnableReminders => 'Activer les rappels';
@@ -633,6 +651,26 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get leaderboardNoRequestsSubtitle =>
       'Les demandes d\'amitié reçues apparaîtront ici.';
+
+  @override
+  String get leaderboardManageTitle => 'Amis & demandes';
+
+  @override
+  String get leaderboardYourFriends => 'Mes amis';
+
+  @override
+  String get leaderboardRemoveFriend => 'Retirer';
+
+  @override
+  String get leaderboardRemoveFriendTitle => 'Retirer cet ami ?';
+
+  @override
+  String leaderboardRemoveFriendMessage(String name) {
+    return '$name ne sera plus dans ton classement. Il faudra une nouvelle demande pour vous réajouter.';
+  }
+
+  @override
+  String get leaderboardRemoveFriendConfirm => 'Retirer';
 
   @override
   String get a11yLeaderboardButton => 'Ouvrir le classement entre amis';

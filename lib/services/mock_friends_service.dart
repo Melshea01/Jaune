@@ -99,6 +99,13 @@ class MockFriendsService implements FriendsService {
     await _persist();
   }
 
+  @override
+  Future<void> removeFriend(String userId) async {
+    await _ensureLoaded();
+    _friends.removeWhere((f) => f.userId == userId);
+    await _persist();
+  }
+
   // --- Interne ---
 
   String _usernameFromCode(String code) {
