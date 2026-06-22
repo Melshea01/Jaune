@@ -15,16 +15,23 @@ class AudioService {
   final AudioPlayer _audioPlayer;
   Timer? _volumeFadeTimer;
 
+  /// Assets dont le chargement a échoué (slot non livré) : on ne réessaie pas
+  /// et on ne pollue plus les logs — c'est la dégradation silencieuse voulue.
+  final Set<String> _unavailable = <String>{};
+
   Future<void> _playSound(String asset) async {
     if (!SettingsService.instance.soundEnabled.value) return;
+    if (_unavailable.contains(asset)) return;
     try {
       _volumeFadeTimer?.cancel();
       await _audioPlayer.stop();
       await _audioPlayer.setVolume(1.0);
       await _audioPlayer.setSource(AssetSource(asset));
       await _audioPlayer.resume();
-    } catch (e) {
-      debugPrint('Error playing sound $asset: $e');
+    } catch (_) {
+      // Asset manquant ou illisible : on le note pour ne plus retenter, et on
+      // continue sans son (cf. assets/sounds/README.md).
+      _unavailable.add(asset);
     }
   }
 
