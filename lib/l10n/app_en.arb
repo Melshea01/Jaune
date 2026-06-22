@@ -204,6 +204,7 @@
   "statsPeriodYear": "Year",
   "statsPeriodAll": "All",
   "statsConsumptionTitle": "Drinks",
+  "statsDrinksLabel": "Drinks this period",
   "statsUnitPerDay": "Drinks per day",
   "statsUnitPerMonth": "Drinks per month",
   "statsHealthScrubHint": "Drag across the curve to see each day",

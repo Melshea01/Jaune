@@ -295,9 +295,11 @@ abstract class StatsService {
           }),
         );
       case StatsPeriod.year:
+        // Mois ÉCOULÉS uniquement (jan → mois courant) : pas de mois futurs
+        // vides qui donneraient l'illusion de plus de données que « Tout ».
         return (
           gran: StatGranularity.month,
-          bars: List.generate(12, (i) {
+          bars: List.generate(d0.month, (i) {
             final m = DateTime(d0.year, i + 1, 1);
             return StatBar(m, totalInRange(dailyMap, m, _lastOfMonth(m.year, m.month)));
           }),
@@ -308,9 +310,26 @@ abstract class StatsService {
             first != null
                 ? DateTime(first.year, first.month, 1)
                 : DateTime(d0.year, d0.month, 1);
+        final lastM = DateTime(d0.year, d0.month, 1);
+        final monthsSpan =
+            (lastM.year - startM.year) * 12 + (lastM.month - startM.month) + 1;
+        // Historique court (≤ 1 mois) : on détaille au jour, sinon « Tout »
+        // n'aurait qu'une seule barre. Au-delà : agrégation mensuelle.
+        if (monthsSpan <= 1) {
+          final start = first != null
+              ? DateTime(first.year, first.month, first.day)
+              : DateTime(d0.year, d0.month, 1);
+          final n = d0.difference(start).inDays + 1;
+          return (
+            gran: StatGranularity.day,
+            bars: List.generate(n, (i) {
+              final d = start.add(Duration(days: i));
+              return StatBar(d, dailyMap[dateKey(d)] ?? 0);
+            }),
+          );
+        }
         final bars = <StatBar>[];
         DateTime m = startM;
-        final lastM = DateTime(d0.year, d0.month, 1);
         while (!m.isAfter(lastM)) {
           bars.add(StatBar(m, totalInRange(dailyMap, m, _lastOfMonth(m.year, m.month))));
           m = DateTime(m.year, m.month + 1, 1);

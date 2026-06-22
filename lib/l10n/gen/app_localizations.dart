@@ -1178,6 +1178,12 @@ abstract class AppLocalizations {
   /// **'Consommation'**
   String get statsConsumptionTitle;
 
+  /// No description provided for @statsDrinksLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Verres sur la période'**
+  String get statsDrinksLabel;
+
   /// No description provided for @statsUnitPerDay.
   ///
   /// In fr, this message translates to:

@@ -10,11 +10,20 @@ import 'citron_character.dart';
 /// Couleur d'un jour/bucket selon le nombre de verres — mêmes paliers que le
 /// calendrier, pour que l'app raconte partout la même histoire.
 Color jauneStatColor(int count) {
-  if (count <= 0) return const Color(0xFF43E97B); // sobre = vert vibrant
-  if (count <= 2) return const Color(0xFF56AB2F);
-  if (count <= 4) return const Color(0xFFE0A800);
-  if (count <= 5) return const Color(0xFFFF7043);
-  return const Color(0xFFE53935);
+  if (count <= 0) return const Color(0xFF22C55E); // sobre = vert net
+  if (count <= 2) return const Color(0xFF84CC16); // léger = lime
+  if (count <= 4) return const Color(0xFFF59E0B); // attention = ambre
+  if (count <= 5) return const Color(0xFFF97316); // limite = orange
+  return const Color(0xFFEF4444); // binge = rouge
+}
+
+/// Accents de couleur cohérents pour les tuiles et anneaux des statistiques.
+abstract class StatPalette {
+  static const Color sober = Color(0xFF22C55E); // vert
+  static const Color drinks = Color(0xFFF59E0B); // ambre
+  static const Color streak = Color(0xFFFB7185); // corail (série)
+  static const Color light = Color(0xFF38BDF8); // bleu ciel
+  static const Color lemon = Color(0xFFEAB308); // citron profond
 }
 
 // =====================================================================
@@ -45,6 +54,39 @@ class CountUpInt extends StatelessWidget {
       duration: duration,
       curve: JauneMotion.smooth,
       builder: (context, v, _) => Text('$prefix${v.round()}$suffix', style: style),
+    );
+  }
+}
+
+/// Emoji qui pulse en boucle (flamme de série, etc.) — donne vie au header.
+class _PulsingEmoji extends StatefulWidget {
+  final String emoji;
+  final double fontSize;
+  const _PulsingEmoji(this.emoji, {required this.fontSize});
+
+  @override
+  State<_PulsingEmoji> createState() => _PulsingEmojiState();
+}
+
+class _PulsingEmojiState extends State<_PulsingEmoji>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final curved = CurvedAnimation(parent: _c, curve: Curves.easeInOut);
+    return ScaleTransition(
+      scale: Tween(begin: 0.9, end: 1.15).animate(curved),
+      child: Text(widget.emoji, style: TextStyle(fontSize: widget.fontSize)),
     );
   }
 }
@@ -220,7 +262,7 @@ class StatHeroHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
-                    const Text('🔥', style: TextStyle(fontSize: 34)),
+                    const _PulsingEmoji('🔥', fontSize: 34),
                     const SizedBox(width: 6),
                     CountUpInt(
                       streakDays,
@@ -649,49 +691,74 @@ class StatTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (ring != null)
-            SizedBox(
-              width: 34,
-              height: 34,
-              child: _MiniRing(progress: ring!, color: accent),
+      child: ring != null
+          ? Column(
+              // Style « anneau d'activité » : la valeur vit au centre de
+              // l'anneau, le libellé dessous.
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: _MiniRing(
+                    progress: ring!,
+                    color: accent,
+                    child: CountUpInt(
+                      value,
+                      suffix: suffix,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: accent,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _label(),
+              ],
             )
-          else
-            Text(emoji, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 12),
-          CountUpInt(
-            value,
-            suffix: suffix,
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: accent,
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 24)),
+                const SizedBox(height: 12),
+                CountUpInt(
+                  value,
+                  suffix: suffix,
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: accent,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                _label(),
+              ],
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: JauneColors.inkSoft,
-              height: 1.25,
-            ),
-          ),
-        ],
-      ),
     );
   }
+
+  Widget _label() => Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: JauneColors.inkSoft,
+          height: 1.25,
+        ),
+      );
 }
 
-/// Petit anneau de progression animé (pour les tuiles).
+/// Petit anneau de progression animé (pour les tuiles), avec contenu central
+/// optionnel (ex. la valeur au centre, façon anneau d'activité).
 class _MiniRing extends StatefulWidget {
   final double progress;
   final Color color;
-  const _MiniRing({required this.progress, required this.color});
+  final Widget? child;
+  const _MiniRing({required this.progress, required this.color, this.child});
 
   @override
   State<_MiniRing> createState() => _MiniRingState();
@@ -718,8 +785,11 @@ class _MiniRingState extends State<_MiniRing>
         painter: _RingPainter(
           widget.progress.clamp(0.0, 1.0) * _c.value,
           [widget.color, widget.color],
-          stroke: 5,
+          stroke: 6,
         ),
+        child: widget.child == null
+            ? null
+            : Center(child: widget.child),
       ),
     );
   }

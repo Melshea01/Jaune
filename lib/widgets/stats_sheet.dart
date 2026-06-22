@@ -245,15 +245,18 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         ];
         showLabels = true;
       case StatsPeriod.all:
+        // Mensuel : initiales de mois si peu de barres. Journalier (historique
+        // court) : pas de labels (trop de jours).
         final few = pb.bars.length <= 12;
+        final monthly = pb.gran == StatGranularity.month;
         data = [
           for (final b in pb.bars)
             StatBarDatum(
-              few ? _initial(DateFormat.MMM(locale).format(b.date)) : '',
+              (few && monthly) ? _initial(DateFormat.MMM(locale).format(b.date)) : '',
               b.value,
             ),
         ];
-        showLabels = few;
+        showLabels = few && monthly;
     }
 
     final cmp = StatsService.periodComparison(_map, _period, _now);
@@ -354,15 +357,16 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         ring: tracked == 0 ? 0 : sober / tracked,
         value: pct,
         suffix: '%',
-        label: l10n.statsSoberTitle,
-        accent: const Color(0xFF43C463),
+        // Le % est dans l'anneau ; le libellé apporte le détail chiffré.
+        label: l10n.statsSoberCount(sober, tracked),
+        accent: StatPalette.sober,
       ),
       StatTile(
         key: ValueKey('drinks-${_period.name}'),
         emoji: '🍺',
         value: total,
-        label: l10n.statsConsumptionTitle,
-        accent: JauneColors.lemonDeep,
+        label: l10n.statsDrinksLabel,
+        accent: StatPalette.drinks,
       ),
     ]);
   }
@@ -451,27 +455,27 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         emoji: '🔥',
         value: math.max(longest, streak),
         label: l10n.statsLongestStreak,
-        accent: JauneColors.flame,
+        accent: StatPalette.streak,
       ),
       StatTile(
         emoji: '🌿',
         value: soberTotal,
         label: l10n.statsTotalSoberDays,
-        accent: const Color(0xFF43C463),
+        accent: StatPalette.sober,
       ),
       if (lightest != null)
         StatTile(
           emoji: '🪶',
           value: lightest,
           label: l10n.statsLightestWeek,
-          accent: JauneColors.skyDeep,
+          accent: StatPalette.light,
         ),
       if (avoided != null)
         StatTile(
           emoji: '🍋',
           value: avoided,
           label: l10n.statsDrinksAvoided,
-          accent: JauneColors.lemonDeep,
+          accent: StatPalette.lemon,
         ),
     ]);
   }
@@ -517,7 +521,11 @@ class _HealthCurveState extends State<_HealthCurve> {
     final values = widget.values;
     if (values.length < 2) return;
     final frac = (dx / width).clamp(0.0, 1.0);
-    setState(() => _selected = (frac * (values.length - 1)).round());
+    final idx = (frac * (values.length - 1)).round();
+    if (idx != _selected) {
+      HapticFeedback.selectionClick();
+      setState(() => _selected = idx);
+    }
   }
 
   @override
@@ -566,22 +574,18 @@ class _HealthCurveState extends State<_HealthCurve> {
                 ),
               ),
             ),
-            const Spacer(),
-            if (_selected != null)
-              Text(
-                dateLabel,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: JauneColors.inkSoft,
-                ),
-              ),
           ],
         ),
         const SizedBox(height: 6),
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
+            final len = values.length;
+            final bubbleX = len < 2
+                ? 0.0
+                : ((shownIndex / (len - 1)) * width - 36)
+                    .clamp(0.0, math.max(0.0, width - 72))
+                    .toDouble();
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTapDown: (d) => _updateFromX(d.localPosition.dx, width),
@@ -595,23 +599,76 @@ class _HealthCurveState extends State<_HealthCurve> {
               child: SizedBox(
                 height: _chartH,
                 width: double.infinity,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: 1),
-                  duration: JauneMotion.emphasized,
-                  curve: JauneMotion.smooth,
-                  builder: (context, progress, _) => CustomPaint(
-                    painter: _HealthCurvePainter(
-                      values: values,
-                      progress: progress,
-                      selected: _selected,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: 1),
+                        duration: JauneMotion.emphasized,
+                        curve: JauneMotion.smooth,
+                        builder: (context, progress, _) => CustomPaint(
+                          painter: _HealthCurvePainter(
+                            values: values,
+                            progress: progress,
+                            selected: _selected,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    // Bulle qui suit le doigt pendant le scrub.
+                    if (_selected != null && len >= 2)
+                      Positioned(
+                        top: 0,
+                        left: bubbleX,
+                        child: _scrubBubble(shown.round(), dateLabel, pill.last),
+                      ),
+                  ],
                 ),
               ),
             );
           },
         ),
       ],
+    );
+  }
+
+  Widget _scrubBubble(int value, String date, Color color) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 72),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: JauneColors.ink,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            offset: const Offset(0, 3),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            '$value ${widget.hpUnit}',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
+          ),
+          Text(
+            date,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -667,11 +724,11 @@ class _HealthCurvePainter extends CustomPainter {
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        Color(0xFF43E97B),
-        Color(0xFFA8E063),
-        Color(0xFFFFD200),
-        Color(0xFFFF8C42),
-        Color(0xFFF85757),
+        Color(0xFF22C55E),
+        Color(0xFF84CC16),
+        Color(0xFFF59E0B),
+        Color(0xFFF97316),
+        Color(0xFFEF4444),
       ],
       stops: [0.0, 0.18, 0.45, 0.72, 1.0],
     ).createShader(Offset.zero & size);
@@ -685,9 +742,9 @@ class _HealthCurvePainter extends CustomPainter {
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        const Color(0xFF43E97B).withValues(alpha: 0.22),
-        const Color(0xFFFFD200).withValues(alpha: 0.12),
-        const Color(0xFFF85757).withValues(alpha: 0.04),
+        const Color(0xFF22C55E).withValues(alpha: 0.22),
+        const Color(0xFFF59E0B).withValues(alpha: 0.12),
+        const Color(0xFFEF4444).withValues(alpha: 0.04),
       ],
       stops: const [0.0, 0.5, 1.0],
     ).createShader(Offset.zero & size);

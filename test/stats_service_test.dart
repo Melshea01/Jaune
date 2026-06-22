@@ -176,11 +176,11 @@ void main() {
       expect(r.bars[3].value, 2);
     });
 
-    test('année : 12 barres mensuelles', () {
+    test('année : mois écoulés uniquement (jan → mois courant)', () {
       final map = mapOf({DateTime(2026, 3, 4): 6});
       final r = StatsService.periodBars(map, StatsPeriod.year, today, '');
       expect(r.gran, StatGranularity.month);
-      expect(r.bars.length, 12);
+      expect(r.bars.length, 6); // janvier → juin (today = 11 juin)
       expect(r.bars[2].value, 6); // mars
     });
   });

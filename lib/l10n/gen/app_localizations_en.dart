@@ -644,6 +644,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsConsumptionTitle => 'Drinks';
 
   @override
+  String get statsDrinksLabel => 'Drinks this period';
+
+  @override
   String get statsUnitPerDay => 'Drinks per day';
 
   @override

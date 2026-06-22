@@ -328,6 +328,7 @@
   "statsPeriodYear": "Année",
   "statsPeriodAll": "Tout",
   "statsConsumptionTitle": "Consommation",
+  "statsDrinksLabel": "Verres sur la période",
   "statsUnitPerDay": "Verres par jour",
   "statsUnitPerMonth": "Verres par mois",
   "statsHealthScrubHint": "Glisse ton doigt sur la courbe pour voir chaque jour",
