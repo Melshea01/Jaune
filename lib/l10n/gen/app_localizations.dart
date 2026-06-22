@@ -1178,22 +1178,58 @@ abstract class AppLocalizations {
   /// **'Consommation'**
   String get statsConsumptionTitle;
 
+  /// No description provided for @statsUnitPerDay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Verres par jour'**
+  String get statsUnitPerDay;
+
+  /// No description provided for @statsUnitPerMonth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Verres par mois'**
+  String get statsUnitPerMonth;
+
+  /// No description provided for @statsHealthScrubHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Glisse ton doigt sur la courbe pour voir chaque jour'**
+  String get statsHealthScrubHint;
+
+  /// No description provided for @statsSoberTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jours sobres'**
+  String get statsSoberTitle;
+
+  /// No description provided for @statsSoberSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur la période sélectionnée'**
+  String get statsSoberSubtitle;
+
+  /// No description provided for @statsSoberCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{sober, plural, =1{1 jour sobre sur {total}} other{{sober} jours sobres sur {total}}}'**
+  String statsSoberCount(int sober, int total);
+
   /// No description provided for @statsMilestoneTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Prochain palier'**
+  /// **'Objectifs de série'**
   String get statsMilestoneTitle;
 
   /// No description provided for @statsMilestoneReached.
   ///
   /// In fr, this message translates to:
-  /// **'Palier maximum atteint, tu es une légende 🔥'**
+  /// **'Objectif maximum atteint, tu es une légende 🔥'**
   String get statsMilestoneReached;
 
   /// No description provided for @statsMilestoneCaption.
   ///
   /// In fr, this message translates to:
-  /// **'{remaining, plural, =1{Plus qu\'un jour avant le palier {target} 🔥} other{Plus que {remaining} jours avant le palier {target} 🔥}}'**
+  /// **'{remaining, plural, =1{Plus qu\'un jour sobre pour atteindre l\'objectif {target} 🔥} other{Plus que {remaining} jours sobres pour atteindre l\'objectif {target} 🔥}}'**
   String statsMilestoneCaption(int remaining, int target);
 
   /// No description provided for @statsWeekdayTitle.
@@ -1202,11 +1238,35 @@ abstract class AppLocalizations {
   /// **'Par jour de la semaine'**
   String get statsWeekdayTitle;
 
+  /// No description provided for @statsWeekdaySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Moyenne de verres par jour, ton jour à risque ressort'**
+  String get statsWeekdaySubtitle;
+
   /// No description provided for @statsHeatmapTitle.
   ///
   /// In fr, this message translates to:
   /// **'Ton historique'**
   String get statsHeatmapTitle;
+
+  /// No description provided for @statsHeatmapSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque carré = un jour. Vert = sobre, rouge = chargé.'**
+  String get statsHeatmapSubtitle;
+
+  /// No description provided for @statsHeatmapLess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sobre'**
+  String get statsHeatmapLess;
+
+  /// No description provided for @statsHeatmapMore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chargé'**
+  String get statsHeatmapMore;
 
   /// No description provided for @statsTotalSoberDays.
   ///

@@ -104,12 +104,14 @@ class _StaggeredRevealState extends State<StaggeredReveal>
 
 class StatCard extends StatelessWidget {
   final String? title;
+  final String? subtitle;
   final Widget child;
   final EdgeInsetsGeometry padding;
 
   const StatCard({
     super.key,
     this.title,
+    this.subtitle,
     required this.child,
     this.padding = const EdgeInsets.all(16),
   });
@@ -138,13 +140,25 @@ class StatCard extends StatelessWidget {
             Text(
               title!,
               style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: JauneColors.inkSoft,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: JauneColors.ink,
                 letterSpacing: 0.2,
               ),
             ),
-            const SizedBox(height: 12),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                subtitle!,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: JauneColors.inkSoft,
+                  height: 1.3,
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
           ],
           child,
         ],
@@ -263,11 +277,21 @@ class StatHeroHeader extends StatelessWidget {
               ],
             ),
           ),
+          // Le CitronCharacter a un layout fixe de 420×420 (seul le rendu est
+          // scalé). Un FittedBox contient l'ensemble du personnage — tige
+          // comprise — dans la vignette, sans détacher ni rogner.
           SizedBox(
-            width: 120,
-            height: 120,
+            width: 116,
+            height: 116,
             child: IgnorePointer(
-              child: CitronCharacter(controller: citron, skin: skin, scale: 0.7),
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: SizedBox(
+                  width: 420,
+                  height: 420,
+                  child: CitronCharacter(controller: citron, skin: skin),
+                ),
+              ),
             ),
           ),
         ],
@@ -427,7 +451,7 @@ class StatBarChart extends StatefulWidget {
   const StatBarChart({
     super.key,
     required this.data,
-    this.height = 120,
+    this.height = 150,
     this.showLabels = true,
   });
 
@@ -454,12 +478,16 @@ class _StatBarChartState extends State<StatBarChart>
     final maxValue = data.fold<int>(1, (m, d) => d.value > m ? d.value : m);
     final n = data.length;
     final thin = n > 12;
+    final showValue = n <= 12;
 
+    // La zone des barres est un Expanded : valeur (haut) et label (bas) ont
+    // une hauteur fixe, donc le total ne dépasse jamais [height] (zéro
+    // overflow, quelle que soit la valeur max).
     return AnimatedBuilder(
       animation: _c,
       builder: (context, _) {
         return SizedBox(
-          height: widget.height + (widget.showLabels ? 22 : 6),
+          height: widget.height,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -467,7 +495,7 @@ class _StatBarChartState extends State<StatBarChart>
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: thin ? 1 : 3),
-                    child: _bar(data[i], maxValue, i, n),
+                    child: _bar(data[i], maxValue, i, n, thin, showValue),
                   ),
                 ),
             ],
@@ -477,48 +505,71 @@ class _StatBarChartState extends State<StatBarChart>
     );
   }
 
-  Widget _bar(StatBarDatum d, int maxValue, int i, int n) {
-    final thin = n > 12;
+  Widget _bar(
+    StatBarDatum d,
+    int maxValue,
+    int i,
+    int n,
+    bool thin,
+    bool showValue,
+  ) {
     // Cascade : chaque barre démarre légèrement après la précédente.
     final start = n <= 1 ? 0.0 : (i / n) * 0.35;
     final t = ((_c.value - start) / (1 - 0.35)).clamp(0.0, 1.0);
     final eased = Curves.easeOutCubic.transform(t);
-    final targetH = d.value <= 0 ? 4.0 : widget.height * d.value / maxValue;
-    final h = targetH * eased;
+    final frac = (d.value <= 0 ? 0.0 : d.value / maxValue) * eased;
     final color = d.value <= 0 ? Colors.grey.shade200 : jauneStatColor(d.value);
+    final radius = BorderRadius.circular(thin ? 2 : 6);
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        if (d.value > 0 && n <= 12)
-          Text(
-            '${d.value}',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              color: JauneColors.inkSoft,
-            ),
+        if (showValue)
+          SizedBox(
+            height: 16,
+            child: d.value > 0
+                ? Center(
+                    child: Text(
+                      '${d.value}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: JauneColors.inkSoft,
+                      ),
+                    ),
+                  )
+                : null,
           ),
-        Container(
-          height: h,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(thin ? 2 : 6),
+        Expanded(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: d.value <= 0
+                ? Container(
+                    height: 3,
+                    decoration: BoxDecoration(color: color, borderRadius: radius),
+                  )
+                : FractionallySizedBox(
+                    heightFactor: frac.clamp(0.02, 1.0),
+                    widthFactor: 1,
+                    child: Container(
+                      decoration: BoxDecoration(color: color, borderRadius: radius),
+                    ),
+                  ),
           ),
         ),
-        if (widget.showLabels) ...[
-          const SizedBox(height: 6),
-          Text(
-            d.label,
-            maxLines: 1,
-            overflow: TextOverflow.clip,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: Colors.grey.shade600,
+        if (widget.showLabels)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              d.label,
+              maxLines: 1,
+              overflow: TextOverflow.clip,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade600,
+              ),
             ),
           ),
-        ],
       ],
     );
   }
@@ -554,25 +605,27 @@ class StatTrendBadge extends StatelessWidget {
 // Anneau de progression vers le prochain palier de série
 // =====================================================================
 
-class MilestoneRing extends StatefulWidget {
-  final int currentStreak;
-  final int target;
-  final String centerLabel; // ex: "3 / 7"
-  final String caption; // ex: "jours avant le palier 7"
+/// Anneau « jours sobres » (style anneau d'activité Apple) : proportion de
+/// jours sans verre sur la période, avec gros pourcentage au centre.
+class SoberRing extends StatefulWidget {
+  final double progress; // 0..1
+  final String bigLabel; // ex: "72%"
+  final String smallLabel; // ex: "5 / 7 jours sobres"
+  final List<Color> gradient;
 
-  const MilestoneRing({
+  const SoberRing({
     super.key,
-    required this.currentStreak,
-    required this.target,
-    required this.centerLabel,
-    required this.caption,
+    required this.progress,
+    required this.bigLabel,
+    required this.smallLabel,
+    this.gradient = const [Color(0xFF43E97B), Color(0xFF38F9D7)],
   });
 
   @override
-  State<MilestoneRing> createState() => _MilestoneRingState();
+  State<SoberRing> createState() => _SoberRingState();
 }
 
-class _MilestoneRingState extends State<MilestoneRing>
+class _SoberRingState extends State<SoberRing>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
@@ -587,22 +640,23 @@ class _MilestoneRingState extends State<MilestoneRing>
 
   @override
   Widget build(BuildContext context) {
-    final progress =
-        widget.target <= 0 ? 1.0 : (widget.currentStreak / widget.target).clamp(0.0, 1.0);
     return Row(
       children: [
         SizedBox(
-          width: 92,
-          height: 92,
+          width: 96,
+          height: 96,
           child: AnimatedBuilder(
             animation: _c,
             builder: (context, _) => CustomPaint(
-              painter: _RingPainter(progress * _c.value),
+              painter: _RingPainter(
+                widget.progress.clamp(0.0, 1.0) * _c.value,
+                widget.gradient,
+              ),
               child: Center(
                 child: Text(
-                  widget.centerLabel,
+                  widget.bigLabel,
                   style: const TextStyle(
-                    fontSize: 17,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: JauneColors.ink,
                   ),
@@ -614,10 +668,10 @@ class _MilestoneRingState extends State<MilestoneRing>
         const SizedBox(width: 16),
         Expanded(
           child: Text(
-            widget.caption,
+            widget.smallLabel,
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
               color: JauneColors.ink,
               height: 1.35,
             ),
@@ -630,13 +684,14 @@ class _MilestoneRingState extends State<MilestoneRing>
 
 class _RingPainter extends CustomPainter {
   final double progress;
-  _RingPainter(this.progress);
+  final List<Color> gradient;
+  _RingPainter(this.progress, this.gradient);
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    final radius = size.width / 2 - 6;
-    const stroke = 10.0;
+    final radius = size.width / 2 - 7;
+    const stroke = 12.0;
 
     final bg = Paint()
       ..color = const Color(0xFFEDEFF4)
@@ -647,8 +702,8 @@ class _RingPainter extends CustomPainter {
 
     final rect = Rect.fromCircle(center: center, radius: radius);
     final fg = Paint()
-      ..shader = const SweepGradient(
-        colors: [JauneColors.lemon, JauneColors.flame, JauneColors.lemonDeep],
+      ..shader = SweepGradient(
+        colors: [...gradient, gradient.first],
         startAngle: -math.pi / 2,
         endAngle: 3 * math.pi / 2,
       ).createShader(rect)
@@ -660,6 +715,146 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RingPainter old) => old.progress != progress;
+}
+
+/// Parcours d'objectifs (style chemin Duolingo) : les paliers de série sobre
+/// (3, 7, 30, 100) sous forme de jalons reliés, remplis jusqu'à la série en
+/// cours. Beaucoup plus parlant qu'un simple anneau « 3/7 ».
+class MilestoneTrack extends StatelessWidget {
+  final int currentStreak;
+  final List<int> milestones;
+
+  const MilestoneTrack({
+    super.key,
+    required this.currentStreak,
+    required this.milestones,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final children = <Widget>[];
+    int prev = 0;
+    for (int k = 0; k < milestones.length; k++) {
+      final m = milestones[k];
+      final fill = ((currentStreak - prev) / (m - prev)).clamp(0.0, 1.0);
+      final reached = currentStreak >= m;
+      final isNext = !reached &&
+          (k == 0 || currentStreak >= milestones[k - 1]);
+      children.add(Expanded(child: _segment(fill)));
+      children.add(_node(m, reached, isNext));
+      prev = m;
+    }
+    return Row(crossAxisAlignment: CrossAxisAlignment.center, children: children);
+  }
+
+  Widget _segment(double fill) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Stack(
+        children: [
+          Container(
+            height: 6,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDEFF4),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          FractionallySizedBox(
+            widthFactor: fill,
+            child: Container(
+              height: 6,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [JauneColors.lemon, JauneColors.flame],
+                ),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _node(int milestone, bool reached, bool isNext) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: reached
+            ? const LinearGradient(colors: [JauneColors.lemon, JauneColors.flame])
+            : null,
+        color: reached ? null : Colors.white,
+        border: Border.all(
+          color: isNext
+              ? JauneColors.flame
+              : reached
+                  ? Colors.transparent
+                  : const Color(0xFFD9DCE3),
+          width: isNext ? 2.5 : 1.5,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '$milestone',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+          color: reached ? Colors.white : JauneColors.inkSoft,
+        ),
+      ),
+    );
+  }
+}
+
+/// Légende de la heatmap : du sobre (vert) au chargé (rouge).
+class StatHeatmapLegend extends StatelessWidget {
+  final String lessLabel;
+  final String moreLabel;
+  const StatHeatmapLegend({
+    super.key,
+    required this.lessLabel,
+    required this.moreLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const swatches = [0, 2, 4, 5, 6];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Text(
+          lessLabel,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(width: 6),
+        for (final c in swatches)
+          Container(
+            width: 12,
+            height: 12,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            decoration: BoxDecoration(
+              color: jauneStatColor(c).withValues(alpha: c == 0 ? 0.35 : 1.0),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+        const SizedBox(width: 6),
+        Text(
+          moreLabel,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 // =====================================================================
@@ -739,6 +934,7 @@ class StatHeatmap extends StatelessWidget {
   final DateTime today;
   final String firstUseDate;
   final String Function(DateTime day) keyOf;
+  final List<String> weekdayLabels; // L M M J V S D (lundi→dimanche)
 
   const StatHeatmap({
     super.key,
@@ -748,6 +944,7 @@ class StatHeatmap extends StatelessWidget {
     required this.today,
     required this.firstUseDate,
     required this.keyOf,
+    required this.weekdayLabels,
   });
 
   @override
@@ -774,10 +971,42 @@ class StatHeatmap extends StatelessWidget {
       cursor = cursor.add(const Duration(days: 7));
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      reverse: true, // dernières semaines visibles d'abord
-      child: Row(children: columns),
+    // Colonne fixe des initiales de jours, alignée sur les lignes (cellules
+    // de 14 px + 4 px de marge basse).
+    final labelColumn = Column(
+      children: [
+        for (int i = 0; i < 7; i++)
+          SizedBox(
+            height: 18,
+            child: Center(
+              child: Text(
+                weekdayLabels.length > i ? weekdayLabels[i] : '',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: labelColumn,
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            reverse: true, // dernières semaines visibles d'abord
+            child: Row(children: columns),
+          ),
+        ),
+      ],
     );
   }
 

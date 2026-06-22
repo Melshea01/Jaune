@@ -644,19 +644,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsConsumptionTitle => 'Drinks';
 
   @override
-  String get statsMilestoneTitle => 'Next milestone';
+  String get statsUnitPerDay => 'Drinks per day';
 
   @override
-  String get statsMilestoneReached =>
-      'Top milestone reached, you\'re a legend 🔥';
+  String get statsUnitPerMonth => 'Drinks per month';
+
+  @override
+  String get statsHealthScrubHint => 'Drag across the curve to see each day';
+
+  @override
+  String get statsSoberTitle => 'Sober days';
+
+  @override
+  String get statsSoberSubtitle => 'Over the selected period';
+
+  @override
+  String statsSoberCount(int sober, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      sober,
+      locale: localeName,
+      other: '$sober sober days out of $total',
+      one: '1 sober day out of $total',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get statsMilestoneTitle => 'Streak goals';
+
+  @override
+  String get statsMilestoneReached => 'Top goal reached, you\'re a legend 🔥';
 
   @override
   String statsMilestoneCaption(int remaining, int target) {
     String _temp0 = intl.Intl.pluralLogic(
       remaining,
       locale: localeName,
-      other: '$remaining more days to milestone $target 🔥',
-      one: '1 more day to milestone $target 🔥',
+      other: '$remaining more sober days to reach goal $target 🔥',
+      one: '1 more sober day to reach goal $target 🔥',
     );
     return '$_temp0';
   }
@@ -665,7 +690,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsWeekdayTitle => 'By day of the week';
 
   @override
+  String get statsWeekdaySubtitle =>
+      'Average drinks per day, your risky day stands out';
+
+  @override
   String get statsHeatmapTitle => 'Your history';
+
+  @override
+  String get statsHeatmapSubtitle =>
+      'Each square = a day. Green = sober, red = heavy.';
+
+  @override
+  String get statsHeatmapLess => 'Sober';
+
+  @override
+  String get statsHeatmapMore => 'Heavy';
 
   @override
   String get statsTotalSoberDays => 'Total sober days';

@@ -646,19 +646,47 @@ class AppLocalizationsFr extends AppLocalizations {
   String get statsConsumptionTitle => 'Consommation';
 
   @override
-  String get statsMilestoneTitle => 'Prochain palier';
+  String get statsUnitPerDay => 'Verres par jour';
+
+  @override
+  String get statsUnitPerMonth => 'Verres par mois';
+
+  @override
+  String get statsHealthScrubHint =>
+      'Glisse ton doigt sur la courbe pour voir chaque jour';
+
+  @override
+  String get statsSoberTitle => 'Jours sobres';
+
+  @override
+  String get statsSoberSubtitle => 'Sur la période sélectionnée';
+
+  @override
+  String statsSoberCount(int sober, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      sober,
+      locale: localeName,
+      other: '$sober jours sobres sur $total',
+      one: '1 jour sobre sur $total',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get statsMilestoneTitle => 'Objectifs de série';
 
   @override
   String get statsMilestoneReached =>
-      'Palier maximum atteint, tu es une légende 🔥';
+      'Objectif maximum atteint, tu es une légende 🔥';
 
   @override
   String statsMilestoneCaption(int remaining, int target) {
     String _temp0 = intl.Intl.pluralLogic(
       remaining,
       locale: localeName,
-      other: 'Plus que $remaining jours avant le palier $target 🔥',
-      one: 'Plus qu\'un jour avant le palier $target 🔥',
+      other:
+          'Plus que $remaining jours sobres pour atteindre l\'objectif $target 🔥',
+      one: 'Plus qu\'un jour sobre pour atteindre l\'objectif $target 🔥',
     );
     return '$_temp0';
   }
@@ -667,7 +695,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get statsWeekdayTitle => 'Par jour de la semaine';
 
   @override
+  String get statsWeekdaySubtitle =>
+      'Moyenne de verres par jour, ton jour à risque ressort';
+
+  @override
   String get statsHeatmapTitle => 'Ton historique';
+
+  @override
+  String get statsHeatmapSubtitle =>
+      'Chaque carré = un jour. Vert = sobre, rouge = chargé.';
+
+  @override
+  String get statsHeatmapLess => 'Sobre';
+
+  @override
+  String get statsHeatmapMore => 'Chargé';
 
   @override
   String get statsTotalSoberDays => 'Total de jours sobres';

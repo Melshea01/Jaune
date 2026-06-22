@@ -135,11 +135,12 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         },
       ),
       _insightCard(l10n, locale, streak),
+      _soberCard(l10n),
       _consumptionCard(l10n, locale),
       _healthCard(l10n),
       _milestoneCard(l10n, streak),
       _weekdayCard(l10n, locale),
-      _heatmapCard(l10n),
+      _heatmapCard(l10n, locale),
       _recordsCard(l10n, streak),
     ];
 
@@ -254,8 +255,10 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
     }
 
     final cmp = StatsService.periodComparison(_map, _period, _now);
+    final perMonth = _period == StatsPeriod.year || _period == StatsPeriod.all;
     return StatCard(
       title: l10n.statsConsumptionTitle,
+      subtitle: perMonth ? l10n.statsUnitPerMonth : l10n.statsUnitPerDay,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -313,7 +316,42 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
     final values = StatsService.hpTrajectory(_map, _firstUse, _now, days: days);
     return StatCard(
       title: l10n.statsHealthTrend,
-      child: _HealthCurve(values: values, hpUnit: l10n.statsHpUnit),
+      subtitle: l10n.statsHealthScrubHint,
+      child: _HealthCurve(
+        key: ValueKey('curve-${_period.name}'),
+        values: values,
+        hpUnit: l10n.statsHpUnit,
+        now: _now,
+        locale: Localizations.localeOf(context).toString(),
+      ),
+    );
+  }
+
+  Widget _soberCard(AppLocalizations l10n) {
+    final range = StatsService.periodRange(_period, _now, _firstUse);
+    final tracked = StatsService.trackedDaysInRange(
+      range.start,
+      range.end,
+      _now,
+      _firstUse,
+    );
+    final sober = StatsService.soberDaysInRange(
+      _map,
+      range.start,
+      range.end,
+      _now,
+      _firstUse,
+    );
+    final pct = tracked == 0 ? 0 : (sober * 100 / tracked).round();
+    return StatCard(
+      title: l10n.statsSoberTitle,
+      subtitle: l10n.statsSoberSubtitle,
+      child: SoberRing(
+        key: ValueKey('sober-${_period.name}'),
+        progress: tracked == 0 ? 0 : sober / tracked,
+        bigLabel: '$pct%',
+        smallLabel: l10n.statsSoberCount(sober, tracked),
+      ),
     );
   }
 
@@ -330,45 +368,55 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
     final remaining = math.max(0, target - streak);
     return StatCard(
       title: l10n.statsMilestoneTitle,
-      child: MilestoneRing(
-        key: ValueKey('ring-$streak'),
-        currentStreak: streak,
-        target: target,
-        centerLabel: reached ? '$streak 🔥' : '$streak/$target',
-        caption: reached
-            ? l10n.statsMilestoneReached
-            : l10n.statsMilestoneCaption(remaining, target),
-      ),
+      subtitle: reached
+          ? l10n.statsMilestoneReached
+          : l10n.statsMilestoneCaption(remaining, target),
+      child: MilestoneTrack(currentStreak: streak, milestones: milestones),
     );
   }
 
   Widget _weekdayCard(AppLocalizations l10n, String locale) {
     final avgs = StatsService.weekdayAverages(_map, _firstUse, _now);
-    // Initiales lundi→dimanche.
-    final monday = StatsService.mondayOf(_now);
-    final labels = [
-      for (int i = 0; i < 7; i++)
-        _initial(DateFormat.E(locale).format(monday.add(Duration(days: i)))),
-    ];
     return StatCard(
       title: l10n.statsWeekdayTitle,
-      child: WeekdayChart(averages: avgs, labels: labels),
+      subtitle: l10n.statsWeekdaySubtitle,
+      child: WeekdayChart(averages: avgs, labels: _weekdayInitials(locale)),
     );
   }
 
-  Widget _heatmapCard(AppLocalizations l10n) {
+  Widget _heatmapCard(AppLocalizations l10n, String locale) {
     final range = StatsService.periodRange(_period, _now, _firstUse);
     return StatCard(
       title: l10n.statsHeatmapTitle,
-      child: StatHeatmap(
-        start: range.start,
-        end: range.end,
-        dailyMap: _map,
-        today: _now,
-        firstUseDate: _firstUse,
-        keyOf: dateKey,
+      subtitle: l10n.statsHeatmapSubtitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StatHeatmap(
+            start: range.start,
+            end: range.end,
+            dailyMap: _map,
+            today: _now,
+            firstUseDate: _firstUse,
+            keyOf: dateKey,
+            weekdayLabels: _weekdayInitials(locale),
+          ),
+          const SizedBox(height: 12),
+          StatHeatmapLegend(
+            lessLabel: l10n.statsHeatmapLess,
+            moreLabel: l10n.statsHeatmapMore,
+          ),
+        ],
       ),
     );
+  }
+
+  List<String> _weekdayInitials(String locale) {
+    final monday = StatsService.mondayOf(_now);
+    return [
+      for (int i = 0; i < 7; i++)
+        _initial(DateFormat.E(locale).format(monday.add(Duration(days: i)))),
+    ];
   }
 
   Widget _recordsCard(AppLocalizations l10n, int streak) {
@@ -421,15 +469,54 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
 // Courbe de santé (PV) — conservée de la version précédente
 // =====================================================================
 
-class _HealthCurve extends StatelessWidget {
+class _HealthCurve extends StatefulWidget {
   final List<double> values;
   final String hpUnit;
-  const _HealthCurve({required this.values, required this.hpUnit});
+  final DateTime now;
+  final String locale;
+
+  const _HealthCurve({
+    super.key,
+    required this.values,
+    required this.hpUnit,
+    required this.now,
+    required this.locale,
+  });
+
+  @override
+  State<_HealthCurve> createState() => _HealthCurveState();
+}
+
+class _HealthCurveState extends State<_HealthCurve> {
+  // Index sélectionné par le doigt (null = pas de scrub, on montre le dernier).
+  int? _selected;
+
+  static const double _chartH = 130;
+
+  void _updateFromX(double dx, double width) {
+    final values = widget.values;
+    if (values.length < 2) return;
+    final frac = (dx / width).clamp(0.0, 1.0);
+    setState(() => _selected = (frac * (values.length - 1)).round());
+  }
 
   @override
   Widget build(BuildContext context) {
-    final double current = values.isNotEmpty ? values.last : 100.0;
-    final List<Color> pill = JauneColors.healthGradient(current / 100.0);
+    final values = widget.values;
+    final int shownIndex = _selected ?? (values.length - 1);
+    final double shown =
+        values.isNotEmpty ? values[shownIndex.clamp(0, values.length - 1)] : 100.0;
+    final List<Color> pill = JauneColors.healthGradient(shown / 100.0);
+
+    // Date du point affiché : le dernier point = aujourd'hui.
+    String dateLabel = '';
+    if (values.isNotEmpty) {
+      final daysFromEnd = (values.length - 1) - shownIndex;
+      final date = DateTime(widget.now.year, widget.now.month, widget.now.day)
+          .subtract(Duration(days: daysFromEnd));
+      final raw = DateFormat.MMMEd(widget.locale).format(date);
+      dateLabel = raw.isEmpty ? '' : raw[0].toUpperCase() + raw.substring(1);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,8 +525,9 @@ class _HealthCurve extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            CountUpInt(
-              current.round(),
+            // Le chiffre suit le doigt (pas de count-up pendant le scrub).
+            Text(
+              '${shown.round()}',
               style: TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.w900,
@@ -450,7 +538,7 @@ class _HealthCurve extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                hpUnit,
+                widget.hpUnit,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
@@ -458,20 +546,50 @@ class _HealthCurve extends StatelessWidget {
                 ),
               ),
             ),
+            const Spacer(),
+            if (_selected != null)
+              Text(
+                dateLabel,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: JauneColors.inkSoft,
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 6),
-        SizedBox(
-          height: 120,
-          width: double.infinity,
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: JauneMotion.emphasized,
-            curve: JauneMotion.smooth,
-            builder: (context, progress, _) => CustomPaint(
-              painter: _HealthCurvePainter(values: values, progress: progress),
-            ),
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapDown: (d) => _updateFromX(d.localPosition.dx, width),
+              onHorizontalDragStart: (d) =>
+                  _updateFromX(d.localPosition.dx, width),
+              onHorizontalDragUpdate: (d) =>
+                  _updateFromX(d.localPosition.dx, width),
+              onHorizontalDragEnd: (_) => setState(() => _selected = null),
+              onTapUp: (_) => setState(() => _selected = null),
+              onTapCancel: () => setState(() => _selected = null),
+              child: SizedBox(
+                height: _chartH,
+                width: double.infinity,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: JauneMotion.emphasized,
+                  curve: JauneMotion.smooth,
+                  builder: (context, progress, _) => CustomPaint(
+                    painter: _HealthCurvePainter(
+                      values: values,
+                      progress: progress,
+                      selected: _selected,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -481,8 +599,13 @@ class _HealthCurve extends StatelessWidget {
 class _HealthCurvePainter extends CustomPainter {
   final List<double> values;
   final double progress;
+  final int? selected;
 
-  _HealthCurvePainter({required this.values, required this.progress});
+  _HealthCurvePainter({
+    required this.values,
+    required this.progress,
+    this.selected,
+  });
 
   static const double _padTop = 10;
   static const double _padBottom = 10;
@@ -584,6 +707,25 @@ class _HealthCurvePainter extends CustomPainter {
           ..strokeWidth = 2.5,
       );
     }
+
+    // Marqueur de scrub : ligne verticale + point sur le jour sélectionné.
+    final sel = selected;
+    if (sel != null && sel >= 0 && sel < points.length && progress >= 0.999) {
+      final p = points[sel];
+      final line = Paint()
+        ..color = JauneColors.ink.withValues(alpha: 0.18)
+        ..strokeWidth = 1.5;
+      canvas.drawLine(Offset(p.dx, 0), Offset(p.dx, size.height), line);
+      canvas.drawCircle(p, 6, Paint()..color = Colors.white);
+      canvas.drawCircle(
+        p,
+        6,
+        Paint()
+          ..shader = shader
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3,
+      );
+    }
   }
 
   Offset? _pointAt(Path path, double t) {
@@ -596,7 +738,9 @@ class _HealthCurvePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_HealthCurvePainter old) =>
-      old.progress != progress || old.values != values;
+      old.progress != progress ||
+      old.values != values ||
+      old.selected != selected;
 }
 
 // =====================================================================
