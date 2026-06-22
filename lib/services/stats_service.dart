@@ -166,4 +166,317 @@ abstract class StatsService {
     final int avoided = (baselinePerDay * daysSince - actual).round();
     return math.max(0, avoided);
   }
+
+  // =====================================================================
+  // Période sélectionnable (semaine / mois / année / tout)
+  // =====================================================================
+
+  static DateTime _lastOfMonth(int year, int month) =>
+      DateTime(year, month + 1, 0);
+
+  /// Bornes [start, end] (inclusives, à minuit) de la période sélectionnée.
+  static ({DateTime start, DateTime end}) periodRange(
+    StatsPeriod period,
+    DateTime today,
+    String firstUseDate,
+  ) {
+    final d0 = DateTime(today.year, today.month, today.day);
+    switch (period) {
+      case StatsPeriod.week:
+        final mon = mondayOf(d0);
+        return (start: mon, end: mon.add(const Duration(days: 6)));
+      case StatsPeriod.month:
+        return (
+          start: DateTime(d0.year, d0.month, 1),
+          end: _lastOfMonth(d0.year, d0.month),
+        );
+      case StatsPeriod.year:
+        return (start: DateTime(d0.year, 1, 1), end: DateTime(d0.year, 12, 31));
+      case StatsPeriod.all:
+        final first = DateTime.tryParse(firstUseDate);
+        final start =
+            first != null
+                ? DateTime(first.year, first.month, first.day)
+                : d0;
+        return (start: start, end: d0);
+    }
+  }
+
+  /// Total de verres entre [start] et [end] inclus.
+  static int totalInRange(
+    Map<String, int> dailyMap,
+    DateTime start,
+    DateTime end,
+  ) {
+    int t = 0;
+    DateTime d = DateTime(start.year, start.month, start.day);
+    final last = DateTime(end.year, end.month, end.day);
+    while (!d.isAfter(last)) {
+      t += dailyMap[dateKey(d)] ?? 0;
+      d = d.add(const Duration(days: 1));
+    }
+    return t;
+  }
+
+  /// Jours sobres (0 verre) dans [start, end], en ne comptant que les jours
+  /// déjà écoulés (≤ aujourd'hui) et suivis (≥ première utilisation).
+  static int soberDaysInRange(
+    Map<String, int> dailyMap,
+    DateTime start,
+    DateTime end,
+    DateTime today,
+    String firstUseDate,
+  ) {
+    final d0 = DateTime(today.year, today.month, today.day);
+    final first = DateTime.tryParse(firstUseDate);
+    DateTime lo = DateTime(start.year, start.month, start.day);
+    if (first != null) {
+      final f = DateTime(first.year, first.month, first.day);
+      if (f.isAfter(lo)) lo = f;
+    }
+    DateTime hi = DateTime(end.year, end.month, end.day);
+    if (hi.isAfter(d0)) hi = d0;
+    int sober = 0;
+    DateTime cur = lo;
+    while (!cur.isAfter(hi)) {
+      if ((dailyMap[dateKey(cur)] ?? 0) == 0) sober++;
+      cur = cur.add(const Duration(days: 1));
+    }
+    return sober;
+  }
+
+  /// Nombre de jours suivis (écoulés) dans [start, end].
+  static int trackedDaysInRange(
+    DateTime start,
+    DateTime end,
+    DateTime today,
+    String firstUseDate,
+  ) {
+    final d0 = DateTime(today.year, today.month, today.day);
+    final first = DateTime.tryParse(firstUseDate);
+    DateTime lo = DateTime(start.year, start.month, start.day);
+    if (first != null) {
+      final f = DateTime(first.year, first.month, first.day);
+      if (f.isAfter(lo)) lo = f;
+    }
+    DateTime hi = DateTime(end.year, end.month, end.day);
+    if (hi.isAfter(d0)) hi = d0;
+    if (hi.isBefore(lo)) return 0;
+    return hi.difference(lo).inDays + 1;
+  }
+
+  /// Barres du graphe selon la période : jour par jour (semaine/mois) ou mois
+  /// par mois (année/tout).
+  static ({StatGranularity gran, List<StatBar> bars}) periodBars(
+    Map<String, int> dailyMap,
+    StatsPeriod period,
+    DateTime today,
+    String firstUseDate,
+  ) {
+    final d0 = DateTime(today.year, today.month, today.day);
+    switch (period) {
+      case StatsPeriod.week:
+        final mon = mondayOf(d0);
+        return (
+          gran: StatGranularity.day,
+          bars: List.generate(7, (i) {
+            final d = mon.add(Duration(days: i));
+            return StatBar(d, dailyMap[dateKey(d)] ?? 0);
+          }),
+        );
+      case StatsPeriod.month:
+        final first = DateTime(d0.year, d0.month, 1);
+        final n = _lastOfMonth(d0.year, d0.month).day;
+        return (
+          gran: StatGranularity.day,
+          bars: List.generate(n, (i) {
+            final d = first.add(Duration(days: i));
+            return StatBar(d, dailyMap[dateKey(d)] ?? 0);
+          }),
+        );
+      case StatsPeriod.year:
+        return (
+          gran: StatGranularity.month,
+          bars: List.generate(12, (i) {
+            final m = DateTime(d0.year, i + 1, 1);
+            return StatBar(m, totalInRange(dailyMap, m, _lastOfMonth(m.year, m.month)));
+          }),
+        );
+      case StatsPeriod.all:
+        final first = DateTime.tryParse(firstUseDate);
+        final startM =
+            first != null
+                ? DateTime(first.year, first.month, 1)
+                : DateTime(d0.year, d0.month, 1);
+        final bars = <StatBar>[];
+        DateTime m = startM;
+        final lastM = DateTime(d0.year, d0.month, 1);
+        while (!m.isAfter(lastM)) {
+          bars.add(StatBar(m, totalInRange(dailyMap, m, _lastOfMonth(m.year, m.month))));
+          m = DateTime(m.year, m.month + 1, 1);
+        }
+        return (gran: StatGranularity.month, bars: bars);
+    }
+  }
+
+  /// Comparaison période courante vs période précédente de même longueur.
+  /// null pour [StatsPeriod.all] (pas de période précédente pertinente).
+  static ({int current, int previous})? periodComparison(
+    Map<String, int> dailyMap,
+    StatsPeriod period,
+    DateTime today,
+  ) {
+    final d0 = DateTime(today.year, today.month, today.day);
+    switch (period) {
+      case StatsPeriod.week:
+        final mon = mondayOf(d0);
+        return (
+          current: weekTotal(dailyMap, mon),
+          previous: weekTotal(dailyMap, mon.subtract(const Duration(days: 7))),
+        );
+      case StatsPeriod.month:
+        final cur = DateTime(d0.year, d0.month, 1);
+        final prev = DateTime(d0.year, d0.month - 1, 1);
+        return (
+          current: totalInRange(dailyMap, cur, _lastOfMonth(cur.year, cur.month)),
+          previous:
+              totalInRange(dailyMap, prev, _lastOfMonth(prev.year, prev.month)),
+        );
+      case StatsPeriod.year:
+        return (
+          current: totalInRange(
+            dailyMap,
+            DateTime(d0.year, 1, 1),
+            DateTime(d0.year, 12, 31),
+          ),
+          previous: totalInRange(
+            dailyMap,
+            DateTime(d0.year - 1, 1, 1),
+            DateTime(d0.year - 1, 12, 31),
+          ),
+        );
+      case StatsPeriod.all:
+        return null;
+    }
+  }
+
+  /// Moyenne de verres par jour de la semaine (0 = lundi … 6 = dimanche), sur
+  /// toutes les journées closes depuis la première utilisation.
+  static List<double> weekdayAverages(
+    Map<String, int> dailyMap,
+    String firstUseDate,
+    DateTime today,
+  ) {
+    final first = DateTime.tryParse(firstUseDate);
+    if (first == null) return List<double>.filled(7, 0);
+    final sums = List<double>.filled(7, 0);
+    final counts = List<int>.filled(7, 0);
+    final d0 = DateTime(today.year, today.month, today.day);
+    DateTime d = DateTime(first.year, first.month, first.day);
+    while (d.isBefore(d0)) {
+      final wd = d.weekday - 1; // 0 = lundi
+      sums[wd] += dailyMap[dateKey(d)] ?? 0;
+      counts[wd]++;
+      d = d.add(const Duration(days: 1));
+    }
+    return List<double>.generate(7, (i) => counts[i] == 0 ? 0 : sums[i] / counts[i]);
+  }
+
+  /// Total de jours sobres depuis la première utilisation (journées closes).
+  static int totalSoberDays(
+    Map<String, int> dailyMap,
+    String firstUseDate,
+    DateTime today,
+  ) {
+    final first = DateTime.tryParse(firstUseDate);
+    if (first == null) return 0;
+    final d0 = DateTime(today.year, today.month, today.day);
+    int sober = 0;
+    DateTime d = DateTime(first.year, first.month, first.day);
+    while (d.isBefore(d0)) {
+      if ((dailyMap[dateKey(d)] ?? 0) == 0) sober++;
+      d = d.add(const Duration(days: 1));
+    }
+    return sober;
+  }
+
+  /// Choisit l'insight le plus marquant à mettre en avant. La présentation
+  /// (texte localisé) se fait côté UI à partir du [StatInsightKind] + valeur.
+  static StatInsight computeInsight({
+    required Map<String, int> dailyMap,
+    required String firstUseDate,
+    required DateTime today,
+    required StatsPeriod period,
+    required int currentStreak,
+  }) {
+    final cmp = periodComparison(dailyMap, period, today);
+    if (cmp != null && cmp.previous > 0 && cmp.current < cmp.previous) {
+      final pct = ((cmp.previous - cmp.current) * 100 / cmp.previous).round();
+      if (pct >= 10) return StatInsight(StatInsightKind.trendDown, pct);
+    }
+    final longest = longestSoberStreak(dailyMap, firstUseDate, today);
+    if (currentStreak >= 3 && currentStreak >= longest) {
+      return StatInsight(StatInsightKind.bestStreak, currentStreak);
+    }
+    final range = periodRange(period, today, firstUseDate);
+    final tracked =
+        trackedDaysInRange(range.start, range.end, today, firstUseDate);
+    if (tracked >= 3) {
+      final sober = soberDaysInRange(
+        dailyMap,
+        range.start,
+        range.end,
+        today,
+        firstUseDate,
+      );
+      final rate = (sober * 100 / tracked).round();
+      if (rate >= 50) return StatInsight(StatInsightKind.soberRate, rate);
+    }
+    if (cmp != null && cmp.previous > 0 && cmp.current > cmp.previous) {
+      final pct = ((cmp.current - cmp.previous) * 100 / cmp.previous).round();
+      return StatInsight(StatInsightKind.trendUp, pct);
+    }
+    final wk = weekdayAverages(dailyMap, firstUseDate, today);
+    double maxV = -1;
+    int maxI = 0;
+    for (int i = 0; i < 7; i++) {
+      if (wk[i] > maxV) {
+        maxV = wk[i];
+        maxI = i;
+      }
+    }
+    if (maxV > 0) return StatInsight(StatInsightKind.worstWeekday, maxI);
+    return const StatInsight(StatInsightKind.gettingStarted, 0);
+  }
+}
+
+/// Période d'analyse sélectionnable dans l'écran de statistiques.
+enum StatsPeriod { week, month, year, all }
+
+/// Granularité des barres du graphe principal selon la période.
+enum StatGranularity { day, month }
+
+/// Une barre du graphe : la date de début du bucket et sa valeur (verres).
+class StatBar {
+  final DateTime date;
+  final int value;
+  const StatBar(this.date, this.value);
+}
+
+/// Type d'insight mis en avant dans la carte du haut des statistiques.
+enum StatInsightKind {
+  trendDown,
+  trendUp,
+  bestStreak,
+  soberRate,
+  worstWeekday,
+  gettingStarted,
+}
+
+/// Insight calculé : un [StatInsightKind] et une valeur associée (pourcentage,
+/// nombre de jours, ou index de jour de la semaine selon le kind).
+class StatInsight {
+  final StatInsightKind kind;
+  final int value;
+  const StatInsight(this.kind, this.value);
 }

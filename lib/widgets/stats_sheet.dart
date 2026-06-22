@@ -1,16 +1,26 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../controllers/citron_animation_controller.dart';
 import '../l10n/gen/app_localizations.dart';
 import '../services/audio_service.dart';
 import '../services/character_service.dart';
+import '../services/milestone_scheduler.dart';
 import '../services/stats_service.dart';
 import '../theme/jaune_design.dart';
+import '../utils/date_keys.dart';
+import 'draggable_sheet.dart';
+import 'share_card.dart';
+import 'stats_components.dart';
 
-/// Bottom sheet de statistiques : graphe des 7 derniers jours, tendance
-/// semaine vs semaine, records et verres évités. Tout est calculé par
-/// StatsService (fonctions pures) à partir de la map des consommations.
+/// Bottom sheet de statistiques : un tableau de bord vivant et ludique.
+/// Header héros (série + PV + citron), sélecteur de période, insight, graphe,
+/// tendance, courbe de santé, anneau de palier, patterns par jour, heatmap et
+/// records — le tout animé, avec célébration quand un record tombe.
 class StatsSheet {
   static void show(
     BuildContext context, {
@@ -29,399 +39,392 @@ class StatsSheet {
   }
 }
 
-class _StatsSheetContent extends StatelessWidget {
+class _StatsSheetContent extends StatefulWidget {
   final Map<String, int> dailyMap;
   final CharacterService character;
 
   const _StatsSheetContent({required this.dailyMap, required this.character});
 
-  /// Mêmes paliers de couleur que le calendrier : ≤2 modéré, ≤4 attention,
-  /// ≤5 limite, ≥6 binge — l'app raconte partout la même histoire
-  static Color _barColor(int count) {
-    if (count == 0) return JauneColors.healthVibrant.first;
-    if (count <= 2) return Colors.green.shade600;
-    if (count <= 4) return Colors.yellow.shade700;
-    if (count <= 5) return Colors.deepOrange.shade600;
-    return Colors.redAccent.shade700;
+  @override
+  State<_StatsSheetContent> createState() => _StatsSheetContentState();
+}
+
+class _StatsSheetContentState extends State<_StatsSheetContent> {
+  StatsPeriod _period = StatsPeriod.week;
+  late final CitronAnimationController _citron;
+  final DateTime _now = DateTime.now();
+
+  Map<String, int> get _map => widget.dailyMap;
+  String get _firstUse => widget.character.profile.firstUseDate;
+
+  @override
+  void initState() {
+    super.initState();
+    final hp = widget.character.healthPercent;
+    _citron = CitronAnimationController()
+      ..updateHealth((hp * 100).round())
+      ..idleMood = hp >= 0.5 ? 'happy' : 'sad';
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeCelebrate());
+  }
+
+  @override
+  void dispose() {
+    _citron.dispose();
+    super.dispose();
+  }
+
+  /// Célèbre (une seule fois) quand la série en cours atteint/égale le record.
+  Future<void> _maybeCelebrate() async {
+    final streak = widget.character.soberStreakDays;
+    final longest = StatsService.longestSoberStreak(_map, _firstUse, _now);
+    if (streak < 3 || streak < longest) return;
+    final prefs = await SharedPreferences.getInstance();
+    const key = 'last_celebrated_streak';
+    if (streak <= (prefs.getInt(key) ?? 0)) return;
+    await prefs.setInt(key, streak);
+    if (!mounted) return;
+    HapticFeedback.mediumImpact();
+    AudioService.instance.playStreakChime();
+    _RecordConfetti.show(context);
+  }
+
+  void _setPeriod(StatsPeriod p) {
+    if (p == _period) return;
+    HapticFeedback.selectionClick();
+    setState(() => _period = p);
+  }
+
+  Future<void> _share() async {
+    HapticFeedback.selectionClick();
+    final l10n = AppLocalizations.of(context);
+    final soberTotal = StatsService.totalSoberDays(_map, _firstUse, _now);
+    await ShareCard.shareStats(
+      context,
+      streakDays: widget.character.soberStreakDays,
+      soberDays: soberTotal,
+      caption: l10n.statsShareCaption(soberTotal),
+      skin: widget.character.profile.equippedSkin,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
-    final now = DateTime.now();
+    final streak = widget.character.soberStreakDays;
 
-    final List<int> week = StatsService.last7Days(dailyMap, now);
-    final List<double> healthTrend = StatsService.hpTrajectory(
-      dailyMap,
-      character.profile.firstUseDate,
-      now,
-    );
-    final comparison = StatsService.weekComparison(dailyMap, now);
-    final int longestStreak = StatsService.longestSoberStreak(
-      dailyMap,
-      character.profile.firstUseDate,
-      now,
-    );
-    final int? lightestWeek = StatsService.lightestFullWeekTotal(
-      dailyMap,
-      character.profile.firstUseDate,
-      now,
-    );
-    final int? avoided = StatsService.drinksAvoided(
-      dailyMap,
-      character.profile.firstUseDate,
-      now,
-    );
+    // Sections révélées en cascade.
+    final sections = <Widget>[
+      _titleRow(l10n),
+      StatHeroHeader(
+        streakDays: streak,
+        healthPercent: widget.character.healthPercent,
+        streakLabel: l10n.statsHeroStreak,
+        hpLabel: l10n.statsHpUnit,
+        citron: _citron,
+        skin: widget.character.profile.equippedSkin,
+      ),
+      StatPeriodSelector(
+        selected: _period,
+        onChanged: _setPeriod,
+        labels: {
+          StatsPeriod.week: l10n.statsPeriodWeek,
+          StatsPeriod.month: l10n.statsPeriodMonth,
+          StatsPeriod.year: l10n.statsPeriodYear,
+          StatsPeriod.all: l10n.statsPeriodAll,
+        },
+      ),
+      _insightCard(l10n, locale, streak),
+      _consumptionCard(l10n, locale),
+      _healthCard(l10n),
+      _milestoneCard(l10n, streak),
+      _weekdayCard(l10n, locale),
+      _heatmapCard(l10n),
+      _recordsCard(l10n, streak),
+    ];
 
-    // DraggableScrollableSheet : le geste vertical est partagé entre le scroll
-    // du contenu et le sheet lui-même. Tirer vers le bas (contenu en haut)
-    // referme la feuille — comme les autres sheets de l'app.
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.85,
-      minChildSize: 0.5,
-      maxChildSize: 0.92,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(JauneRadii.sheet),
+    return DraggableSheet(
+      children: [
+        for (int i = 0; i < sections.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: StaggeredReveal(
+              delay: Duration(milliseconds: 60 * i),
+              child: sections[i],
             ),
           ),
-          child: SingleChildScrollView(
-            controller: scrollController,
-            padding: EdgeInsets.only(
-              left: 24,
-              right: 24,
-              top: 10,
-              bottom: MediaQuery.of(context).padding.bottom + 24,
+      ],
+    );
+  }
+
+  Widget _titleRow(AppLocalizations l10n) {
+    return Row(
+      children: [
+        Text(
+          l10n.statsTitle,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            color: JauneColors.ink,
+          ),
+        ),
+        const Spacer(),
+        GestureDetector(
+          onTap: _share,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: JauneColors.lemon.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(JauneRadii.pill),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Center(
-                    child: Text(
-                      l10n.statsTitle,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: JauneColors.ink,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // --- Graphe 7 jours ---
-                  _SectionTitle(l10n.statsLast7Days),
-                  const SizedBox(height: 12),
-                  _WeekChart(
-                    values: week,
-                    locale: locale,
-                    now: now,
-                    barColor: _barColor,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // --- Courbe de santé de fond (PV) ---
-                  _SectionTitle(l10n.statsHealthTrend),
-                  const SizedBox(height: 4),
-                  Text(
-                    l10n.statsHealthTrendHint,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: JauneColors.inkSoft,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _HealthCurve(values: healthTrend),
-                  const SizedBox(height: 24),
-
-                  // --- Tendance semaine vs semaine ---
-                  _TrendCard(
-                    l10n: l10n,
-                    thisWeek: comparison.thisWeek,
-                    lastWeek: comparison.lastWeek,
-                  ),
-
-                  // --- Records ---
-                  const SizedBox(height: 24),
-                  _SectionTitle(l10n.statsRecords),
-                  const SizedBox(height: 10),
-                  _RecordRow(
-                    emoji: '🔥',
-                    label: l10n.statsLongestStreak,
-                    value: l10n.daysCount(longestStreak),
-                  ),
-                  if (lightestWeek != null) ...[
-                    const SizedBox(height: 10),
-                    _RecordRow(
-                      emoji: '🪶',
-                      label: l10n.statsLightestWeek,
-                      value: l10n.statsDrinksCount(lightestWeek),
-                    ),
-                  ],
-
-                  // --- Verres évités ---
-                  if (avoided != null) ...[
-                    const SizedBox(height: 24),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            JauneColors.lemon.withValues(alpha: 0.25),
-                            JauneColors.lemonDeep.withValues(alpha: 0.18),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(JauneRadii.card),
-                        border: Border.all(
-                          color: JauneColors.lemonDeep.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            '🍋 $avoided',
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              color: JauneColors.ink,
-                            ),
-                          ),
-                          Text(
-                            l10n.statsDrinksAvoided,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: JauneColors.ink,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            l10n.statsAvoidedHint,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: JauneColors.inkSoft,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-      },
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String text;
-  const _SectionTitle(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w800,
-        color: JauneColors.ink,
-        letterSpacing: 0.2,
-      ),
-    );
-  }
-}
-
-/// Graphe en barres des 7 derniers jours — les hauteurs s'animent à
-/// l'ouverture, les couleurs suivent les paliers du calendrier
-class _WeekChart extends StatelessWidget {
-  final List<int> values;
-  final String locale;
-  final DateTime now;
-  final Color Function(int) barColor;
-
-  const _WeekChart({
-    required this.values,
-    required this.locale,
-    required this.now,
-    required this.barColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final int maxValue = values.fold(1, (m, v) => v > m ? v : m);
-    const double chartHeight = 110;
-
-    return SizedBox(
-      height: chartHeight + 36,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: List.generate(7, (i) {
-          final int v = values[i];
-          final DateTime day = now.subtract(Duration(days: 6 - i));
-          final String label =
-              DateFormat.E(locale).format(day).characters.first.toUpperCase();
-          final double h = v == 0 ? 6 : chartHeight * v / maxValue;
-
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (v > 0)
-                    Text(
-                      '$v',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: JauneColors.inkSoft,
-                      ),
-                    ),
-                  //const SizedBox(height: 4),
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: h),
-                    duration: JauneMotion.emphasized,
-                    curve: JauneMotion.smooth,
-                    builder:
-                        (context, height, _) => Container(
-                          height: height,
-                          decoration: BoxDecoration(
-                            color: v == 0 ? Colors.grey.shade200 : barColor(v),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-}
-
-class _TrendCard extends StatelessWidget {
-  final AppLocalizations l10n;
-  final int thisWeek;
-  final int lastWeek;
-
-  const _TrendCard({
-    required this.l10n,
-    required this.thisWeek,
-    required this.lastWeek,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final String trend;
-    final Color color;
-    if (lastWeek == 0 || thisWeek == lastWeek) {
-      trend = l10n.statsTrendFlat;
-      color = JauneColors.inkSoft;
-    } else if (thisWeek < lastWeek) {
-      trend = l10n.statsTrendDown(
-        ((lastWeek - thisWeek) * 100 / lastWeek).round(),
-      );
-      color = const Color(0xFF34C759);
-    } else {
-      trend = l10n.statsTrendUp(
-        ((thisWeek - lastWeek) * 100 / lastWeek).round(),
-      );
-      color = JauneColors.flame;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(JauneRadii.card),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+                const Icon(Icons.ios_share, size: 16, color: JauneColors.ink),
+                const SizedBox(width: 6),
                 Text(
-                  '${l10n.statsThisWeek} · ${l10n.statsDrinksCount(thisWeek)}',
+                  l10n.statsShare,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: JauneColors.ink,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${l10n.statsLastWeek} · ${l10n.statsDrinksCount(lastWeek)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: JauneColors.inkSoft,
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+        ),
+      ],
+    );
+  }
+
+  Widget _insightCard(AppLocalizations l10n, String locale, int streak) {
+    final insight = StatsService.computeInsight(
+      dailyMap: _map,
+      firstUseDate: _firstUse,
+      today: _now,
+      period: _period,
+      currentStreak: streak,
+    );
+    final (emoji, text) = switch (insight.kind) {
+      StatInsightKind.trendDown => ('📉', l10n.statsInsightTrendDown(insight.value)),
+      StatInsightKind.trendUp => ('📈', l10n.statsInsightTrendUp(insight.value)),
+      StatInsightKind.bestStreak => ('🔥', l10n.statsInsightBestStreak(insight.value)),
+      StatInsightKind.soberRate => ('💧', l10n.statsInsightSoberRate(insight.value)),
+      StatInsightKind.worstWeekday => (
+        '📅',
+        l10n.statsInsightWorstWeekday(_weekdayName(locale, insight.value)),
+      ),
+      StatInsightKind.gettingStarted => ('🍋', l10n.statsInsightGettingStarted),
+    };
+    return StatInsightCard(emoji: emoji, text: text);
+  }
+
+  Widget _consumptionCard(AppLocalizations l10n, String locale) {
+    final pb = StatsService.periodBars(_map, _period, _now, _firstUse);
+    final List<StatBarDatum> data;
+    final bool showLabels;
+    switch (_period) {
+      case StatsPeriod.week:
+        data = [
+          for (final b in pb.bars)
+            StatBarDatum(_initial(DateFormat.E(locale).format(b.date)), b.value),
+        ];
+        showLabels = true;
+      case StatsPeriod.month:
+        data = [for (final b in pb.bars) StatBarDatum('', b.value)];
+        showLabels = false;
+      case StatsPeriod.year:
+        data = [
+          for (final b in pb.bars)
+            StatBarDatum(_initial(DateFormat.MMM(locale).format(b.date)), b.value),
+        ];
+        showLabels = true;
+      case StatsPeriod.all:
+        final few = pb.bars.length <= 12;
+        data = [
+          for (final b in pb.bars)
+            StatBarDatum(
+              few ? _initial(DateFormat.MMM(locale).format(b.date)) : '',
+              b.value,
             ),
-            child: Text(
-              trend,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
-            ),
+        ];
+        showLabels = few;
+    }
+
+    final cmp = StatsService.periodComparison(_map, _period, _now);
+    return StatCard(
+      title: l10n.statsConsumptionTitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (cmp != null) ...[
+            _trendRow(l10n, cmp.current, cmp.previous),
+            const SizedBox(height: 12),
+          ],
+          StatBarChart(
+            key: ValueKey('bars-${_period.name}'),
+            data: data,
+            showLabels: showLabels,
           ),
         ],
       ),
     );
   }
+
+  Widget _trendRow(AppLocalizations l10n, int current, int previous) {
+    final String text;
+    final Color color;
+    if (previous == 0 || current == previous) {
+      text = l10n.statsTrendFlat;
+      color = JauneColors.inkSoft;
+    } else if (current < previous) {
+      text = l10n.statsTrendDown(((previous - current) * 100 / previous).round());
+      color = const Color(0xFF34C759);
+    } else {
+      text = l10n.statsTrendUp(((current - previous) * 100 / previous).round());
+      color = JauneColors.flame;
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            l10n.statsDrinksCount(current),
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: JauneColors.ink,
+            ),
+          ),
+        ),
+        StatTrendBadge(text: text, color: color),
+      ],
+    );
+  }
+
+  Widget _healthCard(AppLocalizations l10n) {
+    final days = switch (_period) {
+      StatsPeriod.week => 7,
+      StatsPeriod.month => 31,
+      StatsPeriod.year => 365,
+      StatsPeriod.all => 365 * 3,
+    };
+    final values = StatsService.hpTrajectory(_map, _firstUse, _now, days: days);
+    return StatCard(
+      title: l10n.statsHealthTrend,
+      child: _HealthCurve(values: values, hpUnit: l10n.statsHpUnit),
+    );
+  }
+
+  Widget _milestoneCard(AppLocalizations l10n, int streak) {
+    final milestones = MilestoneScheduler.streakMilestones;
+    int target = milestones.last;
+    for (final m in milestones) {
+      if (streak < m) {
+        target = m;
+        break;
+      }
+    }
+    final reached = streak >= milestones.last;
+    final remaining = math.max(0, target - streak);
+    return StatCard(
+      title: l10n.statsMilestoneTitle,
+      child: MilestoneRing(
+        key: ValueKey('ring-$streak'),
+        currentStreak: streak,
+        target: target,
+        centerLabel: reached ? '$streak 🔥' : '$streak/$target',
+        caption: reached
+            ? l10n.statsMilestoneReached
+            : l10n.statsMilestoneCaption(remaining, target),
+      ),
+    );
+  }
+
+  Widget _weekdayCard(AppLocalizations l10n, String locale) {
+    final avgs = StatsService.weekdayAverages(_map, _firstUse, _now);
+    // Initiales lundi→dimanche.
+    final monday = StatsService.mondayOf(_now);
+    final labels = [
+      for (int i = 0; i < 7; i++)
+        _initial(DateFormat.E(locale).format(monday.add(Duration(days: i)))),
+    ];
+    return StatCard(
+      title: l10n.statsWeekdayTitle,
+      child: WeekdayChart(averages: avgs, labels: labels),
+    );
+  }
+
+  Widget _heatmapCard(AppLocalizations l10n) {
+    final range = StatsService.periodRange(_period, _now, _firstUse);
+    return StatCard(
+      title: l10n.statsHeatmapTitle,
+      child: StatHeatmap(
+        start: range.start,
+        end: range.end,
+        dailyMap: _map,
+        today: _now,
+        firstUseDate: _firstUse,
+        keyOf: dateKey,
+      ),
+    );
+  }
+
+  Widget _recordsCard(AppLocalizations l10n, int streak) {
+    final longest = StatsService.longestSoberStreak(_map, _firstUse, _now);
+    final lightest = StatsService.lightestFullWeekTotal(_map, _firstUse, _now);
+    final soberTotal = StatsService.totalSoberDays(_map, _firstUse, _now);
+    final avoided = StatsService.drinksAvoided(_map, _firstUse, _now);
+    return StatCard(
+      title: l10n.statsRecords,
+      child: Column(
+        children: [
+          StatRecordRow(
+            emoji: '🔥',
+            label: l10n.statsLongestStreak,
+            value: l10n.daysCount(math.max(longest, streak)),
+            highlight: streak >= 3 && streak >= longest,
+          ),
+          StatRecordRow(
+            emoji: '🌿',
+            label: l10n.statsTotalSoberDays,
+            value: l10n.daysCount(soberTotal),
+          ),
+          if (lightest != null)
+            StatRecordRow(
+              emoji: '🪶',
+              label: l10n.statsLightestWeek,
+              value: l10n.statsDrinksCount(lightest),
+            ),
+          if (avoided != null)
+            StatRecordRow(
+              emoji: '🍋',
+              label: l10n.statsDrinksAvoided,
+              value: l10n.statsDrinksCount(avoided),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _initial(String s) =>
+      s.isEmpty ? '' : s.characters.first.toUpperCase();
+
+  String _weekdayName(String locale, int index0) {
+    final monday = StatsService.mondayOf(_now);
+    return DateFormat.EEEE(locale).format(monday.add(Duration(days: index0)));
+  }
 }
 
-/// Courbe de la santé de fond (PV 0–100) sur les 30 derniers jours.
-///
-/// La couleur encode l'altitude : un dégradé vertical vert (haut, plein de
-/// vie) → rouge (bas) — exactement les paliers de [JauneColors.healthGradient].
-/// Le tracé se dessine à l'ouverture et la pastille affiche le PV courant.
+// =====================================================================
+// Courbe de santé (PV) — conservée de la version précédente
+// =====================================================================
+
 class _HealthCurve extends StatelessWidget {
   final List<double> values;
-  const _HealthCurve({required this.values});
+  final String hpUnit;
+  const _HealthCurve({required this.values, required this.hpUnit});
 
   @override
   Widget build(BuildContext context) {
@@ -431,13 +434,12 @@ class _HealthCurve extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // PV courant, gros, dans la couleur de sa zone.
         Row(
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            Text(
-              '${current.round()}',
+            CountUpInt(
+              current.round(),
               style: TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.w900,
@@ -445,11 +447,11 @@ class _HealthCurve extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 3),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 4),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                'PV',
-                style: TextStyle(
+                hpUnit,
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: JauneColors.inkSoft,
@@ -482,7 +484,6 @@ class _HealthCurvePainter extends CustomPainter {
 
   _HealthCurvePainter({required this.values, required this.progress});
 
-  // Marges verticales : laisse respirer le 100 et le 0.
   static const double _padTop = 10;
   static const double _padBottom = 10;
 
@@ -497,14 +498,12 @@ class _HealthCurvePainter extends CustomPainter {
     double yAt(double hp) =>
         _padTop + usableH * (1 - (hp.clamp(0.0, 100.0) / 100.0));
 
-    // Ligne de base discrète à 100 PV (objectif santé pleine).
     final gridPaint = Paint()
       ..color = JauneColors.inkSoft.withValues(alpha: 0.12)
       ..strokeWidth = 1;
     final double yFull = yAt(100);
     canvas.drawLine(Offset(0, yFull), Offset(size.width, yFull), gridPaint);
 
-    // Construit le chemin lissé (béziers quadratiques via les milieux).
     final points = [
       for (int i = 0; i < values.length; i++) Offset(xAt(i), yAt(values[i])),
     ];
@@ -521,28 +520,24 @@ class _HealthCurvePainter extends CustomPainter {
       path.lineTo(points.last.dx, points.last.dy);
     }
 
-    // Dégradé vertical vert (haut) → rouge (bas) = paliers de santé.
     final shader = const LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        Color(0xFF43E97B), // ≥90 vibrant
-        Color(0xFFA8E063), // ≥75 high
-        Color(0xFFFFD200), // ≥50 mid
-        Color(0xFFFF8C42), // ≥25 warm
-        Color(0xFFF85757), // <25 low
+        Color(0xFF43E97B),
+        Color(0xFFA8E063),
+        Color(0xFFFFD200),
+        Color(0xFFFF8C42),
+        Color(0xFFF85757),
       ],
       stops: [0.0, 0.18, 0.45, 0.72, 1.0],
     ).createShader(Offset.zero & size);
 
-    // Anime le tracé : on n'extrait que la fraction [progress] du chemin.
     final metric = path.computeMetrics().fold<Path>(
       Path(),
       (acc, m) => acc..addPath(m.extractPath(0, m.length * progress), Offset.zero),
     );
 
-    // Aire sous la courbe : même dégradé mais translucide (l'alpha est dans
-    // les couleurs, car un shader ignore Paint.color).
     final fillShader = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
@@ -568,7 +563,6 @@ class _HealthCurvePainter extends CustomPainter {
       );
     }
 
-    // La ligne elle-même.
     canvas.drawPath(
       metric,
       Paint()
@@ -579,7 +573,6 @@ class _HealthCurvePainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round,
     );
 
-    // Pastille sur le point courant.
     if (lastDrawn != null) {
       canvas.drawCircle(lastDrawn, 5, Paint()..color = Colors.white);
       canvas.drawCircle(
@@ -593,7 +586,6 @@ class _HealthCurvePainter extends CustomPainter {
     }
   }
 
-  /// Position du point situé à la fraction [t] de la longueur du chemin.
   Offset? _pointAt(Path path, double t) {
     for (final m in path.computeMetrics()) {
       final tan = m.getTangentForOffset(m.length * t.clamp(0.0, 1.0));
@@ -607,51 +599,128 @@ class _HealthCurvePainter extends CustomPainter {
       old.progress != progress || old.values != values;
 }
 
-class _RecordRow extends StatelessWidget {
-  final String emoji;
-  final String label;
-  final String value;
+// =====================================================================
+// Confettis de record — overlay léger, auto-effacé
+// =====================================================================
 
-  const _RecordRow({
-    required this.emoji,
-    required this.label,
-    required this.value,
-  });
+class _RecordConfetti {
+  static void show(BuildContext context) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => _ConfettiLayer(onDone: () => entry.remove()),
+    );
+    overlay.insert(entry);
+  }
+}
+
+class _ConfettiLayer extends StatefulWidget {
+  final VoidCallback onDone;
+  const _ConfettiLayer({required this.onDone});
+
+  @override
+  State<_ConfettiLayer> createState() => _ConfettiLayerState();
+}
+
+class _ConfettiLayerState extends State<_ConfettiLayer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  );
+  late final List<_Particle> _particles;
+
+  @override
+  void initState() {
+    super.initState();
+    final rnd = math.Random();
+    const colors = [
+      JauneColors.lemon,
+      JauneColors.lemonDeep,
+      JauneColors.flame,
+      Color(0xFF43E97B),
+      Color(0xFF5E9FD5),
+    ];
+    _particles = List.generate(80, (_) {
+      final angle = -math.pi / 2 + (rnd.nextDouble() - 0.5) * math.pi;
+      final speed = 380 + rnd.nextDouble() * 420;
+      return _Particle(
+        vx: math.cos(angle) * speed,
+        vy: math.sin(angle) * speed,
+        color: colors[rnd.nextInt(colors.length)],
+        size: 6 + rnd.nextDouble() * 8,
+        rot: rnd.nextDouble() * math.pi,
+        rotSpeed: (rnd.nextDouble() - 0.5) * 8,
+        square: rnd.nextBool(),
+      );
+    });
+    _c.forward().whenComplete(widget.onDone);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: JauneColors.lemon.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          alignment: Alignment.center,
-          child: Text(emoji, style: const TextStyle(fontSize: 18)),
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) => CustomPaint(
+          size: Size.infinite,
+          painter: _ConfettiPainter(_particles, _c.value),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: JauneColors.ink,
-            ),
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            color: JauneColors.ink,
-          ),
-        ),
-      ],
+      ),
     );
   }
+}
+
+class _Particle {
+  final double vx, vy, size, rot, rotSpeed;
+  final Color color;
+  final bool square;
+  const _Particle({
+    required this.vx,
+    required this.vy,
+    required this.color,
+    required this.size,
+    required this.rot,
+    required this.rotSpeed,
+    required this.square,
+  });
+}
+
+class _ConfettiPainter extends CustomPainter {
+  final List<_Particle> particles;
+  final double t;
+  _ConfettiPainter(this.particles, this.t);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final origin = Offset(size.width / 2, size.height * 0.32);
+    const g = 900.0; // gravité
+    final fade = (1 - t).clamp(0.0, 1.0);
+    for (final p in particles) {
+      final x = origin.dx + p.vx * t;
+      final y = origin.dy + p.vy * t + 0.5 * g * t * t;
+      final paint = Paint()..color = p.color.withValues(alpha: fade);
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(p.rot + p.rotSpeed * t);
+      if (p.square) {
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: p.size, height: p.size),
+          paint,
+        );
+      } else {
+        canvas.drawCircle(Offset.zero, p.size / 2, paint);
+      }
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter old) => old.t != t;
 }

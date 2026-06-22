@@ -30,6 +30,22 @@ abstract class ShareCard {
     );
   }
 
+  /// Carte de partage des statistiques : série en gros + sous-titre récap.
+  static Future<void> shareStats(
+    BuildContext context, {
+    required int streakDays,
+    required int soberDays,
+    required String caption,
+    String skin = '',
+  }) {
+    return _share(
+      context,
+      headline: '$streakDays 🔥',
+      caption: caption,
+      skin: skin,
+    );
+  }
+
   static Future<void> shareLevel(
     BuildContext context, {
     required int level,

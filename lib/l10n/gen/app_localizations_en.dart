@@ -587,16 +587,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String statsTrendDown(int percent) {
-    return '−$percent% vs last week 💪';
+    return '−$percent% vs previous period 💪';
   }
 
   @override
   String statsTrendUp(int percent) {
-    return '+$percent% vs last week';
+    return '+$percent% vs previous period';
   }
 
   @override
-  String get statsTrendFlat => 'Steady vs last week';
+  String get statsTrendFlat => 'Steady vs previous period';
 
   @override
   String get statsHealthTrend => 'Your health trend';
@@ -618,6 +618,103 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statsAvoidedHint => 'vs your pace in the first 4 weeks';
+
+  @override
+  String get statsShare => 'Share';
+
+  @override
+  String get statsHeroStreak => 'sober days in a row';
+
+  @override
+  String get statsHpUnit => 'HP';
+
+  @override
+  String get statsPeriodWeek => 'Week';
+
+  @override
+  String get statsPeriodMonth => 'Month';
+
+  @override
+  String get statsPeriodYear => 'Year';
+
+  @override
+  String get statsPeriodAll => 'All';
+
+  @override
+  String get statsConsumptionTitle => 'Drinks';
+
+  @override
+  String get statsMilestoneTitle => 'Next milestone';
+
+  @override
+  String get statsMilestoneReached =>
+      'Top milestone reached, you\'re a legend 🔥';
+
+  @override
+  String statsMilestoneCaption(int remaining, int target) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '$remaining more days to milestone $target 🔥',
+      one: '1 more day to milestone $target 🔥',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get statsWeekdayTitle => 'By day of the week';
+
+  @override
+  String get statsHeatmapTitle => 'Your history';
+
+  @override
+  String get statsTotalSoberDays => 'Total sober days';
+
+  @override
+  String statsShareCaption(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sober days in total',
+      one: '1 sober day in total',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String statsInsightTrendDown(int percent) {
+    return '−$percent% vs the previous period, keep it up 🎉';
+  }
+
+  @override
+  String statsInsightTrendUp(int percent) {
+    return '+$percent% vs the previous period, take back control 💪';
+  }
+
+  @override
+  String statsInsightBestStreak(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Current record: $days sober days 🔥',
+      one: 'Current record: 1 sober day 🔥',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String statsInsightSoberRate(int percent) {
+    return '$percent% sober days this period 💧';
+  }
+
+  @override
+  String statsInsightWorstWeekday(String day) {
+    return 'Your heaviest day: $day';
+  }
+
+  @override
+  String get statsInsightGettingStarted =>
+      'Keep logging, your stats will sharpen 🍋';
 
   @override
   String get a11yStatsButton => 'Open statistics';

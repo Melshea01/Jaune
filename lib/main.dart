@@ -735,7 +735,10 @@ class _MyHomePageState extends State<MyHomePage>
 
   /// Traite un lien d'ajout d'ami : extrait le code, s'assure d'un pseudo,
   /// envoie la demande, puis ouvre le classement.
-  Future<void> _handleIncomingLink(Uri uri, {bool fromColdStart = false}) async {
+  Future<void> _handleIncomingLink(
+    Uri uri, {
+    bool fromColdStart = false,
+  }) async {
     final isAddFriend =
         uri.host == 'add-friend' || uri.path.contains('add-friend');
     if (!isAddFriend) return;
@@ -944,7 +947,7 @@ class _MyHomePageState extends State<MyHomePage>
             top: 48,
             left: 16,
             right: 16,
-            bottom: 12 + bottomInset,
+            bottom: 2 + bottomInset,
           ),
           decoration: const BoxDecoration(
             // Trois stops : le ciel garde de la présence jusqu'à mi-écran

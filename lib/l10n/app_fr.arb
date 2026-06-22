@@ -300,19 +300,19 @@
       "count": {"type": "int"}
     }
   },
-  "statsTrendDown": "−{percent}% vs semaine dernière 💪",
+  "statsTrendDown": "−{percent}% vs période précédente 💪",
   "@statsTrendDown": {
     "placeholders": {
       "percent": {"type": "int"}
     }
   },
-  "statsTrendUp": "+{percent}% vs semaine dernière",
+  "statsTrendUp": "+{percent}% vs période précédente",
   "@statsTrendUp": {
     "placeholders": {
       "percent": {"type": "int"}
     }
   },
-  "statsTrendFlat": "Stable vs semaine dernière",
+  "statsTrendFlat": "Stable vs période précédente",
   "statsHealthTrend": "Évolution de ta santé",
   "statsHealthTrendHint": "Santé de fond sur les 30 derniers jours",
   "statsRecords": "Records",
@@ -320,6 +320,63 @@
   "statsLightestWeek": "Semaine la plus légère",
   "statsDrinksAvoided": "Verres évités",
   "statsAvoidedHint": "vs ton rythme des 4 premières semaines",
+  "statsShare": "Partager",
+  "statsHeroStreak": "jours sobres d'affilée",
+  "statsHpUnit": "PV",
+  "statsPeriodWeek": "Semaine",
+  "statsPeriodMonth": "Mois",
+  "statsPeriodYear": "Année",
+  "statsPeriodAll": "Tout",
+  "statsConsumptionTitle": "Consommation",
+  "statsMilestoneTitle": "Prochain palier",
+  "statsMilestoneReached": "Palier maximum atteint, tu es une légende 🔥",
+  "statsMilestoneCaption": "{remaining, plural, =1{Plus qu'un jour avant le palier {target} 🔥} other{Plus que {remaining} jours avant le palier {target} 🔥}}",
+  "@statsMilestoneCaption": {
+    "placeholders": {
+      "remaining": {"type": "int"},
+      "target": {"type": "int"}
+    }
+  },
+  "statsWeekdayTitle": "Par jour de la semaine",
+  "statsHeatmapTitle": "Ton historique",
+  "statsTotalSoberDays": "Total de jours sobres",
+  "statsShareCaption": "{count, plural, =1{1 jour sobre au total} other{{count} jours sobres au total}}",
+  "@statsShareCaption": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "statsInsightTrendDown": "−{percent}% vs la période précédente, continue comme ça 🎉",
+  "@statsInsightTrendDown": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "statsInsightTrendUp": "+{percent}% vs la période précédente, reprends la main 💪",
+  "@statsInsightTrendUp": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "statsInsightBestStreak": "{days, plural, =1{Record en cours : 1 jour sobre 🔥} other{Record en cours : {days} jours sobres 🔥}}",
+  "@statsInsightBestStreak": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "statsInsightSoberRate": "{percent}% de jours sobres sur la période 💧",
+  "@statsInsightSoberRate": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "statsInsightWorstWeekday": "Ton jour le plus chargé : {day}",
+  "@statsInsightWorstWeekday": {
+    "placeholders": {
+      "day": {"type": "String"}
+    }
+  },
+  "statsInsightGettingStarted": "Continue à logguer, tes stats vont s'affiner 🍋",
   "a11yStatsButton": "Ouvrir les statistiques",
   "shareAction": "Partager",
 

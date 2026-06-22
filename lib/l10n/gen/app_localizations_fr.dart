@@ -589,16 +589,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String statsTrendDown(int percent) {
-    return '−$percent% vs semaine dernière 💪';
+    return '−$percent% vs période précédente 💪';
   }
 
   @override
   String statsTrendUp(int percent) {
-    return '+$percent% vs semaine dernière';
+    return '+$percent% vs période précédente';
   }
 
   @override
-  String get statsTrendFlat => 'Stable vs semaine dernière';
+  String get statsTrendFlat => 'Stable vs période précédente';
 
   @override
   String get statsHealthTrend => 'Évolution de ta santé';
@@ -620,6 +620,103 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get statsAvoidedHint => 'vs ton rythme des 4 premières semaines';
+
+  @override
+  String get statsShare => 'Partager';
+
+  @override
+  String get statsHeroStreak => 'jours sobres d\'affilée';
+
+  @override
+  String get statsHpUnit => 'PV';
+
+  @override
+  String get statsPeriodWeek => 'Semaine';
+
+  @override
+  String get statsPeriodMonth => 'Mois';
+
+  @override
+  String get statsPeriodYear => 'Année';
+
+  @override
+  String get statsPeriodAll => 'Tout';
+
+  @override
+  String get statsConsumptionTitle => 'Consommation';
+
+  @override
+  String get statsMilestoneTitle => 'Prochain palier';
+
+  @override
+  String get statsMilestoneReached =>
+      'Palier maximum atteint, tu es une légende 🔥';
+
+  @override
+  String statsMilestoneCaption(int remaining, int target) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: 'Plus que $remaining jours avant le palier $target 🔥',
+      one: 'Plus qu\'un jour avant le palier $target 🔥',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get statsWeekdayTitle => 'Par jour de la semaine';
+
+  @override
+  String get statsHeatmapTitle => 'Ton historique';
+
+  @override
+  String get statsTotalSoberDays => 'Total de jours sobres';
+
+  @override
+  String statsShareCaption(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jours sobres au total',
+      one: '1 jour sobre au total',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String statsInsightTrendDown(int percent) {
+    return '−$percent% vs la période précédente, continue comme ça 🎉';
+  }
+
+  @override
+  String statsInsightTrendUp(int percent) {
+    return '+$percent% vs la période précédente, reprends la main 💪';
+  }
+
+  @override
+  String statsInsightBestStreak(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Record en cours : $days jours sobres 🔥',
+      one: 'Record en cours : 1 jour sobre 🔥',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String statsInsightSoberRate(int percent) {
+    return '$percent% de jours sobres sur la période 💧';
+  }
+
+  @override
+  String statsInsightWorstWeekday(String day) {
+    return 'Ton jour le plus chargé : $day';
+  }
+
+  @override
+  String get statsInsightGettingStarted =>
+      'Continue à logguer, tes stats vont s\'affiner 🍋';
 
   @override
   String get a11yStatsButton => 'Ouvrir les statistiques';

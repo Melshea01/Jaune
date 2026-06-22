@@ -1073,19 +1073,19 @@ abstract class AppLocalizations {
   /// No description provided for @statsTrendDown.
   ///
   /// In fr, this message translates to:
-  /// **'−{percent}% vs semaine dernière 💪'**
+  /// **'−{percent}% vs période précédente 💪'**
   String statsTrendDown(int percent);
 
   /// No description provided for @statsTrendUp.
   ///
   /// In fr, this message translates to:
-  /// **'+{percent}% vs semaine dernière'**
+  /// **'+{percent}% vs période précédente'**
   String statsTrendUp(int percent);
 
   /// No description provided for @statsTrendFlat.
   ///
   /// In fr, this message translates to:
-  /// **'Stable vs semaine dernière'**
+  /// **'Stable vs période précédente'**
   String get statsTrendFlat;
 
   /// No description provided for @statsHealthTrend.
@@ -1129,6 +1129,132 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'vs ton rythme des 4 premières semaines'**
   String get statsAvoidedHint;
+
+  /// No description provided for @statsShare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager'**
+  String get statsShare;
+
+  /// No description provided for @statsHeroStreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'jours sobres d\'affilée'**
+  String get statsHeroStreak;
+
+  /// No description provided for @statsHpUnit.
+  ///
+  /// In fr, this message translates to:
+  /// **'PV'**
+  String get statsHpUnit;
+
+  /// No description provided for @statsPeriodWeek.
+  ///
+  /// In fr, this message translates to:
+  /// **'Semaine'**
+  String get statsPeriodWeek;
+
+  /// No description provided for @statsPeriodMonth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mois'**
+  String get statsPeriodMonth;
+
+  /// No description provided for @statsPeriodYear.
+  ///
+  /// In fr, this message translates to:
+  /// **'Année'**
+  String get statsPeriodYear;
+
+  /// No description provided for @statsPeriodAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout'**
+  String get statsPeriodAll;
+
+  /// No description provided for @statsConsumptionTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Consommation'**
+  String get statsConsumptionTitle;
+
+  /// No description provided for @statsMilestoneTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prochain palier'**
+  String get statsMilestoneTitle;
+
+  /// No description provided for @statsMilestoneReached.
+  ///
+  /// In fr, this message translates to:
+  /// **'Palier maximum atteint, tu es une légende 🔥'**
+  String get statsMilestoneReached;
+
+  /// No description provided for @statsMilestoneCaption.
+  ///
+  /// In fr, this message translates to:
+  /// **'{remaining, plural, =1{Plus qu\'un jour avant le palier {target} 🔥} other{Plus que {remaining} jours avant le palier {target} 🔥}}'**
+  String statsMilestoneCaption(int remaining, int target);
+
+  /// No description provided for @statsWeekdayTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Par jour de la semaine'**
+  String get statsWeekdayTitle;
+
+  /// No description provided for @statsHeatmapTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton historique'**
+  String get statsHeatmapTitle;
+
+  /// No description provided for @statsTotalSoberDays.
+  ///
+  /// In fr, this message translates to:
+  /// **'Total de jours sobres'**
+  String get statsTotalSoberDays;
+
+  /// No description provided for @statsShareCaption.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 jour sobre au total} other{{count} jours sobres au total}}'**
+  String statsShareCaption(int count);
+
+  /// No description provided for @statsInsightTrendDown.
+  ///
+  /// In fr, this message translates to:
+  /// **'−{percent}% vs la période précédente, continue comme ça 🎉'**
+  String statsInsightTrendDown(int percent);
+
+  /// No description provided for @statsInsightTrendUp.
+  ///
+  /// In fr, this message translates to:
+  /// **'+{percent}% vs la période précédente, reprends la main 💪'**
+  String statsInsightTrendUp(int percent);
+
+  /// No description provided for @statsInsightBestStreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'{days, plural, =1{Record en cours : 1 jour sobre 🔥} other{Record en cours : {days} jours sobres 🔥}}'**
+  String statsInsightBestStreak(int days);
+
+  /// No description provided for @statsInsightSoberRate.
+  ///
+  /// In fr, this message translates to:
+  /// **'{percent}% de jours sobres sur la période 💧'**
+  String statsInsightSoberRate(int percent);
+
+  /// No description provided for @statsInsightWorstWeekday.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton jour le plus chargé : {day}'**
+  String statsInsightWorstWeekday(String day);
+
+  /// No description provided for @statsInsightGettingStarted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continue à logguer, tes stats vont s\'affiner 🍋'**
+  String get statsInsightGettingStarted;
 
   /// No description provided for @a11yStatsButton.
   ///

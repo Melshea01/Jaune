@@ -130,4 +130,94 @@ void main() {
       expect(StatsService.drinksAvoided(map, '2026-04-01', today), 0);
     });
   });
+
+  group('periodComparison', () {
+    test('semaine : courante vs précédente', () {
+      final map = mapOf({
+        DateTime(2026, 6, 8): 1,
+        DateTime(2026, 6, 10): 2,
+        DateTime(2026, 6, 1): 4,
+        DateTime(2026, 6, 7): 3,
+      });
+      final c = StatsService.periodComparison(map, StatsPeriod.week, today)!;
+      expect(c.current, 3);
+      expect(c.previous, 7);
+    });
+
+    test('mois : juin vs mai', () {
+      final map = mapOf({
+        DateTime(2026, 6, 5): 2,
+        DateTime(2026, 6, 9): 3,
+        DateTime(2026, 5, 20): 10,
+      });
+      final c = StatsService.periodComparison(map, StatsPeriod.month, today)!;
+      expect(c.current, 5);
+      expect(c.previous, 10);
+    });
+
+    test('tout : pas de comparaison', () {
+      expect(
+        StatsService.periodComparison(const {}, StatsPeriod.all, today),
+        isNull,
+      );
+    });
+  });
+
+  group('periodBars', () {
+    test('semaine : 7 barres lundi→dimanche, granularité jour', () {
+      final map = mapOf({
+        DateTime(2026, 6, 8): 1, // lundi
+        DateTime(2026, 6, 11): 2, // jeudi (aujourd'hui)
+      });
+      final r = StatsService.periodBars(map, StatsPeriod.week, today, '');
+      expect(r.gran, StatGranularity.day);
+      expect(r.bars.length, 7);
+      expect(r.bars.first.value, 1);
+      expect(r.bars[3].value, 2);
+    });
+
+    test('année : 12 barres mensuelles', () {
+      final map = mapOf({DateTime(2026, 3, 4): 6});
+      final r = StatsService.periodBars(map, StatsPeriod.year, today, '');
+      expect(r.gran, StatGranularity.month);
+      expect(r.bars.length, 12);
+      expect(r.bars[2].value, 6); // mars
+    });
+  });
+
+  group('weekdayAverages', () {
+    test('moyenne par jour de la semaine depuis la première utilisation', () {
+      // Deux mardis (2 et 9 juin) : 4 et 2 verres → moyenne 3 (index 1).
+      final map = mapOf({
+        DateTime(2026, 6, 2): 4,
+        DateTime(2026, 6, 9): 2,
+      });
+      final avgs = StatsService.weekdayAverages(map, '2026-06-01', today);
+      expect(avgs[1], closeTo(3.0, 0.001)); // mardi
+    });
+  });
+
+  group('totalSoberDays', () {
+    test('compte les journées closes sans verre', () {
+      // Du 8 au 10 juin suivis ; le 9 a un verre → 2 jours sobres (8 et 10).
+      final map = mapOf({DateTime(2026, 6, 9): 3});
+      expect(StatsService.totalSoberDays(map, '2026-06-08', today), 2);
+    });
+  });
+
+  group('computeInsight', () {
+    test('met en avant le record de série en cours', () {
+      // Première utilisation = aujourd'hui → aucun jour clos, donc le record
+      // historique vaut 0 et la série en cours (12) devient le record.
+      final insight = StatsService.computeInsight(
+        dailyMap: const {},
+        firstUseDate: '2026-06-11',
+        today: today,
+        period: StatsPeriod.week,
+        currentStreak: 12,
+      );
+      expect(insight.kind, StatInsightKind.bestStreak);
+      expect(insight.value, 12);
+    });
+  });
 }
