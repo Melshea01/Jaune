@@ -58,56 +58,6 @@ class CountUpInt extends StatelessWidget {
   }
 }
 
-/// Emoji « flamme » qui danse comme un vrai feu : pas de zoom, mais une
-/// ondulation (cisaillement + léger balancement + montée) avec la base
-/// ancrée. La taille reste constante — c'est le mouvement qui vit.
-class _FlameEmoji extends StatefulWidget {
-  final String emoji;
-  final double fontSize;
-  const _FlameEmoji(this.emoji, {required this.fontSize});
-
-  @override
-  State<_FlameEmoji> createState() => _FlameEmojiState();
-}
-
-class _FlameEmojiState extends State<_FlameEmoji>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1400),
-  )..repeat();
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (context, child) {
-        final t = _c.value * 2 * math.pi;
-        // Plusieurs harmoniques = flammèche organique, jamais régulière.
-        final skew = math.sin(t) * 0.12 + math.sin(t * 2.3) * 0.05;
-        final dy = math.sin(t * 1.6) * 1.8;
-        final rot = math.sin(t * 0.9) * 0.06;
-        final m = Matrix4.identity()
-          ..translateByDouble(0.0, dy, 0.0, 1.0)
-          ..rotateZ(rot)
-          ..setEntry(0, 1, skew); // cisaillement horizontal (haut qui ondule)
-        return Transform(
-          alignment: Alignment.bottomCenter,
-          transform: m,
-          child: child,
-        );
-      },
-      child: Text(widget.emoji, style: TextStyle(fontSize: widget.fontSize)),
-    );
-  }
-}
-
 /// Apparition en cascade : fondu + glissement vers le haut, déclenché après un
 /// délai (typiquement index × pas) pour révéler les sections une à une.
 class StaggeredReveal extends StatefulWidget {
@@ -279,7 +229,7 @@ class StatHeroHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
-                    const _FlameEmoji('🔥', fontSize: 34),
+                    const Text('🔥', style: TextStyle(fontSize: 34)),
                     const SizedBox(width: 6),
                     CountUpInt(
                       streakDays,
@@ -541,29 +491,52 @@ class _StatBarChartState extends State<StatBarChart>
     final n = data.length;
     final thin = n > 12;
     final showValue = n <= 12;
+    final hasData = data.any((d) => d.value > 0);
+    // Sur les vues denses (mois, tout au jour), un libellé sur N pour garder
+    // un axe lisible.
+    final step = n <= 12 ? 1 : (n / 6).ceil();
 
-    // La zone des barres est un Expanded : valeur (haut) et label (bas) ont
-    // une hauteur fixe, donc le total ne dépasse jamais [height] (zéro
-    // overflow, quelle que soit la valeur max).
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (context, _) {
-        return SizedBox(
-          height: widget.height,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              for (int i = 0; i < n; i++)
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: thin ? 1 : 3),
-                    child: _bar(data[i], maxValue, i, n, thin, showValue),
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Échelle verticale : le pic de verres, toujours visible (donne le
+        // « nombre de verres » même quand les barres n'ont pas d'étiquette).
+        if (hasData)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'max $maxValue',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey.shade500,
                 ),
-            ],
+              ),
+            ),
           ),
-        );
-      },
+        SizedBox(
+          height: widget.height,
+          child: AnimatedBuilder(
+            animation: _c,
+            builder: (context, _) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  for (int i = 0; i < n; i++)
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: thin ? 1 : 3),
+                        child: _bar(data[i], maxValue, i, n, thin, showValue, step),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -574,6 +547,7 @@ class _StatBarChartState extends State<StatBarChart>
     int n,
     bool thin,
     bool showValue,
+    int step,
   ) {
     // Cascade : chaque barre démarre légèrement après la précédente.
     final start = n <= 1 ? 0.0 : (i / n) * 0.35;
@@ -631,7 +605,7 @@ class _StatBarChartState extends State<StatBarChart>
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              d.label,
+              i % step == 0 ? d.label : '',
               maxLines: 1,
               overflow: TextOverflow.clip,
               style: TextStyle(
@@ -737,8 +711,10 @@ class StatTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                _label(),
+                if (label.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _label(),
+                ],
               ],
             )
           : Column(
@@ -756,8 +732,10 @@ class StatTile extends StatelessWidget {
                     color: accent,
                   ),
                 ),
-                const SizedBox(height: 2),
-                _label(),
+                if (label.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  _label(),
+                ],
               ],
             ),
     );

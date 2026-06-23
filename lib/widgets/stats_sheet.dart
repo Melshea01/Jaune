@@ -152,7 +152,6 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         skin: widget.character.profile.equippedSkin,
       ),
       _milestoneCard(l10n, streak),
-      _guidelineCard(l10n),
       StatPeriodSelector(
         selected: _period,
         onChanged: _setPeriod,
@@ -171,6 +170,7 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
       _sectionLabel(l10n.statsAllTimeSection),
       _weekdayCard(l10n, locale),
       _recordsGrid(l10n, streak),
+      _guidelineCard(l10n),
     ];
 
     return DraggableSheet(
@@ -263,8 +263,11 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         ];
         showLabels = true;
       case StatsPeriod.month:
-        data = [for (final b in pb.bars) StatBarDatum('', b.value)];
-        showLabels = false;
+        // Numéro du jour : le graphe affichera un libellé espacé (axe lisible).
+        data = [
+          for (final b in pb.bars) StatBarDatum('${b.date.day}', b.value),
+        ];
+        showLabels = true;
       case StatsPeriod.year:
         data = [
           for (final b in pb.bars)
@@ -272,18 +275,17 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         ];
         showLabels = true;
       case StatsPeriod.all:
-        // Mensuel : initiales de mois si peu de barres. Journalier (historique
-        // court) : pas de labels (trop de jours).
-        final few = pb.bars.length <= 12;
         final monthly = pb.gran == StatGranularity.month;
         data = [
           for (final b in pb.bars)
             StatBarDatum(
-              (few && monthly) ? _initial(DateFormat.MMM(locale).format(b.date)) : '',
+              monthly
+                  ? _initial(DateFormat.MMM(locale).format(b.date))
+                  : '${b.date.day}',
               b.value,
             ),
         ];
-        showLabels = few && monthly;
+        showLabels = true;
     }
 
     final cmp = StatsService.periodComparison(_map, _period, _now);
@@ -385,9 +387,7 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         ring: tracked == 0 ? 0 : sober / tracked,
         value: pct,
         suffix: '%',
-        // Le % est dans l'anneau ; le libellé apporte une info en plus : la
-        // tendance vs la période précédente (ou le détail si pas d'historique).
-        label: _soberTrendLabel(l10n, sober, tracked),
+        label: '', // anneau seul, pas de texte redondant en dessous
         accent: StatPalette.sober,
       ),
       StatTile(
@@ -398,49 +398,6 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         accent: StatPalette.drinks,
       ),
     ]);
-  }
-
-  /// Tendance des jours sobres vs la période précédente (info utile, pas une
-  /// répétition du %). Repli sur le détail chiffré si pas de période d'avant.
-  String _soberTrendLabel(AppLocalizations l10n, int sober, int tracked) {
-    final prev = _previousSober();
-    if (prev == null || prev.tracked == 0 || tracked == 0) {
-      return l10n.statsSoberCount(sober, tracked);
-    }
-    final curRate = sober / tracked;
-    final prevRate = prev.sober / prev.tracked;
-    final diff = curRate - prevRate;
-    if (diff > 0.03) return l10n.statsSoberUp;
-    if (diff < -0.03) return l10n.statsSoberDown;
-    return l10n.statsSoberFlat;
-  }
-
-  ({int sober, int tracked})? _previousSober() {
-    late DateTime pStart;
-    late DateTime pEnd;
-    switch (_period) {
-      case StatsPeriod.week:
-        final mon = StatsService.mondayOf(_now).subtract(const Duration(days: 7));
-        pStart = mon;
-        pEnd = mon.add(const Duration(days: 6));
-      case StatsPeriod.month:
-        final prevLast =
-            DateTime(_now.year, _now.month, 1).subtract(const Duration(days: 1));
-        pStart = DateTime(prevLast.year, prevLast.month, 1);
-        pEnd = prevLast;
-      case StatsPeriod.year:
-        pStart = DateTime(_now.year - 1, 1, 1);
-        pEnd = DateTime(_now.year - 1, 12, 31);
-      case StatsPeriod.all:
-        return null;
-    }
-    // pEnd sert de « aujourd'hui » pour compter la période précédente entière.
-    final tracked =
-        StatsService.trackedDaysInRange(pStart, pEnd, pEnd, _firstUse);
-    if (tracked == 0) return null;
-    final sober =
-        StatsService.soberDaysInRange(_map, pStart, pEnd, pEnd, _firstUse);
-    return (sober: sober, tracked: tracked);
   }
 
   /// Carte « Repères à moindre risque » (Santé publique France), toujours
