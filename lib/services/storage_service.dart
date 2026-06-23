@@ -8,10 +8,20 @@ class StorageService {
   static const String _kDailyConsosKey = 'daily_consos';
   static const String _kLastNotificationSentKey = 'last_notification_sent';
   static const String _kLastBejaunePostKey = 'last_bejaune_post';
+  static const String _kDrinkTimesKey = 'drink_times';
 
   Map<String, int> _dailyMap = {};
+  // Horodatages (epoch ms) de chaque verre loggé, pour l'analyse par heure.
+  // Complément best-effort de [_dailyMap] : alimenté au tap « +1 », purgé au
+  // reset du jour. Les jours édités autrement (ou antérieurs à la feature)
+  // n'ont simplement pas de détail horaire.
+  List<int> _drinkTimes = [];
 
   Map<String, int> get dailyMap => Map.unmodifiable(_dailyMap);
+
+  List<DateTime> get drinkTimes => _drinkTimes
+      .map((ms) => DateTime.fromMillisecondsSinceEpoch(ms))
+      .toList();
 
   static String _dateToKey(DateTime date) => dateKey(date);
 
@@ -43,11 +53,50 @@ class StorageService {
         }
       }
 
+      // Horodatages des verres (best-effort, peut être absent).
+      _drinkTimes = [];
+      final savedTimes = prefs.getString(_kDrinkTimesKey);
+      if (savedTimes != null && savedTimes.isNotEmpty) {
+        try {
+          _drinkTimes = (json.decode(savedTimes) as List)
+              .map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0)
+              .where((ms) => ms > 0)
+              .toList();
+        } catch (e) {
+          debugPrint('Error parsing drink times: $e');
+          _drinkTimes = [];
+        }
+      }
+
       return AppState(todayConsos: todayConsos, dailyMap: _dailyMap);
     } catch (e) {
       debugPrint('Error loading app state: $e');
       return AppState(todayConsos: 0, dailyMap: {});
     }
+  }
+
+  Future<void> _saveDrinkTimes() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kDrinkTimesKey, json.encode(_drinkTimes));
+    } catch (e) {
+      debugPrint('Error saving drink times: $e');
+    }
+  }
+
+  /// Enregistre l'horodatage du verre qu'on vient de logger (tap « +1 »).
+  Future<void> recordDrinkNow() async {
+    _drinkTimes.add(DateTime.now().millisecondsSinceEpoch);
+    await _saveDrinkTimes();
+  }
+
+  /// Purge les horodatages d'un jour donné (reset du jour).
+  Future<void> removeDrinkTimesForDate(DateTime date) async {
+    final key = _dateToKey(date);
+    _drinkTimes.removeWhere(
+      (ms) => _dateToKey(DateTime.fromMillisecondsSinceEpoch(ms)) == key,
+    );
+    await _saveDrinkTimes();
   }
 
   Future<void> _saveDailyMap() async {

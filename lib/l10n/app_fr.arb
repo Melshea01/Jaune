@@ -329,6 +329,24 @@
   "statsPeriodAll": "Tout",
   "statsConsumptionTitle": "Consommation",
   "statsDrinksLabel": "Verres sur la période",
+  "statsSoberUp": "En progrès vs avant 📈",
+  "statsSoberDown": "En recul vs avant",
+  "statsSoberFlat": "Stable vs avant",
+  "statsGuidelineTitle": "Repères à moindre risque",
+  "statsGuidelineSubtitle": "Cette semaine · repères Santé publique France",
+  "statsGuidelineWeekly": "≤ 10 verres / semaine",
+  "statsGuidelinePerDay": "≤ 2 verres / jour (max atteint)",
+  "statsGuidelineSoberDays": "Des jours sans alcool",
+  "statsClockTitle": "À quelle heure",
+  "statsClockSubtitle": "Répartition de tes verres dans la journée",
+  "statsClockEmpty": "Tes heures s'afficheront à mesure que tu logues tes verres",
+  "statsClockPeak": "heure de pointe",
+  "statsClockInsight": "{percent}% de tes verres en soirée (21 h–2 h)",
+  "@statsClockInsight": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
   "statsUnitPerDay": "Verres par jour",
   "statsUnitPerMonth": "Verres par mois",
   "statsHealthScrubHint": "Glisse ton doigt sur la courbe pour voir chaque jour",

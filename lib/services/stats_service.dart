@@ -401,6 +401,22 @@ abstract class StatsService {
     return List<double>.generate(7, (i) => counts[i] == 0 ? 0 : sums[i] / counts[i]);
   }
 
+  /// Répartition des verres par heure (0–23) sur [start, end] inclus, à partir
+  /// des horodatages des verres. Sert au cadran 24h.
+  static List<int> hourCounts(
+    List<DateTime> times,
+    DateTime start,
+    DateTime end,
+  ) {
+    final counts = List<int>.filled(24, 0);
+    final lo = DateTime(start.year, start.month, start.day);
+    final hi = DateTime(end.year, end.month, end.day, 23, 59, 59);
+    for (final t in times) {
+      if (!t.isBefore(lo) && !t.isAfter(hi)) counts[t.hour]++;
+    }
+    return counts;
+  }
+
   /// Total de jours sobres depuis la première utilisation (journées closes).
   static int totalSoberDays(
     Map<String, int> dailyMap,

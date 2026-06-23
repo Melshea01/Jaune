@@ -647,6 +647,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsDrinksLabel => 'Drinks this period';
 
   @override
+  String get statsSoberUp => 'Improving vs before 📈';
+
+  @override
+  String get statsSoberDown => 'Down vs before';
+
+  @override
+  String get statsSoberFlat => 'Steady vs before';
+
+  @override
+  String get statsGuidelineTitle => 'Lower-risk guidelines';
+
+  @override
+  String get statsGuidelineSubtitle => 'This week · French health guidelines';
+
+  @override
+  String get statsGuidelineWeekly => '≤ 10 drinks / week';
+
+  @override
+  String get statsGuidelinePerDay => '≤ 2 drinks / day (max reached)';
+
+  @override
+  String get statsGuidelineSoberDays => 'Alcohol-free days';
+
+  @override
+  String get statsClockTitle => 'What time';
+
+  @override
+  String get statsClockSubtitle => 'When you drink during the day';
+
+  @override
+  String get statsClockEmpty => 'Your hours will show up as you log drinks';
+
+  @override
+  String get statsClockPeak => 'peak time';
+
+  @override
+  String statsClockInsight(int percent) {
+    return '$percent% of your drinks in the evening (9pm–2am)';
+  }
+
+  @override
   String get statsUnitPerDay => 'Drinks per day';
 
   @override

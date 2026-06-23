@@ -649,6 +649,49 @@ class AppLocalizationsFr extends AppLocalizations {
   String get statsDrinksLabel => 'Verres sur la période';
 
   @override
+  String get statsSoberUp => 'En progrès vs avant 📈';
+
+  @override
+  String get statsSoberDown => 'En recul vs avant';
+
+  @override
+  String get statsSoberFlat => 'Stable vs avant';
+
+  @override
+  String get statsGuidelineTitle => 'Repères à moindre risque';
+
+  @override
+  String get statsGuidelineSubtitle =>
+      'Cette semaine · repères Santé publique France';
+
+  @override
+  String get statsGuidelineWeekly => '≤ 10 verres / semaine';
+
+  @override
+  String get statsGuidelinePerDay => '≤ 2 verres / jour (max atteint)';
+
+  @override
+  String get statsGuidelineSoberDays => 'Des jours sans alcool';
+
+  @override
+  String get statsClockTitle => 'À quelle heure';
+
+  @override
+  String get statsClockSubtitle => 'Répartition de tes verres dans la journée';
+
+  @override
+  String get statsClockEmpty =>
+      'Tes heures s\'afficheront à mesure que tu logues tes verres';
+
+  @override
+  String get statsClockPeak => 'heure de pointe';
+
+  @override
+  String statsClockInsight(int percent) {
+    return '$percent% de tes verres en soirée (21 h–2 h)';
+  }
+
+  @override
   String get statsUnitPerDay => 'Verres par jour';
 
   @override

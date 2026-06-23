@@ -466,6 +466,8 @@ class _MyHomePageState extends State<MyHomePage>
     HapticFeedback.mediumImpact();
     // Feedback immédiat : le citron penche la tête en arrière et "boit"
     _citronController.triggerEvent('drink_beer');
+    // Horodatage du verre (analyse par heure dans les stats).
+    await _storageService.recordDrinkNow();
     setState(() {
       _consos += 1;
     });
@@ -507,6 +509,7 @@ class _MyHomePageState extends State<MyHomePage>
     try {
       setState(() {
         _storageService.resetTodayConsos();
+        _storageService.removeDrinkTimesForDate(DateTime.now());
         _consos = 0;
         _animatedConsos = 0.0;
       });
@@ -707,6 +710,7 @@ class _MyHomePageState extends State<MyHomePage>
     StatsSheet.show(
       context,
       dailyMap: _storageService.dailyMap,
+      drinkTimes: _storageService.drinkTimes,
       character: _characterService,
     );
   }

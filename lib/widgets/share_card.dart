@@ -70,9 +70,10 @@ abstract class ShareCard {
   }) async {
     final overlay = Overlay.of(context);
     final boundaryKey = GlobalKey();
-    final citronController = CitronAnimationController()
-      ..updateHealth(100)
-      ..idleMood = 'happy';
+    final citronController =
+        CitronAnimationController()
+          ..updateHealth(100)
+          ..idleMood = 'happy';
 
     final entry = OverlayEntry(
       builder:
@@ -200,14 +201,6 @@ class _ShareCardContent extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                     color: JauneColors.ink,
                     letterSpacing: 2,
-                  ),
-                ),
-                Text(
-                  '🍋 jaune.app',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: JauneColors.inkSoft.withValues(alpha: 0.9),
                   ),
                 ),
               ],

@@ -1184,6 +1184,84 @@ abstract class AppLocalizations {
   /// **'Verres sur la période'**
   String get statsDrinksLabel;
 
+  /// No description provided for @statsSoberUp.
+  ///
+  /// In fr, this message translates to:
+  /// **'En progrès vs avant 📈'**
+  String get statsSoberUp;
+
+  /// No description provided for @statsSoberDown.
+  ///
+  /// In fr, this message translates to:
+  /// **'En recul vs avant'**
+  String get statsSoberDown;
+
+  /// No description provided for @statsSoberFlat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stable vs avant'**
+  String get statsSoberFlat;
+
+  /// No description provided for @statsGuidelineTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Repères à moindre risque'**
+  String get statsGuidelineTitle;
+
+  /// No description provided for @statsGuidelineSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette semaine · repères Santé publique France'**
+  String get statsGuidelineSubtitle;
+
+  /// No description provided for @statsGuidelineWeekly.
+  ///
+  /// In fr, this message translates to:
+  /// **'≤ 10 verres / semaine'**
+  String get statsGuidelineWeekly;
+
+  /// No description provided for @statsGuidelinePerDay.
+  ///
+  /// In fr, this message translates to:
+  /// **'≤ 2 verres / jour (max atteint)'**
+  String get statsGuidelinePerDay;
+
+  /// No description provided for @statsGuidelineSoberDays.
+  ///
+  /// In fr, this message translates to:
+  /// **'Des jours sans alcool'**
+  String get statsGuidelineSoberDays;
+
+  /// No description provided for @statsClockTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'À quelle heure'**
+  String get statsClockTitle;
+
+  /// No description provided for @statsClockSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répartition de tes verres dans la journée'**
+  String get statsClockSubtitle;
+
+  /// No description provided for @statsClockEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tes heures s\'afficheront à mesure que tu logues tes verres'**
+  String get statsClockEmpty;
+
+  /// No description provided for @statsClockPeak.
+  ///
+  /// In fr, this message translates to:
+  /// **'heure de pointe'**
+  String get statsClockPeak;
+
+  /// No description provided for @statsClockInsight.
+  ///
+  /// In fr, this message translates to:
+  /// **'{percent}% de tes verres en soirée (21 h–2 h)'**
+  String statsClockInsight(int percent);
+
   /// No description provided for @statsUnitPerDay.
   ///
   /// In fr, this message translates to:

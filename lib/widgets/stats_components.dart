@@ -58,22 +58,24 @@ class CountUpInt extends StatelessWidget {
   }
 }
 
-/// Emoji qui pulse en boucle (flamme de série, etc.) — donne vie au header.
-class _PulsingEmoji extends StatefulWidget {
+/// Emoji « flamme » qui danse comme un vrai feu : pas de zoom, mais une
+/// ondulation (cisaillement + léger balancement + montée) avec la base
+/// ancrée. La taille reste constante — c'est le mouvement qui vit.
+class _FlameEmoji extends StatefulWidget {
   final String emoji;
   final double fontSize;
-  const _PulsingEmoji(this.emoji, {required this.fontSize});
+  const _FlameEmoji(this.emoji, {required this.fontSize});
 
   @override
-  State<_PulsingEmoji> createState() => _PulsingEmojiState();
+  State<_FlameEmoji> createState() => _FlameEmojiState();
 }
 
-class _PulsingEmojiState extends State<_PulsingEmoji>
+class _FlameEmojiState extends State<_FlameEmoji>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1100),
-  )..repeat(reverse: true);
+    duration: const Duration(milliseconds: 1400),
+  )..repeat();
 
   @override
   void dispose() {
@@ -83,9 +85,24 @@ class _PulsingEmojiState extends State<_PulsingEmoji>
 
   @override
   Widget build(BuildContext context) {
-    final curved = CurvedAnimation(parent: _c, curve: Curves.easeInOut);
-    return ScaleTransition(
-      scale: Tween(begin: 0.9, end: 1.15).animate(curved),
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, child) {
+        final t = _c.value * 2 * math.pi;
+        // Plusieurs harmoniques = flammèche organique, jamais régulière.
+        final skew = math.sin(t) * 0.12 + math.sin(t * 2.3) * 0.05;
+        final dy = math.sin(t * 1.6) * 1.8;
+        final rot = math.sin(t * 0.9) * 0.06;
+        final m = Matrix4.identity()
+          ..translateByDouble(0.0, dy, 0.0, 1.0)
+          ..rotateZ(rot)
+          ..setEntry(0, 1, skew); // cisaillement horizontal (haut qui ondule)
+        return Transform(
+          alignment: Alignment.bottomCenter,
+          transform: m,
+          child: child,
+        );
+      },
       child: Text(widget.emoji, style: TextStyle(fontSize: widget.fontSize)),
     );
   }
@@ -262,7 +279,7 @@ class StatHeroHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
-                    const _PulsingEmoji('🔥', fontSize: 34),
+                    const _FlameEmoji('🔥', fontSize: 34),
                     const SizedBox(width: 6),
                     CountUpInt(
                       streakDays,
@@ -489,12 +506,15 @@ class StatBarChart extends StatefulWidget {
   final List<StatBarDatum> data;
   final double height;
   final bool showLabels;
+  // Couleur unique des barres (plus sobre/on-brand). Si null, palier par valeur.
+  final Color? barColor;
 
   const StatBarChart({
     super.key,
     required this.data,
     this.height = 150,
     this.showLabels = true,
+    this.barColor,
   });
 
   @override
@@ -560,7 +580,9 @@ class _StatBarChartState extends State<StatBarChart>
     final t = ((_c.value - start) / (1 - 0.35)).clamp(0.0, 1.0);
     final eased = Curves.easeOutCubic.transform(t);
     final frac = (d.value <= 0 ? 0.0 : d.value / maxValue) * eased;
-    final color = d.value <= 0 ? Colors.grey.shade200 : jauneStatColor(d.value);
+    final color = d.value <= 0
+        ? Colors.grey.shade200
+        : (widget.barColor ?? jauneStatColor(d.value));
     final radius = BorderRadius.circular(thin ? 2 : 6);
 
     return Column(
@@ -1050,6 +1072,227 @@ class StatRecordRow extends StatelessWidget {
               color: JauneColors.ink,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// =====================================================================
+// Cadran 24h : répartition des verres par heure (style horloge radiale)
+// =====================================================================
+
+class StatClock extends StatefulWidget {
+  final List<int> hourCounts; // longueur 24
+  final Color color;
+  final String centerTop; // ex: "21 h"
+  final String centerBottom; // ex: "heure de pointe"
+
+  const StatClock({
+    super.key,
+    required this.hourCounts,
+    required this.centerTop,
+    required this.centerBottom,
+    this.color = StatPalette.drinks,
+  });
+
+  @override
+  State<StatClock> createState() => _StatClockState();
+}
+
+class _StatClockState extends State<StatClock>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: JauneMotion.emphasized,
+  )..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        width: 200,
+        height: 200,
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (context, _) => CustomPaint(
+            painter: _ClockPainter(widget.hourCounts, _c.value, widget.color),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.centerTop,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: widget.color,
+                    ),
+                  ),
+                  Text(
+                    widget.centerBottom,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: JauneColors.inkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClockPainter extends CustomPainter {
+  final List<int> hours;
+  final double progress;
+  final Color color;
+  _ClockPainter(this.hours, this.progress, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final r = size.width / 2;
+    final innerR = r * 0.42;
+    final maxLen = r - innerR - 4;
+    final maxCount = hours.fold<int>(1, (m, v) => v > m ? v : m);
+
+    // Cercle de base discret.
+    canvas.drawCircle(
+      center,
+      innerR,
+      Paint()
+        ..color = const Color(0xFFEDEFF4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+
+    for (int h = 0; h < 24; h++) {
+      final angle = -math.pi / 2 + (h / 24) * 2 * math.pi;
+      final dir = Offset(math.cos(angle), math.sin(angle));
+      final count = hours[h];
+      final len = (count <= 0 ? 0.0 : maxLen * count / maxCount) * progress;
+      final start = center + dir * innerR;
+      final end = center + dir * (innerR + math.max(len, count > 0 ? 3 : 0));
+      final paint = Paint()
+        ..color = count <= 0
+            ? const Color(0xFFEDEFF4)
+            : color.withValues(alpha: 0.45 + 0.55 * count / maxCount)
+        ..strokeWidth = 6
+        ..strokeCap = StrokeCap.round;
+      if (count > 0) canvas.drawLine(start, end, paint);
+    }
+
+    // Repères cardinaux : 0h (haut), 6h (droite), 12h (bas), 18h (gauche).
+    const labels = {0: '0h', 6: '6h', 12: '12h', 18: '18h'};
+    labels.forEach((h, text) {
+      final angle = -math.pi / 2 + (h / 24) * 2 * math.pi;
+      final dir = Offset(math.cos(angle), math.sin(angle));
+      final pos = center + dir * (r - 8);
+      final tp = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Colors.grey.shade500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
+    });
+  }
+
+  @override
+  bool shouldRepaint(_ClockPainter old) =>
+      old.progress != progress || old.hours != hours;
+}
+
+// =====================================================================
+// Carte « Repères à moindre risque » (Santé publique France)
+// =====================================================================
+
+class GuidelineRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final double? gaugeFraction; // si non nul : barre de jauge
+  final bool ok;
+
+  const GuidelineRow({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.ok,
+    this.gaugeFraction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ok ? StatPalette.sober : StatPalette.drinks;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                ok ? Icons.check_circle_rounded : Icons.error_rounded,
+                size: 16,
+                color: color,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: JauneColors.ink,
+                  ),
+                ),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          if (gaugeFraction != null) ...[
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Stack(
+                children: [
+                  Container(height: 7, color: const Color(0xFFEDEFF4)),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: gaugeFraction!.clamp(0.0, 1.0)),
+                    duration: JauneMotion.emphasized,
+                    curve: JauneMotion.smooth,
+                    builder: (context, f, _) => FractionallySizedBox(
+                      widthFactor: f,
+                      child: Container(height: 7, color: color),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

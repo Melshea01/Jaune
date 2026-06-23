@@ -12,6 +12,7 @@ import '../services/character_service.dart';
 import '../services/milestone_scheduler.dart';
 import '../services/stats_service.dart';
 import '../theme/jaune_design.dart';
+import '../utils/date_keys.dart';
 import 'draggable_sheet.dart';
 import 'share_card.dart';
 import 'stats_components.dart';
@@ -24,6 +25,7 @@ class StatsSheet {
   static void show(
     BuildContext context, {
     required Map<String, int> dailyMap,
+    required List<DateTime> drinkTimes,
     required CharacterService character,
   }) {
     HapticFeedback.selectionClick();
@@ -32,17 +34,25 @@ class StatsSheet {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder:
-          (_) => _StatsSheetContent(dailyMap: dailyMap, character: character),
+      builder: (_) => _StatsSheetContent(
+        dailyMap: dailyMap,
+        drinkTimes: drinkTimes,
+        character: character,
+      ),
     );
   }
 }
 
 class _StatsSheetContent extends StatefulWidget {
   final Map<String, int> dailyMap;
+  final List<DateTime> drinkTimes;
   final CharacterService character;
 
-  const _StatsSheetContent({required this.dailyMap, required this.character});
+  const _StatsSheetContent({
+    required this.dailyMap,
+    required this.drinkTimes,
+    required this.character,
+  });
 
   @override
   State<_StatsSheetContent> createState() => _StatsSheetContentState();
@@ -54,7 +64,22 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
   final DateTime _now = DateTime.now();
 
   Map<String, int> get _map => widget.dailyMap;
-  String get _firstUse => widget.character.profile.firstUseDate;
+
+  /// Première utilisation EFFECTIVE : la date du profil si connue, sinon la
+  /// plus ancienne donnée enregistrée. Sans ça, « Tout » démarrait à
+  /// aujourd'hui (firstUseDate vide) et affichait moins que « Année ».
+  late final String _firstUse = _computeFirstUse();
+
+  String _computeFirstUse() {
+    final profileDate = widget.character.profile.firstUseDate;
+    if (DateTime.tryParse(profileDate) != null) return profileDate;
+    DateTime? earliest;
+    for (final k in _map.keys) {
+      final d = DateTime.tryParse(k);
+      if (d != null && (earliest == null || d.isBefore(earliest))) earliest = d;
+    }
+    return earliest != null ? dateKey(earliest) : dateKey(_now);
+  }
 
   @override
   void initState() {
@@ -127,6 +152,7 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         skin: widget.character.profile.equippedSkin,
       ),
       _milestoneCard(l10n, streak),
+      _guidelineCard(l10n),
       StatPeriodSelector(
         selected: _period,
         onChanged: _setPeriod,
@@ -141,6 +167,7 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
       _insightCard(l10n, locale, streak),
       _consumptionCard(l10n, locale),
       _healthCard(l10n),
+      _clockCard(l10n),
       _sectionLabel(l10n.statsAllTimeSection),
       _weekdayCard(l10n, locale),
       _recordsGrid(l10n, streak),
@@ -275,6 +302,7 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
             key: ValueKey('bars-${_period.name}'),
             data: data,
             showLabels: showLabels,
+            barColor: StatPalette.drinks,
           ),
         ],
       ),
@@ -357,8 +385,9 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         ring: tracked == 0 ? 0 : sober / tracked,
         value: pct,
         suffix: '%',
-        // Le % est dans l'anneau ; le libellé apporte le détail chiffré.
-        label: l10n.statsSoberCount(sober, tracked),
+        // Le % est dans l'anneau ; le libellé apporte une info en plus : la
+        // tendance vs la période précédente (ou le détail si pas d'historique).
+        label: _soberTrendLabel(l10n, sober, tracked),
         accent: StatPalette.sober,
       ),
       StatTile(
@@ -369,6 +398,122 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         accent: StatPalette.drinks,
       ),
     ]);
+  }
+
+  /// Tendance des jours sobres vs la période précédente (info utile, pas une
+  /// répétition du %). Repli sur le détail chiffré si pas de période d'avant.
+  String _soberTrendLabel(AppLocalizations l10n, int sober, int tracked) {
+    final prev = _previousSober();
+    if (prev == null || prev.tracked == 0 || tracked == 0) {
+      return l10n.statsSoberCount(sober, tracked);
+    }
+    final curRate = sober / tracked;
+    final prevRate = prev.sober / prev.tracked;
+    final diff = curRate - prevRate;
+    if (diff > 0.03) return l10n.statsSoberUp;
+    if (diff < -0.03) return l10n.statsSoberDown;
+    return l10n.statsSoberFlat;
+  }
+
+  ({int sober, int tracked})? _previousSober() {
+    late DateTime pStart;
+    late DateTime pEnd;
+    switch (_period) {
+      case StatsPeriod.week:
+        final mon = StatsService.mondayOf(_now).subtract(const Duration(days: 7));
+        pStart = mon;
+        pEnd = mon.add(const Duration(days: 6));
+      case StatsPeriod.month:
+        final prevLast =
+            DateTime(_now.year, _now.month, 1).subtract(const Duration(days: 1));
+        pStart = DateTime(prevLast.year, prevLast.month, 1);
+        pEnd = prevLast;
+      case StatsPeriod.year:
+        pStart = DateTime(_now.year - 1, 1, 1);
+        pEnd = DateTime(_now.year - 1, 12, 31);
+      case StatsPeriod.all:
+        return null;
+    }
+    // pEnd sert de « aujourd'hui » pour compter la période précédente entière.
+    final tracked =
+        StatsService.trackedDaysInRange(pStart, pEnd, pEnd, _firstUse);
+    if (tracked == 0) return null;
+    final sober =
+        StatsService.soberDaysInRange(_map, pStart, pEnd, pEnd, _firstUse);
+    return (sober: sober, tracked: tracked);
+  }
+
+  /// Carte « Repères à moindre risque » (Santé publique France), toujours
+  /// calculée sur la SEMAINE en cours (les repères sont hebdomadaires).
+  Widget _guidelineCard(AppLocalizations l10n) {
+    final monday = StatsService.mondayOf(_now);
+    final weekly = StatsService.weekTotal(_map, monday);
+    int maxDay = 0;
+    int soberDays = 0;
+    for (int i = 0; i < 7; i++) {
+      final d = monday.add(Duration(days: i));
+      if (d.isAfter(_now)) break;
+      final c = _map[dateKey(d)] ?? 0;
+      if (c > maxDay) maxDay = c;
+      if (c == 0) soberDays++;
+    }
+    return StatCard(
+      title: l10n.statsGuidelineTitle,
+      subtitle: l10n.statsGuidelineSubtitle,
+      child: Column(
+        children: [
+          GuidelineRow(
+            label: l10n.statsGuidelineWeekly,
+            value: '$weekly / 10',
+            ok: weekly <= 10,
+            gaugeFraction: weekly / 10,
+          ),
+          GuidelineRow(
+            label: l10n.statsGuidelinePerDay,
+            value: '$maxDay',
+            ok: maxDay <= 2,
+          ),
+          GuidelineRow(
+            label: l10n.statsGuidelineSoberDays,
+            value: '$soberDays',
+            ok: soberDays >= 1,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Cadran 24h : à quelle heure tu bois (à partir des horodatages).
+  Widget _clockCard(AppLocalizations l10n) {
+    final range = StatsService.periodRange(_period, _now, _firstUse);
+    final hours = StatsService.hourCounts(widget.drinkTimes, range.start, range.end);
+    final total = hours.fold<int>(0, (a, b) => a + b);
+    if (total == 0) {
+      return StatCard(
+        title: l10n.statsClockTitle,
+        subtitle: l10n.statsClockEmpty,
+        child: const SizedBox.shrink(),
+      );
+    }
+    int peak = 0;
+    for (int h = 1; h < 24; h++) {
+      if (hours[h] > hours[peak]) peak = h;
+    }
+    final afterCount =
+        hours[21] + hours[22] + hours[23] + hours[0] + hours[1];
+    final pctAfter = (afterCount * 100 / total).round();
+    return StatCard(
+      title: l10n.statsClockTitle,
+      subtitle: pctAfter >= 25
+          ? l10n.statsClockInsight(pctAfter)
+          : l10n.statsClockSubtitle,
+      child: StatClock(
+        key: ValueKey('clock-${_period.name}'),
+        hourCounts: hours,
+        centerTop: '${peak}h',
+        centerBottom: l10n.statsClockPeak,
+      ),
+    );
   }
 
   /// Petit intertitre gris pour séparer la zone « depuis le début ».
@@ -610,6 +755,7 @@ class _HealthCurveState extends State<_HealthCurve> {
                           painter: _HealthCurvePainter(
                             values: values,
                             progress: progress,
+                            color: pill.last,
                             selected: _selected,
                           ),
                         ),
@@ -677,10 +823,12 @@ class _HealthCurvePainter extends CustomPainter {
   final List<double> values;
   final double progress;
   final int? selected;
+  final Color color;
 
   _HealthCurvePainter({
     required this.values,
     required this.progress,
+    required this.color,
     this.selected,
   });
 
@@ -720,33 +868,20 @@ class _HealthCurvePainter extends CustomPainter {
       path.lineTo(points.last.dx, points.last.dy);
     }
 
-    final shader = const LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [
-        Color(0xFF22C55E),
-        Color(0xFF84CC16),
-        Color(0xFFF59E0B),
-        Color(0xFFF97316),
-        Color(0xFFEF4444),
-      ],
-      stops: [0.0, 0.18, 0.45, 0.72, 1.0],
-    ).createShader(Offset.zero & size);
-
     final metric = path.computeMetrics().fold<Path>(
       Path(),
       (acc, m) => acc..addPath(m.extractPath(0, m.length * progress), Offset.zero),
     );
 
+    // Teinte unique = couleur de la santé courante : calme et on-brand, plus
+    // d'arc-en-ciel vert→rouge.
     final fillShader = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        const Color(0xFF22C55E).withValues(alpha: 0.22),
-        const Color(0xFFF59E0B).withValues(alpha: 0.12),
-        const Color(0xFFEF4444).withValues(alpha: 0.04),
+        color.withValues(alpha: 0.24),
+        color.withValues(alpha: 0.02),
       ],
-      stops: const [0.0, 0.5, 1.0],
     ).createShader(Offset.zero & size);
 
     final lastDrawn = _pointAt(path, progress);
@@ -766,7 +901,7 @@ class _HealthCurvePainter extends CustomPainter {
     canvas.drawPath(
       metric,
       Paint()
-        ..shader = shader
+        ..color = color
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
         ..strokeCap = StrokeCap.round
@@ -779,7 +914,7 @@ class _HealthCurvePainter extends CustomPainter {
         lastDrawn,
         5,
         Paint()
-          ..shader = shader
+          ..color = color
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.5,
       );
@@ -798,7 +933,7 @@ class _HealthCurvePainter extends CustomPainter {
         p,
         6,
         Paint()
-          ..shader = shader
+          ..color = color
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3,
       );
@@ -817,7 +952,8 @@ class _HealthCurvePainter extends CustomPainter {
   bool shouldRepaint(_HealthCurvePainter old) =>
       old.progress != progress ||
       old.values != values ||
-      old.selected != selected;
+      old.selected != selected ||
+      old.color != color;
 }
 
 // =====================================================================
