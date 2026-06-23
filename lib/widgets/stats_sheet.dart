@@ -65,15 +65,14 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
 
   Map<String, int> get _map => widget.dailyMap;
 
-  /// Première utilisation EFFECTIVE : la date du profil si connue, sinon la
-  /// plus ancienne donnée enregistrée. Sans ça, « Tout » démarrait à
-  /// aujourd'hui (firstUseDate vide) et affichait moins que « Année ».
+  /// Première utilisation EFFECTIVE = la PLUS ANCIENNE entre la date du profil
+  /// et la plus vieille donnée enregistrée. Indispensable : si firstUseDate du
+  /// profil est récente alors que des verres plus anciens existent, « Tout »
+  /// démarrait trop tard et affichait moins que « Année ».
   late final String _firstUse = _computeFirstUse();
 
   String _computeFirstUse() {
-    final profileDate = widget.character.profile.firstUseDate;
-    if (DateTime.tryParse(profileDate) != null) return profileDate;
-    DateTime? earliest;
+    DateTime? earliest = DateTime.tryParse(widget.character.profile.firstUseDate);
     for (final k in _map.keys) {
       final d = DateTime.tryParse(k);
       if (d != null && (earliest == null || d.isBefore(earliest))) earliest = d;
@@ -163,14 +162,13 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         },
       ),
       _kpiRow(l10n),
-      _insightCard(l10n, locale, streak),
       _consumptionCard(l10n, locale),
       _healthCard(l10n),
       _clockCard(l10n),
       _sectionLabel(l10n.statsAllTimeSection),
       _weekdayCard(l10n, locale),
-      _recordsGrid(l10n, streak),
       _guidelineCard(l10n),
+      _recordsGrid(l10n, streak),
     ];
 
     return DraggableSheet(
@@ -227,28 +225,6 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         ),
       ],
     );
-  }
-
-  Widget _insightCard(AppLocalizations l10n, String locale, int streak) {
-    final insight = StatsService.computeInsight(
-      dailyMap: _map,
-      firstUseDate: _firstUse,
-      today: _now,
-      period: _period,
-      currentStreak: streak,
-    );
-    final (emoji, text) = switch (insight.kind) {
-      StatInsightKind.trendDown => ('📉', l10n.statsInsightTrendDown(insight.value)),
-      StatInsightKind.trendUp => ('📈', l10n.statsInsightTrendUp(insight.value)),
-      StatInsightKind.bestStreak => ('🔥', l10n.statsInsightBestStreak(insight.value)),
-      StatInsightKind.soberRate => ('💧', l10n.statsInsightSoberRate(insight.value)),
-      StatInsightKind.worstWeekday => (
-        '📅',
-        l10n.statsInsightWorstWeekday(_weekdayName(locale, insight.value)),
-      ),
-      StatInsightKind.gettingStarted => ('🍋', l10n.statsInsightGettingStarted),
-    };
-    return StatInsightCard(emoji: emoji, text: text);
   }
 
   Widget _consumptionCard(AppLocalizations l10n, String locale) {
@@ -387,7 +363,7 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
         ring: tracked == 0 ? 0 : sober / tracked,
         value: pct,
         suffix: '%',
-        label: '', // anneau seul, pas de texte redondant en dessous
+        label: l10n.statsSoberCount(sober, tracked),
         accent: StatPalette.sober,
       ),
       StatTile(
@@ -584,11 +560,6 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
 
   String _initial(String s) =>
       s.isEmpty ? '' : s.characters.first.toUpperCase();
-
-  String _weekdayName(String locale, int index0) {
-    final monday = StatsService.mondayOf(_now);
-    return DateFormat.EEEE(locale).format(monday.add(Duration(days: index0)));
-  }
 }
 
 // =====================================================================
@@ -712,7 +683,6 @@ class _HealthCurveState extends State<_HealthCurve> {
                           painter: _HealthCurvePainter(
                             values: values,
                             progress: progress,
-                            color: pill.last,
                             selected: _selected,
                           ),
                         ),
@@ -723,7 +693,11 @@ class _HealthCurveState extends State<_HealthCurve> {
                       Positioned(
                         top: 0,
                         left: bubbleX,
-                        child: _scrubBubble(shown.round(), dateLabel, pill.last),
+                        child: _scrubBubble(
+                          shown.round(),
+                          dateLabel,
+                          const Color(0xFF6366F1),
+                        ),
                       ),
                   ],
                 ),
@@ -780,17 +754,20 @@ class _HealthCurvePainter extends CustomPainter {
   final List<double> values;
   final double progress;
   final int? selected;
-  final Color color;
 
   _HealthCurvePainter({
     required this.values,
     required this.progress,
-    required this.color,
     this.selected,
   });
 
   static const double _padTop = 10;
   static const double _padBottom = 10;
+
+  // Gradient FIXE, style Revolut : la couleur de la courbe ne dépend pas de la
+  // valeur affichée (elle ne change donc plus quand on déplace le doigt).
+  static const List<Color> _lineColors = [Color(0xFF6366F1), Color(0xFF22D3EE)];
+  static const Color _dotColor = Color(0xFF6366F1);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -830,16 +807,22 @@ class _HealthCurvePainter extends CustomPainter {
       (acc, m) => acc..addPath(m.extractPath(0, m.length * progress), Offset.zero),
     );
 
-    // Teinte unique = couleur de la santé courante : calme et on-brand, plus
-    // d'arc-en-ciel vert→rouge.
+    // Gradient FIXE (Revolut) pour le tracé et l'aire — indépendant de la
+    // valeur, donc stable pendant le scrub.
+    final rect = Offset.zero & size;
+    final lineShader = const LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: _lineColors,
+    ).createShader(rect);
     final fillShader = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        color.withValues(alpha: 0.24),
-        color.withValues(alpha: 0.02),
+        _lineColors.first.withValues(alpha: 0.22),
+        _lineColors.last.withValues(alpha: 0.02),
       ],
-    ).createShader(Offset.zero & size);
+    ).createShader(rect);
 
     final lastDrawn = _pointAt(path, progress);
     if (lastDrawn != null) {
@@ -858,7 +841,7 @@ class _HealthCurvePainter extends CustomPainter {
     canvas.drawPath(
       metric,
       Paint()
-        ..color = color
+        ..shader = lineShader
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
         ..strokeCap = StrokeCap.round
@@ -871,7 +854,7 @@ class _HealthCurvePainter extends CustomPainter {
         lastDrawn,
         5,
         Paint()
-          ..color = color
+          ..color = _dotColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.5,
       );
@@ -890,7 +873,7 @@ class _HealthCurvePainter extends CustomPainter {
         p,
         6,
         Paint()
-          ..color = color
+          ..color = _dotColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3,
       );
@@ -909,8 +892,7 @@ class _HealthCurvePainter extends CustomPainter {
   bool shouldRepaint(_HealthCurvePainter old) =>
       old.progress != progress ||
       old.values != values ||
-      old.selected != selected ||
-      old.color != color;
+      old.selected != selected;
 }
 
 // =====================================================================
