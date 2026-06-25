@@ -605,11 +605,12 @@ class _HealthCurveState extends State<_HealthCurve> {
   Widget build(BuildContext context) {
     final values = widget.values;
     final int shownIndex = _selected ?? (values.length - 1);
-    final double shown =
-        values.isNotEmpty ? values[shownIndex.clamp(0, values.length - 1)] : 100.0;
-    final List<Color> pill = JauneColors.healthGradient(shown / 100.0);
+    // Le gros chiffre PV reste TOUJOURS la valeur actuelle (dernier point) :
+    // on ne réaffiche pas les PV en déplaçant le doigt.
+    final double current = values.isNotEmpty ? values.last : 100.0;
+    final List<Color> pill = JauneColors.healthGradient(current / 100.0);
 
-    // Date du point affiché : le dernier point = aujourd'hui.
+    // Date du point survolé (pour la bulle de scrub uniquement).
     String dateLabel = '';
     if (values.isNotEmpty) {
       final daysFromEnd = (values.length - 1) - shownIndex;
@@ -626,9 +627,8 @@ class _HealthCurveState extends State<_HealthCurve> {
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            // Le chiffre suit le doigt (pas de count-up pendant le scrub).
             Text(
-              '${shown.round()}',
+              '${current.round()}',
               style: TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.w900,
@@ -688,16 +688,12 @@ class _HealthCurveState extends State<_HealthCurve> {
                         ),
                       ),
                     ),
-                    // Bulle qui suit le doigt pendant le scrub.
+                    // Bulle de date qui suit le doigt (sans réafficher les PV).
                     if (_selected != null && len >= 2)
                       Positioned(
                         top: 0,
                         left: bubbleX,
-                        child: _scrubBubble(
-                          shown.round(),
-                          dateLabel,
-                          const Color(0xFF6366F1),
-                        ),
+                        child: _scrubBubble(dateLabel),
                       ),
                   ],
                 ),
@@ -709,10 +705,9 @@ class _HealthCurveState extends State<_HealthCurve> {
     );
   }
 
-  Widget _scrubBubble(int value, String date, Color color) {
+  Widget _scrubBubble(String date) {
     return Container(
-      constraints: const BoxConstraints(minWidth: 72),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: JauneColors.ink,
         borderRadius: BorderRadius.circular(12),
@@ -724,27 +719,13 @@ class _HealthCurveState extends State<_HealthCurve> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            '$value ${widget.hpUnit}',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              color: color,
-            ),
-          ),
-          Text(
-            date,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.85),
-            ),
-          ),
-        ],
+      child: Text(
+        date,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
       ),
     );
   }

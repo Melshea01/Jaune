@@ -953,6 +953,23 @@ class WeekdayChart extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Column(
                   children: [
+                    // Moyenne au-dessus de la barre : l'échelle devient
+                    // explicite (sinon plusieurs jours « au max » se ressemblent).
+                    SizedBox(
+                      height: 15,
+                      child: averages[i] > 0
+                          ? Center(
+                              child: Text(
+                                _fmtAvg(averages[i]),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: JauneColors.inkSoft,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
                     Expanded(
                       child: Align(
                         alignment: Alignment.bottomCenter,
@@ -999,6 +1016,10 @@ class WeekdayChart extends StatelessWidget {
       ),
     );
   }
+
+  /// Format compact d'une moyenne : entier si rond, sinon 1 décimale.
+  static String _fmtAvg(double a) =>
+      a == a.roundToDouble() ? a.round().toString() : a.toStringAsFixed(1);
 }
 
 // =====================================================================
