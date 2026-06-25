@@ -789,26 +789,23 @@ class _HealthCurvePainter extends CustomPainter {
     final points = [
       for (int i = 0; i < values.length; i++) Offset(xAt(i), yAt(values[i])),
     ];
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-    if (points.length == 1) {
-      path.lineTo(points.first.dx, points.first.dy);
-    } else {
-      for (int i = 0; i < points.length - 1; i++) {
-        final p0 = points[i];
-        final p1 = points[i + 1];
-        final mid = Offset((p0.dx + p1.dx) / 2, (p0.dy + p1.dy) / 2);
-        path.quadraticBezierTo(p0.dx, p0.dy, mid.dx, mid.dy);
+    // Tracé lissé d'une liste de points (béziers via les milieux).
+    Path smooth(List<Offset> pts) {
+      final p = Path()..moveTo(pts.first.dx, pts.first.dy);
+      if (pts.length == 1) {
+        p.lineTo(pts.first.dx, pts.first.dy);
+        return p;
       }
-      path.lineTo(points.last.dx, points.last.dy);
+      for (int i = 0; i < pts.length - 1; i++) {
+        final p0 = pts[i];
+        final p1 = pts[i + 1];
+        final mid = Offset((p0.dx + p1.dx) / 2, (p0.dy + p1.dy) / 2);
+        p.quadraticBezierTo(p0.dx, p0.dy, mid.dx, mid.dy);
+      }
+      p.lineTo(pts.last.dx, pts.last.dy);
+      return p;
     }
 
-    final metric = path.computeMetrics().fold<Path>(
-      Path(),
-      (acc, m) => acc..addPath(m.extractPath(0, m.length * progress), Offset.zero),
-    );
-
-    // Gradient FIXE (Revolut) pour le tracé et l'aire — indépendant de la
-    // valeur, donc stable pendant le scrub.
     final rect = Offset.zero & size;
     final lineShader = const LinearGradient(
       begin: Alignment.centerLeft,
@@ -824,50 +821,72 @@ class _HealthCurvePainter extends CustomPainter {
       ],
     ).createShader(rect);
 
-    final lastDrawn = _pointAt(path, progress);
-    if (lastDrawn != null) {
-      final fill = Path.from(metric)
-        ..lineTo(lastDrawn.dx, size.height)
-        ..lineTo(points.first.dx, size.height)
+    Paint accentStroke() => Paint()
+      ..shader = lineShader
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    void drawFillUnder(Path linePath, double firstX, double lastX) {
+      final f = Path.from(linePath)
+        ..lineTo(lastX, size.height)
+        ..lineTo(firstX, size.height)
         ..close();
       canvas.drawPath(
-        fill,
+        f,
         Paint()
           ..shader = fillShader
           ..style = PaintingStyle.fill,
       );
     }
 
-    canvas.drawPath(
-      metric,
-      Paint()
-        ..shader = lineShader
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-
-    if (lastDrawn != null) {
-      canvas.drawCircle(lastDrawn, 5, Paint()..color = Colors.white);
-      canvas.drawCircle(
-        lastDrawn,
-        5,
-        Paint()
-          ..color = _dotColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5,
+    // Entrée animée : fraction [progress] du tracé complet.
+    if (progress < 0.999) {
+      final full = smooth(points);
+      final metric = full.computeMetrics().fold<Path>(
+        Path(),
+        (acc, m) =>
+            acc..addPath(m.extractPath(0, m.length * progress), Offset.zero),
       );
+      final lastDrawn = _pointAt(full, progress);
+      if (lastDrawn != null) drawFillUnder(metric, points.first.dx, lastDrawn.dx);
+      canvas.drawPath(metric, accentStroke());
+      return;
     }
 
-    // Marqueur de scrub : ligne verticale + point sur le jour sélectionné.
+    // Scrub façon « cours de bourse » Revolut : avant le doigt en couleur,
+    // après grisé, ligne verticale pointillée + point lumineux.
     final sel = selected;
-    if (sel != null && sel >= 0 && sel < points.length && progress >= 0.999) {
+    if (sel != null && sel >= 0 && sel < points.length && points.length >= 2) {
+      final before = points.sublist(0, sel + 1);
+      final after = points.sublist(sel);
+      final beforePath = smooth(before);
+      drawFillUnder(beforePath, before.first.dx, before.last.dx);
+      canvas.drawPath(beforePath, accentStroke());
+      if (after.length >= 2) {
+        canvas.drawPath(
+          smooth(after),
+          Paint()
+            ..color = JauneColors.inkSoft.withValues(alpha: 0.22)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round,
+        );
+      }
       final p = points[sel];
-      final line = Paint()
-        ..color = JauneColors.ink.withValues(alpha: 0.18)
+      final dash = Paint()
+        ..color = _dotColor.withValues(alpha: 0.5)
         ..strokeWidth = 1.5;
-      canvas.drawLine(Offset(p.dx, 0), Offset(p.dx, size.height), line);
+      for (double y = 0; y < size.height; y += 8) {
+        canvas.drawLine(
+          Offset(p.dx, y),
+          Offset(p.dx, math.min(y + 4, size.height)),
+          dash,
+        );
+      }
+      canvas.drawCircle(p, 12, Paint()..color = _dotColor.withValues(alpha: 0.18));
       canvas.drawCircle(p, 6, Paint()..color = Colors.white);
       canvas.drawCircle(
         p,
@@ -877,7 +896,23 @@ class _HealthCurvePainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3,
       );
+      return;
     }
+
+    // Repos : tracé complet + aire + point final.
+    final full = smooth(points);
+    drawFillUnder(full, points.first.dx, points.last.dx);
+    canvas.drawPath(full, accentStroke());
+    final last = points.last;
+    canvas.drawCircle(last, 5, Paint()..color = Colors.white);
+    canvas.drawCircle(
+      last,
+      5,
+      Paint()
+        ..color = _dotColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5,
+    );
   }
 
   Offset? _pointAt(Path path, double t) {

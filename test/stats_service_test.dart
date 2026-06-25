@@ -205,6 +205,41 @@ void main() {
     });
   });
 
+  group('hourCounts', () {
+    test('répartit les verres par heure sur la plage', () {
+      final times = [
+        DateTime(2026, 6, 10, 21, 30),
+        DateTime(2026, 6, 10, 21, 45),
+        DateTime(2026, 6, 11, 9, 0),
+        DateTime(2026, 6, 1, 23, 0), // hors plage
+      ];
+      final h = StatsService.hourCounts(
+        times,
+        DateTime(2026, 6, 8),
+        DateTime(2026, 6, 11),
+      );
+      expect(h.length, 24);
+      expect(h[21], 2);
+      expect(h[9], 1);
+      expect(h[23], 0); // le 1er juin est hors plage
+    });
+  });
+
+  group('periodBars all', () {
+    test('historique court (<= 1 mois) : granularité jour', () {
+      final map = mapOf({DateTime(2026, 6, 9): 3});
+      final r = StatsService.periodBars(
+        map,
+        StatsPeriod.all,
+        today,
+        '2026-06-08',
+      );
+      expect(r.gran, StatGranularity.day);
+      expect(r.bars.length, 4); // 8, 9, 10, 11
+      expect(r.bars[1].value, 3); // le 9
+    });
+  });
+
   group('computeInsight', () {
     test('met en avant le record de série en cours', () {
       // Première utilisation = aujourd'hui → aucun jour clos, donc le record

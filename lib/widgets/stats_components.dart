@@ -933,14 +933,17 @@ class WeekdayChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxV = averages.fold<double>(0.001, (m, v) => v > m ? v : m);
+    final maxV = averages.fold<double>(0.0, (m, v) => v > m ? v : m);
+    final hasData = maxV > 0;
     int worst = 0;
     for (int i = 1; i < averages.length; i++) {
       if (averages[i] > averages[worst]) worst = i;
     }
-    const chartH = 90.0;
+
+    // Zone de barre en Expanded : valeur + label à hauteur fixe → jamais
+    // d'overflow, quelle que soit la moyenne.
     return SizedBox(
-      height: chartH + 22,
+      height: 112,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -949,22 +952,30 @@ class WeekdayChart extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(
-                        begin: 0,
-                        end: averages[i] <= 0 ? 3 : chartH * averages[i] / maxV,
-                      ),
-                      duration: JauneMotion.emphasized,
-                      curve: JauneMotion.smooth,
-                      builder: (context, h, _) => Container(
-                        height: h,
-                        decoration: BoxDecoration(
-                          color: i == worst && averages[i] > 0
-                              ? JauneColors.flame
-                              : JauneColors.lemonDeep.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(6),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(
+                            begin: 0,
+                            end: hasData ? (averages[i] / maxV) : 0.0,
+                          ),
+                          duration: JauneMotion.emphasized,
+                          curve: JauneMotion.smooth,
+                          builder: (context, f, _) => FractionallySizedBox(
+                            heightFactor: averages[i] <= 0 ? null : f.clamp(0.03, 1.0),
+                            widthFactor: 1,
+                            child: Container(
+                              height: averages[i] <= 0 ? 3 : null,
+                              decoration: BoxDecoration(
+                                color: hasData && i == worst
+                                    ? JauneColors.flame
+                                    : JauneColors.lemonDeep.withValues(alpha: 0.55),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -973,8 +984,11 @@ class WeekdayChart extends StatelessWidget {
                       labels.length > i ? labels[i] : '',
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: i == worst ? FontWeight.w900 : FontWeight.w700,
-                        color: i == worst ? JauneColors.flame : Colors.grey.shade600,
+                        fontWeight:
+                            hasData && i == worst ? FontWeight.w900 : FontWeight.w700,
+                        color: hasData && i == worst
+                            ? JauneColors.flame
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
