@@ -46,6 +46,18 @@ abstract class JauneColors {
     'engagement' => const Color(0xFFAF52DE),
     _ => const Color(0xFFFF9F0A),
   };
+
+  /// Or du chapitre « Légende » (niv. 31+) — 4e couleur de chapitre.
+  static const chapterLegend = Color(0xFFFFB300);
+
+  /// Couleur du chapitre d'un niveau donné — source unique pour le parcours.
+  /// Aligne les 4 chapitres sur les 4 rangs (cf. rankTitle).
+  static Color chapterColor(int level) {
+    if (level <= 5) return phaseColor('discovery');
+    if (level <= 15) return phaseColor('engagement');
+    if (level <= 30) return phaseColor('mastery');
+    return chapterLegend;
+  }
 }
 
 /// Durées et courbes standardisées — un seul langage de mouvement.

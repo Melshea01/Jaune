@@ -605,12 +605,14 @@ class _HealthCurveState extends State<_HealthCurve> {
   Widget build(BuildContext context) {
     final values = widget.values;
     final int shownIndex = _selected ?? (values.length - 1);
-    // Le gros chiffre PV reste TOUJOURS la valeur actuelle (dernier point) :
-    // on ne réaffiche pas les PV en déplaçant le doigt.
-    final double current = values.isNotEmpty ? values.last : 100.0;
-    final List<Color> pill = JauneColors.healthGradient(current / 100.0);
+    // Le gros chiffre PV suit le doigt pendant le scrub ; au repos = PV actuel.
+    final double shown = values.isEmpty
+        ? 100.0
+        : values[shownIndex.clamp(0, values.length - 1)];
+    final List<Color> pill = JauneColors.healthGradient(shown / 100.0);
+    final bool scrubbing = _selected != null;
 
-    // Date du point survolé (pour la bulle de scrub uniquement).
+    // Date du point survolé.
     String dateLabel = '';
     if (values.isNotEmpty) {
       final daysFromEnd = (values.length - 1) - shownIndex;
@@ -624,11 +626,10 @@ class _HealthCurveState extends State<_HealthCurve> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              '${current.round()}',
+              '${shown.round()}',
               style: TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.w900,
@@ -637,7 +638,7 @@ class _HealthCurveState extends State<_HealthCurve> {
             ),
             const SizedBox(width: 3),
             Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.only(top: 8),
               child: Text(
                 widget.hpUnit,
                 style: const TextStyle(
@@ -647,18 +648,30 @@ class _HealthCurveState extends State<_HealthCurve> {
                 ),
               ),
             ),
+            const Spacer(),
+            // Pendant le scrub : la date à droite (le PV, lui, est déjà à gauche).
+            if (scrubbing)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: JauneColors.ink,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  dateLabel,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 6),
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final len = values.length;
-            final bubbleX = len < 2
-                ? 0.0
-                : ((shownIndex / (len - 1)) * width - 36)
-                    .clamp(0.0, math.max(0.0, width - 72))
-                    .toDouble();
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTapDown: (d) => _updateFromX(d.localPosition.dx, width),
@@ -672,61 +685,23 @@ class _HealthCurveState extends State<_HealthCurve> {
               child: SizedBox(
                 height: _chartH,
                 width: double.infinity,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: 1),
-                        duration: JauneMotion.emphasized,
-                        curve: JauneMotion.smooth,
-                        builder: (context, progress, _) => CustomPaint(
-                          painter: _HealthCurvePainter(
-                            values: values,
-                            progress: progress,
-                            selected: _selected,
-                          ),
-                        ),
-                      ),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: JauneMotion.emphasized,
+                  curve: JauneMotion.smooth,
+                  builder: (context, progress, _) => CustomPaint(
+                    painter: _HealthCurvePainter(
+                      values: values,
+                      progress: progress,
+                      selected: _selected,
                     ),
-                    // Bulle de date qui suit le doigt (sans réafficher les PV).
-                    if (_selected != null && len >= 2)
-                      Positioned(
-                        top: 0,
-                        left: bubbleX,
-                        child: _scrubBubble(dateLabel),
-                      ),
-                  ],
+                  ),
                 ),
               ),
             );
           },
         ),
       ],
-    );
-  }
-
-  Widget _scrubBubble(String date) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: JauneColors.ink,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            offset: const Offset(0, 3),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Text(
-        date,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          color: Colors.white,
-        ),
-      ),
     );
   }
 }

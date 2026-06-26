@@ -86,6 +86,50 @@ class AppLocalizationsFr extends AppLocalizations {
   String get xpReasonPerfectWeek => 'Semaine parfaite';
 
   @override
+  String get xpReasonQuestComplete => 'Quête accomplie';
+
+  @override
+  String get dailyQuestsTitle => '🎯 Quêtes du jour';
+
+  @override
+  String get questOpenAppTitle => 'Passer dire bonjour au citron';
+
+  @override
+  String get questLogTodayTitle => 'Noter sa journée';
+
+  @override
+  String get questSoberTodayTitle => 'Une journée sans alcool';
+
+  @override
+  String get questUnderTwoTitle => 'Rester sous 2 verres';
+
+  @override
+  String get questKeepStreakTitle => 'Garder sa série en vie';
+
+  @override
+  String get weeklyGoalTitle => 'Objectif de la semaine';
+
+  @override
+  String weeklyGoalProgress(int sober, int target) {
+    return '$sober / $target jours sobres';
+  }
+
+  @override
+  String get streakShieldProtected => '🛡️ Série protégée';
+
+  @override
+  String streakShieldsAvailable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count boucliers',
+      one: '1 bouclier',
+      zero: 'Aucun bouclier',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String soberStreakInARow(int days) {
     String _temp0 = intl.Intl.pluralLogic(
       days,
@@ -146,6 +190,22 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get andThen => 'Et ensuite…';
+
+  @override
+  String get levelJourneyTitle => '🗺️ Ton parcours';
+
+  @override
+  String get levelYouAreHere => 'Tu es ici';
+
+  @override
+  String chapterTitle(int n) {
+    return 'Chapitre $n';
+  }
+
+  @override
+  String levelLockedShort(int level) {
+    return 'Niv. $level';
+  }
 
   @override
   String levelUpTitle(int level) {

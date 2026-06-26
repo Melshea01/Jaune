@@ -218,6 +218,72 @@ abstract class AppLocalizations {
   /// **'Semaine parfaite'**
   String get xpReasonPerfectWeek;
 
+  /// No description provided for @xpReasonQuestComplete.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quête accomplie'**
+  String get xpReasonQuestComplete;
+
+  /// No description provided for @dailyQuestsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'🎯 Quêtes du jour'**
+  String get dailyQuestsTitle;
+
+  /// No description provided for @questOpenAppTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passer dire bonjour au citron'**
+  String get questOpenAppTitle;
+
+  /// No description provided for @questLogTodayTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Noter sa journée'**
+  String get questLogTodayTitle;
+
+  /// No description provided for @questSoberTodayTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une journée sans alcool'**
+  String get questSoberTodayTitle;
+
+  /// No description provided for @questUnderTwoTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rester sous 2 verres'**
+  String get questUnderTwoTitle;
+
+  /// No description provided for @questKeepStreakTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garder sa série en vie'**
+  String get questKeepStreakTitle;
+
+  /// No description provided for @weeklyGoalTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Objectif de la semaine'**
+  String get weeklyGoalTitle;
+
+  /// No description provided for @weeklyGoalProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'{sober} / {target} jours sobres'**
+  String weeklyGoalProgress(int sober, int target);
+
+  /// No description provided for @streakShieldProtected.
+  ///
+  /// In fr, this message translates to:
+  /// **'🛡️ Série protégée'**
+  String get streakShieldProtected;
+
+  /// No description provided for @streakShieldsAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun bouclier} =1{1 bouclier} other{{count} boucliers}}'**
+  String streakShieldsAvailable(int count);
+
   /// No description provided for @soberStreakInARow.
   ///
   /// In fr, this message translates to:
@@ -313,6 +379,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Et ensuite…'**
   String get andThen;
+
+  /// No description provided for @levelJourneyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'🗺️ Ton parcours'**
+  String get levelJourneyTitle;
+
+  /// No description provided for @levelYouAreHere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu es ici'**
+  String get levelYouAreHere;
+
+  /// No description provided for @chapterTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chapitre {n}'**
+  String chapterTitle(int n);
+
+  /// No description provided for @levelLockedShort.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niv. {level}'**
+  String levelLockedShort(int level);
 
   /// No description provided for @levelUpTitle.
   ///

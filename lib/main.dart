@@ -342,10 +342,12 @@ class _MyHomePageState extends State<MyHomePage>
       // Programmer la notification BeReal du jour si pas encore envoyée
       await _scheduleDailyNotification();
 
-      // À l'ouverture de l'app — attribuer +3 XP
-      final xpResult = await _characterService.awardAppOpenXp();
-      if (xpResult.xpEvent != null) {
-        _showXpToast(xpResult.xpEvent!);
+      // À l'ouverture de l'app — attribuer +3 XP (+ quêtes du jour)
+      final xpResult = await _characterService.awardAppOpenXp(
+        _storageService.dailyMap,
+      );
+      for (final event in xpResult.xpEvents) {
+        _showXpToast(event);
       }
       if (xpResult.newLevels.isNotEmpty) {
         _showLevelUpCelebration(xpResult.newLevels, xpResult.newUnlocks);
@@ -703,7 +705,11 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   void _showLevelDialog() {
-    LevelSheet.show(context, _characterService);
+    LevelSheet.show(
+      context,
+      _characterService,
+      dailyMap: _storageService.dailyMap,
+    );
   }
 
   void _showStatsSheet() {

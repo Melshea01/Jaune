@@ -14,26 +14,217 @@ import 'draggable_sheet.dart';
 import 'pressable.dart';
 import 'share_card.dart';
 
-/// Bottom sheet de progression : niveau, rang, phase, XP, streak,
-/// déblocables acquis et prochains défis.
-/// Remplace l'ancien CupertinoAlertDialog surchargé.
+/// Bottom sheet de progression repensé en **parcours** : un chemin vertical de
+/// nœuds (un par niveau) que le citron grimpe. Chaque chapitre est une section
+/// colorée ; les nœuds-jalons portent un déblocable (anticipation). S'ouvre
+/// directement sur le niveau courant (auto-scroll).
 class LevelSheet {
-  static void show(BuildContext context, CharacterService service) {
+  static void show(
+    BuildContext context,
+    CharacterService service, {
+    Map<String, int>? dailyMap,
+  }) {
     HapticFeedback.selectionClick();
     AudioService.instance.playUiPop();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _LevelSheetContent(service: service),
+      builder: (_) =>
+          _LevelSheetContent(service: service, dailyMap: dailyMap),
     );
   }
 }
 
-class _LevelSheetContent extends StatelessWidget {
-  final CharacterService service;
+// --- Description d'un chapitre du parcours -----------------------------------
 
-  const _LevelSheetContent({required this.service});
+class _Chapter {
+  final int index; // 1..4
+  final int from;
+  final int? to; // null = ouvert (Légende)
+  const _Chapter(this.index, this.from, this.to);
+}
+
+const List<_Chapter> _kChapters = [
+  _Chapter(1, 1, 5),
+  _Chapter(2, 6, 15),
+  _Chapter(3, 16, 30),
+  _Chapter(4, 31, null),
+];
+
+enum _NodeState { acquired, current, locked }
+
+class _LevelSheetContent extends StatefulWidget {
+  final CharacterService service;
+  final Map<String, int>? dailyMap;
+
+  const _LevelSheetContent({required this.service, this.dailyMap});
+
+  @override
+  State<_LevelSheetContent> createState() => _LevelSheetContentState();
+}
+
+class _LevelSheetContentState extends State<_LevelSheetContent> {
+  final GlobalKey _currentNodeKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // Ouvre le parcours centré sur la position actuelle.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _currentNodeKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          alignment: 0.5,
+          duration: JauneMotion.standard,
+          curve: JauneMotion.smooth,
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final service = widget.service;
+    final level = service.level;
+    final streak = service.soberStreakDays;
+
+    final quests = service.dailyQuests();
+
+    return DraggableSheet(
+      children: [
+        _Header(service: service),
+
+        if (widget.dailyMap != null) ...[
+          const SizedBox(height: 16),
+          _WeeklyGoalCard(service: service, dailyMap: widget.dailyMap!),
+        ],
+
+        if (streak > 0) ...[
+          const SizedBox(height: 14),
+          _StreakCard(service: service),
+        ],
+
+        const SizedBox(height: 24),
+        _SectionTitle(l10n.dailyQuestsTitle),
+        const SizedBox(height: 12),
+        ...quests.map((q) => _QuestRow(status: q)),
+
+        const SizedBox(height: 26),
+        _SectionTitle(l10n.levelJourneyTitle),
+        const SizedBox(height: 14),
+        ..._buildJourney(context, level),
+
+        const SizedBox(height: 22),
+        PressableScale(
+          semanticLabel: l10n.badgeGalleryViewAll,
+          onTap: () => BadgeGallerySheet.show(context, service),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: JauneColors.lemon.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(JauneRadii.card),
+              border: Border.all(
+                color: JauneColors.lemonDeep.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('🏅', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.badgeGalleryViewAll,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: JauneColors.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Construit le parcours de haut (niveaux verrouillés à venir) en bas
+  /// (niveau 1). Les chapitres sont rendus du plus élevé au plus bas.
+  List<Widget> _buildJourney(BuildContext context, int level) {
+    final l10n = AppLocalizations.of(context);
+    final service = widget.service;
+    final progress = service.levelProgress;
+    final unlockByLevel = {for (final u in kLevelUnlocks) u.level: u};
+
+    // On rend jusqu'à un peu au-delà du niveau courant pour donner à voir.
+    final int renderMax = math.max(31, level + 4);
+
+    final List<Widget> widgets = [];
+
+    for (final chapter in _kChapters.reversed) {
+      final int top = chapter.to == null ? renderMax : chapter.to!;
+      if (chapter.from > renderMax) continue;
+      final int chapterTop = math.min(top, renderMax);
+
+      // Bannière du chapitre.
+      widgets.add(
+        _ChapterBanner(
+          index: chapter.index,
+          name: l10n_helpers.rankTitle(l10n, chapter.from),
+          color: JauneColors.chapterColor(chapter.from),
+        ),
+      );
+
+      for (int lvl = chapterTop; lvl >= chapter.from; lvl--) {
+        final _NodeState state = lvl < level
+            ? _NodeState.acquired
+            : (lvl == level ? _NodeState.current : _NodeState.locked);
+        final unlock = unlockByLevel[lvl];
+        final bool isChapterTop = lvl == chapterTop;
+        final bool isChapterBottom = lvl == chapter.from;
+
+        widgets.add(
+          _LevelNode(
+            key: lvl == level ? _currentNodeKey : null,
+            level: lvl,
+            state: state,
+            unlock: unlock,
+            color: JauneColors.chapterColor(lvl),
+            currentLevel: level,
+            progress: progress,
+            xp: service.profile.xp,
+            xpToNext: service.xpToNextLevel,
+            equippedSkin: service.profile.equippedSkin,
+            hasLineAbove: !isChapterTop,
+            hasLineBelow: !isChapterBottom,
+            onTapBadge: (state == _NodeState.acquired &&
+                    unlock != null &&
+                    unlock.type == UnlockType.badge)
+                ? () => ShareCard.shareStreak(
+                      context,
+                      days: service.soberStreakDays,
+                      skin: service.profile.equippedSkin,
+                    )
+                : null,
+          ),
+        );
+      }
+    }
+
+    return widgets;
+  }
+}
+
+// --- En-tête : niveau, rang, chapitre, stats multi-axes ----------------------
+
+class _Header extends StatelessWidget {
+  final CharacterService service;
+  const _Header({required this.service});
 
   @override
   Widget build(BuildContext context) {
@@ -43,8 +234,8 @@ class _LevelSheetContent extends StatelessWidget {
     final xp = service.profile.xp;
     final xpToNext = service.xpToNextLevel;
     final progress = service.levelProgress;
-    final unlocks = service.acquiredUnlocks;
-    final streak = service.soberStreakDays;
+    final color = JauneColors.chapterColor(level);
+    final rankTitle = l10n_helpers.rankTitle(l10n, level);
 
     final phaseLevels = switch (phase) {
       'discovery' => 5,
@@ -52,326 +243,101 @@ class _LevelSheetContent extends StatelessWidget {
       _ => 20,
     };
     final levelInPhase = (level - 1) % phaseLevels + 1;
-
     final phaseLabel = l10n_helpers.phaseLabel(l10n, phase);
-    final phaseColor = JauneColors.phaseColor(phase);
 
-    final rankTitle = l10n_helpers.rankTitle(l10n, level);
+    final unlocks = service.acquiredUnlocks;
+    final badges =
+        unlocks.where((u) => u.type == UnlockType.badge).length;
+    final skins =
+        unlocks.where((u) => u.type == UnlockType.citronState).length;
 
-    final currentLevelUnlocks = unlocks.where((u) => u.level == level).toList();
-    final nextUnlocks =
-        kLevelUnlocks.where((u) => u.level > level).take(3).toList();
-    final nextUnlock = nextUnlocks.isNotEmpty ? nextUnlocks.first : null;
-    final xpToNextKeyUnlock =
-        nextUnlock != null ? ((nextUnlock.level - level) * xpToNext) - xp : 0;
-
-    return DraggableSheet(
+    return Row(
       children: [
-                    // --- En-tête : ring + rang ---
-                    Row(
-                      children: [
-                        _ProgressRing(
-                          progress: progress,
-                          color: phaseColor,
-                          level: level,
-                        ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                rankTitle,
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  color: JauneColors.ink,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              _PhaseChip(
-                                label:
-                                    '$phaseLabel  ·  $levelInPhase/$phaseLevels',
-                                color: phaseColor,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                l10n.xpProgress(xp, xpToNext),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: JauneColors.inkSoft,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // --- Streak ---
-                    if (streak > 0) ...[
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              JauneColors.flameLight.withValues(alpha: 0.15),
-                              JauneColors.flame.withValues(alpha: 0.10),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(JauneRadii.card),
-                          border: Border.all(
-                            color: JauneColors.flame.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Text('🔥', style: TextStyle(fontSize: 26)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    l10n.soberStreakInARow(streak),
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                      color: JauneColors.ink,
-                                    ),
-                                  ),
-                                  Text(
-                                    _streakSubtitle(l10n, streak),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: JauneColors.inkSoft,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Aux paliers, le streak se partage en carte brandée
-                            if (MilestoneScheduler.streakMilestones.contains(
-                              streak,
-                            )) ...[
-                              const SizedBox(width: 8),
-                              PressableScale(
-                                semanticLabel: l10n.shareAction,
-                                onTap:
-                                    () => ShareCard.shareStreak(
-                                      context,
-                                      days: streak,
-                                      skin: service.profile.equippedSkin,
-                                    ),
-                                child: Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                    color: JauneColors.flame.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.ios_share,
-                                    size: 18,
-                                    color: JauneColors.flame,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // --- Déblocables de ce niveau ---
-                    if (currentLevelUnlocks.isNotEmpty) ...[
-                      const SizedBox(height: 24),
-                      _SectionTitle(l10n.unlockedAtThisLevel),
-                      const SizedBox(height: 10),
-                      ...currentLevelUnlocks.map(
-                        (u) => _UnlockRow(unlock: u, accent: phaseColor),
-                      ),
-                    ],
-
-                    // --- Prochain défi (mis en avant) ---
-                    if (nextUnlock != null) ...[
-                      const SizedBox(height: 24),
-                      _SectionTitle(l10n.nextChallenge),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: phaseColor.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(JauneRadii.card),
-                          border: Border.all(color: phaseColor, width: 1.5),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              _unlockIcon(nextUnlock.type),
-                              style: const TextStyle(fontSize: 28),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    l10n_helpers.unlockTitle(l10n, nextUnlock),
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                      color: JauneColors.ink,
-                                    ),
-                                  ),
-                                  Text(
-                                    l10n.levelWithDescription(
-                                      nextUnlock.level,
-                                      l10n_helpers.unlockDescription(
-                                        l10n,
-                                        nextUnlock,
-                                      ),
-                                    ),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: JauneColors.inkSoft,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: phaseColor,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                l10n.xpReward(xpToNextKeyUnlock),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // --- Toute la collection ---
-                    const SizedBox(height: 20),
-                    PressableScale(
-                      semanticLabel: l10n.badgeGalleryViewAll,
-                      onTap: () => BadgeGallerySheet.show(context, service),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: JauneColors.lemon.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(JauneRadii.card),
-                          border: Border.all(
-                            color: JauneColors.lemonDeep.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('🏅', style: TextStyle(fontSize: 16)),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.badgeGalleryViewAll,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: JauneColors.ink,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // --- Autres déblocables à venir ---
-                    if (nextUnlocks.length > 1) ...[
-                      const SizedBox(height: 24),
-                      _SectionTitle(l10n.andThen),
-                      const SizedBox(height: 10),
-                      ...nextUnlocks
-                          .skip(1)
-                          .map(
-                            (u) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 38,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      '${u.level}',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    _unlockIcon(u.type),
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      l10n_helpers.unlockTitle(l10n, u),
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: JauneColors.inkSoft,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                    ],
+        _ProgressRing(progress: progress, color: color, level: level),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                rankTitle,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: JauneColors.ink,
+                ),
+              ),
+              const SizedBox(height: 6),
+              _PhaseChip(
+                label: '$phaseLabel  ·  $levelInPhase/$phaseLevels',
+                color: color,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _StatPill(emoji: '🔥', value: '${service.soberStreakDays}'),
+                  _StatPill(emoji: '🛡️', value: '${service.streakShields}'),
+                  _StatPill(emoji: '🏅', value: '$badges'),
+                  _StatPill(emoji: '🎨', value: '$skins'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.xpProgress(xp, xpToNext),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: JauneColors.inkSoft,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
+}
 
-  static String _unlockIcon(UnlockType type) => switch (type) {
-    UnlockType.citronState => '🎨',
-    UnlockType.feature => '⭐',
-    UnlockType.badge => '🏅',
-    UnlockType.message => '💬',
-  };
+class _StatPill extends StatelessWidget {
+  final String emoji;
+  final String value;
+  const _StatPill({required this.emoji, required this.value});
 
-  /// Sous-titre de la carte streak : compte à rebours vers le prochain
-  /// palier {3, 7, 30, 100}, sinon l'encouragement générique
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 12)),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: JauneColors.ink,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Carte streak (loss aversion) --------------------------------------------
+
+class _StreakCard extends StatelessWidget {
+  final CharacterService service;
+  const _StreakCard({required this.service});
+
   static String _streakSubtitle(AppLocalizations l10n, int streak) {
     for (final target in MilestoneScheduler.streakMilestones) {
       if (streak < target) {
@@ -380,7 +346,606 @@ class _LevelSheetContent extends StatelessWidget {
     }
     return l10n.streakKeepGoing;
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final streak = service.soberStreakDays;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            JauneColors.flameLight.withValues(alpha: 0.15),
+            JauneColors.flame.withValues(alpha: 0.10),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(JauneRadii.card),
+        border: Border.all(color: JauneColors.flame.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Text('🔥', style: TextStyle(fontSize: 26)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.soberStreakInARow(streak),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: JauneColors.ink,
+                  ),
+                ),
+                Text(
+                  _streakSubtitle(l10n, streak),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: JauneColors.inkSoft,
+                  ),
+                ),
+                if (service.streakShields > 0) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.streakShieldProtected,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: JauneColors.skyDeep,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (MilestoneScheduler.streakMilestones.contains(streak)) ...[
+            const SizedBox(width: 8),
+            PressableScale(
+              semanticLabel: l10n.shareAction,
+              onTap: () => ShareCard.shareStreak(
+                context,
+                days: streak,
+                skin: service.profile.equippedSkin,
+              ),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: JauneColors.flame.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.ios_share,
+                  size: 18,
+                  color: JauneColors.flame,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
+
+// --- Objectif hebdomadaire (anneau) ------------------------------------------
+
+class _WeeklyGoalCard extends StatelessWidget {
+  final CharacterService service;
+  final Map<String, int> dailyMap;
+
+  const _WeeklyGoalCard({required this.service, required this.dailyMap});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final goal = service.weeklyGoal(dailyMap);
+    const color = JauneColors.skyDeep;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(JauneRadii.card),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 46,
+            height: 46,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: const Size(46, 46),
+                  painter: _RingPainter(progress: goal.progress, color: color),
+                ),
+                Text(
+                  '${goal.soberDays}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.weeklyGoalTitle,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: JauneColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.weeklyGoalProgress(goal.soberDays, goal.target),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: JauneColors.inkSoft,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (goal.progress >= 1.0)
+            const Text('✅', style: TextStyle(fontSize: 22)),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Quête du jour -----------------------------------------------------------
+
+class _QuestRow extends StatelessWidget {
+  final QuestStatus status;
+  const _QuestRow({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final done = status.completed;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: done
+              ? JauneColors.lemon.withValues(alpha: 0.14)
+              : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(JauneRadii.card),
+          border: Border.all(
+            color: done
+                ? JauneColors.lemonDeep.withValues(alpha: 0.4)
+                : Colors.grey.shade200,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              done ? Icons.check_circle : Icons.radio_button_unchecked,
+              size: 22,
+              color: done ? JauneColors.lemonDeep : Colors.grey.shade400,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                l10n_helpers.questTitle(l10n, status.quest),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: done ? JauneColors.ink : JauneColors.inkSoft,
+                  decoration: done ? TextDecoration.lineThrough : null,
+                  decorationColor: JauneColors.inkSoft,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: done
+                    ? JauneColors.lemonDeep.withValues(alpha: 0.18)
+                    : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                l10n.xpReward(status.quest.xpReward),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: done ? JauneColors.lemonDeep : Colors.grey.shade500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- Bannière de chapitre ----------------------------------------------------
+
+class _ChapterBanner extends StatelessWidget {
+  final int index;
+  final String name;
+  final Color color;
+
+  const _ChapterBanner({
+    required this.index,
+    required this.name,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.chapterTitle(index),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: JauneColors.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Container(
+              height: 1.5,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withValues(alpha: 0.35), Colors.transparent],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Nœud de niveau ----------------------------------------------------------
+
+class _LevelNode extends StatelessWidget {
+  final int level;
+  final _NodeState state;
+  final LevelUnlock? unlock;
+  final Color color;
+  final int currentLevel;
+  final double progress;
+  final int xp;
+  final int xpToNext;
+  final String equippedSkin;
+  final bool hasLineAbove;
+  final bool hasLineBelow;
+  final VoidCallback? onTapBadge;
+
+  const _LevelNode({
+    super.key,
+    required this.level,
+    required this.state,
+    required this.unlock,
+    required this.color,
+    required this.currentLevel,
+    required this.progress,
+    required this.xp,
+    required this.xpToNext,
+    required this.equippedSkin,
+    required this.hasLineAbove,
+    required this.hasLineBelow,
+    this.onTapBadge,
+  });
+
+  bool get _isMilestone => unlock != null;
+
+  double get _rowHeight {
+    if (state == _NodeState.current) return 96;
+    return _isMilestone ? 82 : 60;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Un demi-segment est « rempli » s'il relie deux nœuds acquis.
+    final bool topFilled = level < currentLevel; // relie level+1
+    final bool bottomFilled = level <= currentLevel; // relie level-1
+
+    final Widget row = SizedBox(
+      height: _rowHeight,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 64,
+            height: _rowHeight,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: Size(64, _rowHeight),
+                  painter: _SpinePainter(
+                    color: color,
+                    topFilled: hasLineAbove && topFilled,
+                    bottomFilled: hasLineBelow && bottomFilled,
+                    topExists: hasLineAbove,
+                    bottomExists: hasLineBelow,
+                  ),
+                ),
+                _circle(context),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: _sideContent(context)),
+        ],
+      ),
+    );
+
+    if (onTapBadge != null) {
+      return PressableScale(
+        semanticLabel: 'badge',
+        onTap: onTapBadge!,
+        child: row,
+      );
+    }
+    return row;
+  }
+
+  Widget _circle(BuildContext context) {
+    if (state == _NodeState.current) {
+      return SizedBox(
+        width: 62,
+        height: 62,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            CustomPaint(
+              size: const Size(62, 62),
+              painter: _RingPainter(progress: progress, color: color),
+            ),
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withValues(alpha: 0.14),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.35),
+                    blurRadius: 12,
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '$level',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                ),
+              ),
+            ),
+            // Le citron grimpe : posé sur le nœud courant.
+            const Positioned(
+              top: -2,
+              right: -2,
+              child: Text('🍋', style: TextStyle(fontSize: 18)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final bool acquired = state == _NodeState.acquired;
+    final double size = _isMilestone ? 50 : (acquired ? 26 : 22);
+
+    if (_isMilestone) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: acquired
+              ? color.withValues(alpha: 0.16)
+              : Colors.grey.shade100,
+          border: Border.all(
+            color: acquired ? color : Colors.grey.shade300,
+            width: 2,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: acquired
+            ? Text(
+                _unlockIcon(unlock!.type),
+                style: const TextStyle(fontSize: 22),
+              )
+            : Icon(Icons.lock, size: 18, color: Colors.grey.shade400),
+      );
+    }
+
+    // Nœud simple.
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: acquired ? color : Colors.grey.shade300,
+      ),
+      alignment: Alignment.center,
+      child: acquired
+          ? const Icon(Icons.check, size: 14, color: Colors.white)
+          : Text(
+              '$level',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: Colors.grey.shade500,
+              ),
+            ),
+    );
+  }
+
+  Widget _sideContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    if (state == _NodeState.current) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              l10n.levelYouAreHere,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.xpProgress(xp, xpToNext),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: JauneColors.inkSoft,
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (!_isMilestone) return const SizedBox.shrink();
+
+    final bool acquired = state == _NodeState.acquired;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          l10n_helpers.unlockTitle(l10n, unlock!),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: acquired ? JauneColors.ink : Colors.grey.shade500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          acquired
+              ? l10n_helpers.unlockDescription(l10n, unlock!)
+              : l10n.levelLockedShort(unlock!.level),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: acquired ? JauneColors.inkSoft : Colors.grey.shade400,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _unlockIcon(UnlockType type) => switch (type) {
+        UnlockType.citronState => '🎨',
+        UnlockType.feature => '⭐',
+        UnlockType.badge => '🏅',
+        UnlockType.message => '💬',
+      };
+}
+
+/// Peint les deux demi-segments verticaux du chemin (au-dessus / au-dessous du
+/// noeud). Rempli = couleur du chapitre, sinon gris.
+class _SpinePainter extends CustomPainter {
+  final Color color;
+  final bool topFilled;
+  final bool bottomFilled;
+  final bool topExists;
+  final bool bottomExists;
+
+  _SpinePainter({
+    required this.color,
+    required this.topFilled,
+    required this.bottomFilled,
+    required this.topExists,
+    required this.bottomExists,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const double w = 4;
+    final double cx = size.width / 2;
+    final double cy = size.height / 2;
+
+    Paint p(bool filled) => Paint()
+      ..color = filled ? color : Colors.grey.shade200
+      ..strokeWidth = w
+      ..strokeCap = StrokeCap.round;
+
+    if (topExists) {
+      canvas.drawLine(Offset(cx, 0), Offset(cx, cy), p(topFilled));
+    }
+    if (bottomExists) {
+      canvas.drawLine(Offset(cx, cy), Offset(cx, size.height), p(bottomFilled));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SpinePainter old) =>
+      old.color != color ||
+      old.topFilled != topFilled ||
+      old.bottomFilled != bottomFilled ||
+      old.topExists != topExists ||
+      old.bottomExists != bottomExists;
+}
+
+// --- Widgets partagés --------------------------------------------------------
 
 class _SectionTitle extends StatelessWidget {
   final String text;
@@ -391,8 +956,8 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w800,
+        fontSize: 15,
+        fontWeight: FontWeight.w900,
         color: JauneColors.ink,
         letterSpacing: 0.2,
       ),
@@ -426,69 +991,8 @@ class _PhaseChip extends StatelessWidget {
   }
 }
 
-class _UnlockRow extends StatelessWidget {
-  final LevelUnlock unlock;
-  final Color accent;
-
-  const _UnlockRow({required this.unlock, required this.accent});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              _LevelSheetContent._unlockIcon(unlock.type),
-              style: const TextStyle(fontSize: 22),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n_helpers.unlockTitle(
-                    AppLocalizations.of(context),
-                    unlock,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: JauneColors.ink,
-                  ),
-                ),
-                Text(
-                  l10n_helpers.unlockDescription(
-                    AppLocalizations.of(context),
-                    unlock,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: JauneColors.inkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Anneau de progression XP avec le niveau au centre.
-/// S'anime de 0 à la valeur courante à l'ouverture du sheet.
+/// Anneau de progression XP avec le niveau au centre. S'anime de 0 à la valeur
+/// courante à l'ouverture.
 class _ProgressRing extends StatelessWidget {
   final double progress;
   final Color color;
@@ -552,30 +1056,28 @@ class _RingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const strokeWidth = 9.0;
+    final strokeWidth = size.width < 70 ? 6.0 : 9.0;
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
 
-    final background =
-        Paint()
-          ..color = Colors.grey.shade200
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = strokeWidth
-          ..strokeCap = StrokeCap.round;
+    final background = Paint()
+      ..color = Colors.grey.shade200
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, radius, background);
 
     if (progress > 0) {
-      final foreground =
-          Paint()
-            ..shader = SweepGradient(
-              startAngle: -math.pi / 2,
-              endAngle: 3 * math.pi / 2,
-              colors: [color.withValues(alpha: 0.7), color],
-              transform: const GradientRotation(-math.pi / 2),
-            ).createShader(Rect.fromCircle(center: center, radius: radius))
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = strokeWidth
-            ..strokeCap = StrokeCap.round;
+      final foreground = Paint()
+        ..shader = SweepGradient(
+          startAngle: -math.pi / 2,
+          endAngle: 3 * math.pi / 2,
+          colors: [color.withValues(alpha: 0.7), color],
+          transform: const GradientRotation(-math.pi / 2),
+        ).createShader(Rect.fromCircle(center: center, radius: radius))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round;
 
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),

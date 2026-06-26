@@ -12,6 +12,16 @@ String xpReasonLabel(AppLocalizations l10n, XpEvent event) =>
       XpReason.greenDay => l10n.xpReasonGreenDay,
       XpReason.soberStreak => l10n.soberStreakInARow(event.value ?? 0),
       XpReason.perfectWeek => l10n.xpReasonPerfectWeek,
+      XpReason.questComplete => l10n.xpReasonQuestComplete,
+    };
+
+String questTitle(AppLocalizations l10n, DailyQuest quest) =>
+    switch (quest.type) {
+      QuestType.openApp => l10n.questOpenAppTitle,
+      QuestType.logToday => l10n.questLogTodayTitle,
+      QuestType.soberToday => l10n.questSoberTodayTitle,
+      QuestType.underTwoToday => l10n.questUnderTwoTitle,
+      QuestType.keepStreak => l10n.questKeepStreakTitle,
     };
 
 String rankTitle(AppLocalizations l10n, int level) => switch (level) {

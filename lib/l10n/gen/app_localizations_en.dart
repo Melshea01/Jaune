@@ -86,6 +86,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get xpReasonPerfectWeek => 'Perfect week';
 
   @override
+  String get xpReasonQuestComplete => 'Quest complete';
+
+  @override
+  String get dailyQuestsTitle => '🎯 Daily quests';
+
+  @override
+  String get questOpenAppTitle => 'Say hi to your lemon';
+
+  @override
+  String get questLogTodayTitle => 'Log your day';
+
+  @override
+  String get questSoberTodayTitle => 'An alcohol-free day';
+
+  @override
+  String get questUnderTwoTitle => 'Stay under 2 drinks';
+
+  @override
+  String get questKeepStreakTitle => 'Keep your streak alive';
+
+  @override
+  String get weeklyGoalTitle => 'This week\'s goal';
+
+  @override
+  String weeklyGoalProgress(int sober, int target) {
+    return '$sober / $target sober days';
+  }
+
+  @override
+  String get streakShieldProtected => '🛡️ Streak protected';
+
+  @override
+  String streakShieldsAvailable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count shields',
+      one: '1 shield',
+      zero: 'No shields',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String soberStreakInARow(int days) {
     String _temp0 = intl.Intl.pluralLogic(
       days,
@@ -146,6 +190,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get andThen => 'And then…';
+
+  @override
+  String get levelJourneyTitle => '🗺️ Your journey';
+
+  @override
+  String get levelYouAreHere => 'You are here';
+
+  @override
+  String chapterTitle(int n) {
+    return 'Chapter $n';
+  }
+
+  @override
+  String levelLockedShort(int level) {
+    return 'Lvl $level';
+  }
 
   @override
   String levelUpTitle(int level) {

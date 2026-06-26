@@ -27,6 +27,17 @@
   "xpReasonSoberYesterday": "Sober yesterday",
   "xpReasonGreenDay": "Green day",
   "xpReasonPerfectWeek": "Perfect week",
+  "xpReasonQuestComplete": "Quest complete",
+  "dailyQuestsTitle": "🎯 Daily quests",
+  "questOpenAppTitle": "Say hi to your lemon",
+  "questLogTodayTitle": "Log your day",
+  "questSoberTodayTitle": "An alcohol-free day",
+  "questUnderTwoTitle": "Stay under 2 drinks",
+  "questKeepStreakTitle": "Keep your streak alive",
+  "weeklyGoalTitle": "This week's goal",
+  "weeklyGoalProgress": "{sober} / {target} sober days",
+  "streakShieldProtected": "🛡️ Streak protected",
+  "streakShieldsAvailable": "{count, plural, =0{No shields} =1{1 shield} other{{count} shields}}",
 
   "soberStreakInARow": "{days, plural, =1{1 sober day in a row} other{{days} sober days in a row}}",
 
@@ -47,6 +58,10 @@
   "levelWithDescription": "Level {level} · {description}",
   "xpReward": "+{xp} XP",
   "andThen": "And then…",
+  "levelJourneyTitle": "🗺️ Your journey",
+  "levelYouAreHere": "You are here",
+  "chapterTitle": "Chapter {n}",
+  "levelLockedShort": "Lvl {level}",
 
   "levelUpTitle": "LEVEL {level}",
   "unlockedBanner": "✨ UNLOCKED ✨",

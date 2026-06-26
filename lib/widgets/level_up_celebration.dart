@@ -179,6 +179,9 @@ class _CelebrationViewState extends State<_CelebrationView>
                       padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: Column(
                         children: [
+                          // Coffre qui s'ouvre : motif de récompense des jalons
+                          const Text('🎁', style: TextStyle(fontSize: 40)),
+                          const SizedBox(height: 8),
                           Text(
                             AppLocalizations.of(context).unlockedBanner,
                             style: const TextStyle(

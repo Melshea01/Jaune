@@ -52,6 +52,28 @@
   "xpReasonSoberYesterday": "Journée d'hier sobre",
   "xpReasonGreenDay": "Journée verte",
   "xpReasonPerfectWeek": "Semaine parfaite",
+  "xpReasonQuestComplete": "Quête accomplie",
+  "dailyQuestsTitle": "🎯 Quêtes du jour",
+  "questOpenAppTitle": "Passer dire bonjour au citron",
+  "questLogTodayTitle": "Noter sa journée",
+  "questSoberTodayTitle": "Une journée sans alcool",
+  "questUnderTwoTitle": "Rester sous 2 verres",
+  "questKeepStreakTitle": "Garder sa série en vie",
+  "weeklyGoalTitle": "Objectif de la semaine",
+  "weeklyGoalProgress": "{sober} / {target} jours sobres",
+  "@weeklyGoalProgress": {
+    "placeholders": {
+      "sober": {"type": "int"},
+      "target": {"type": "int"}
+    }
+  },
+  "streakShieldProtected": "🛡️ Série protégée",
+  "streakShieldsAvailable": "{count, plural, =0{Aucun bouclier} =1{1 bouclier} other{{count} boucliers}}",
+  "@streakShieldsAvailable": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
 
   "soberStreakInARow": "{days, plural, =1{1 jour sobre d'affilée} other{{days} jours sobres d'affilée}}",
   "@soberStreakInARow": {
@@ -94,6 +116,20 @@
     }
   },
   "andThen": "Et ensuite…",
+  "levelJourneyTitle": "🗺️ Ton parcours",
+  "levelYouAreHere": "Tu es ici",
+  "chapterTitle": "Chapitre {n}",
+  "@chapterTitle": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "levelLockedShort": "Niv. {level}",
+  "@levelLockedShort": {
+    "placeholders": {
+      "level": {"type": "int"}
+    }
+  },
 
   "levelUpTitle": "NIVEAU {level}",
   "@levelUpTitle": {

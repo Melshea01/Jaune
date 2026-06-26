@@ -81,6 +81,51 @@ enum XpReason {
   greenDay,
   soberStreak,
   perfectWeek,
+  questComplete,
+}
+
+// ---------------------------------------------------------------------------
+// Quêtes du jour — petites tâches quotidiennes (« toujours qqch à faire »)
+// ---------------------------------------------------------------------------
+
+/// Condition de complétion, évaluée à partir des données existantes.
+enum QuestType {
+  openApp, // ouvrir l'app aujourd'hui
+  logToday, // enregistrer sa conso aujourd'hui
+  soberToday, // 0 verre aujourd'hui
+  underTwoToday, // ≤ 2 verres aujourd'hui
+  keepStreak, // garder sa série (hier sobre)
+}
+
+/// Pure data : libellés résolus par clé en l10n (questTitle / questDesc).
+class DailyQuest {
+  final String id;
+  final QuestType type;
+  final int xpReward;
+
+  const DailyQuest({
+    required this.id,
+    required this.type,
+    required this.xpReward,
+  });
+}
+
+const List<DailyQuest> kDailyQuests = [
+  DailyQuest(id: 'open_app', type: QuestType.openApp, xpReward: 4),
+  DailyQuest(id: 'log_day', type: QuestType.logToday, xpReward: 5),
+  DailyQuest(id: 'sober_today', type: QuestType.soberToday, xpReward: 8),
+  DailyQuest(id: 'under_two', type: QuestType.underTwoToday, xpReward: 6),
+  DailyQuest(id: 'keep_streak', type: QuestType.keepStreak, xpReward: 6),
+];
+
+/// Nombre de quêtes proposées chaque jour.
+const int kDailyQuestCount = 3;
+
+/// État d'une quête pour l'affichage.
+class QuestStatus {
+  final DailyQuest quest;
+  final bool completed;
+  const QuestStatus(this.quest, this.completed);
 }
 
 class XpEvent {
@@ -113,6 +158,12 @@ class CharacterProfile {
   String username; // pseudo affiché dans le classement entre amis ('' = non défini)
   String userId; // identifiant stable / code ami ('' = pas encore généré)
 
+  int streakShields; // boucliers « gel de série » disponibles
+  List<String> frozenDays; // jours de conso « gelés » (pontés par un bouclier)
+
+  String lastQuestDate; // jour des quêtes actives (reset au changement de jour)
+  List<String> completedQuestIds; // quêtes du jour déjà validées
+
   CharacterProfile({
     this.xp = 0,
     this.level = 1,
@@ -127,7 +178,13 @@ class CharacterProfile {
     this.equippedSkin = '',
     this.username = '',
     this.userId = '',
-  }) : currentPv = currentPv ?? 100;
+    this.streakShields = 0,
+    List<String>? frozenDays,
+    this.lastQuestDate = '',
+    List<String>? completedQuestIds,
+  })  : currentPv = currentPv ?? 100,
+        frozenDays = frozenDays ?? [],
+        completedQuestIds = completedQuestIds ?? [];
 
   static final Map<String, List<String>> _assetMessages = {};
   static String _loadedMessagesLocale = '';
@@ -227,6 +284,10 @@ class CharacterProfile {
     'equippedSkin': equippedSkin,
     'username': username,
     'userId': userId,
+    'streakShields': streakShields,
+    'frozenDays': frozenDays,
+    'lastQuestDate': lastQuestDate,
+    'completedQuestIds': completedQuestIds,
   };
 
   static CharacterProfile fromJson(Map<String, dynamic> p) => CharacterProfile(
@@ -243,6 +304,13 @@ class CharacterProfile {
     equippedSkin: (p['equippedSkin'] as String?) ?? '',
     username: (p['username'] as String?) ?? '',
     userId: (p['userId'] as String?) ?? '',
+    streakShields: (p['streakShields'] as int?) ?? 0,
+    frozenDays:
+        (p['frozenDays'] as List?)?.map((e) => e.toString()).toList() ?? [],
+    lastQuestDate: (p['lastQuestDate'] as String?) ?? '',
+    completedQuestIds:
+        (p['completedQuestIds'] as List?)?.map((e) => e.toString()).toList() ??
+            [],
   );
 }
 
@@ -263,8 +331,31 @@ class CharacterService {
   int get xpToNextLevel => _profile.xpToNextLevel;
   String get levelPhase => _profile.levelPhase;
   int get soberStreakDays => _profile.soberStreakDays;
+  int get streakShields => _profile.streakShields;
   bool hasUnlock(String key) => _profile.hasUnlock(key);
   List<LevelUnlock> get acquiredUnlocks => _profile.acquiredUnlocks;
+
+  /// Plafond de boucliers « gel de série » accumulables.
+  static const int kMaxShields = 3;
+
+  /// Cible de l'objectif hebdomadaire : jours sobres dans la semaine en cours.
+  static const int kWeeklyGoalSoberDays = 3;
+
+  /// Variance haussière bornée (0..+20 %) appliquée aux gains de comportement
+  /// et de quêtes : effet « récompense variable » sans jamais punir.
+  final math.Random _rng = math.Random();
+  int _vary(int base) {
+    if (base <= 0) return base;
+    final int span = (base * 0.2).ceil();
+    return base + _rng.nextInt(span + 1);
+  }
+
+  /// Ajoute une XP variée et renvoie le montant réellement attribué.
+  int _award(int base) {
+    final int amount = _vary(base);
+    _addXp(amount);
+    return amount;
+  }
 
   // --- Persistance ---
 
@@ -339,23 +430,40 @@ class CharacterService {
     return newLevels;
   }
 
-  Future<({XpEvent? xpEvent, List<int> newLevels, List<LevelUnlock> newUnlocks})>
-  awardAppOpenXp() async {
+  Future<
+    ({
+      List<XpEvent> xpEvents,
+      List<int> newLevels,
+      List<LevelUnlock> newUnlocks,
+    })
+  >
+  awardAppOpenXp([Map<String, int>? dailyMap]) async {
     final String today = _dateKey(DateTime.now());
-    if (_profile.lastAppOpenDate == today) {
-      return (xpEvent: null, newLevels: const <int>[], newUnlocks: const <LevelUnlock>[]);
+    final int levelBefore = _profile.level;
+    final List<XpEvent> events = [];
+
+    if (_profile.lastAppOpenDate != today) {
+      _profile.lastAppOpenDate = today;
+      _addXp(3);
+      events.add(const XpEvent(3, XpReason.appOpen));
     }
 
-    _profile.lastAppOpenDate = today;
-    final List<int> newLevels = _addXp(3);
-    await saveProfile();
-    final newUnlocks =
-        kLevelUnlocks.where((u) => newLevels.contains(u.level)).toList();
-    return (
-      xpEvent: const XpEvent(3, XpReason.appOpen),
-      newLevels: newLevels,
-      newUnlocks: newUnlocks,
-    );
+    // Quêtes du jour (ex. « ouvrir l'app ») — idempotent
+    events.addAll(_evaluateQuests(dailyMap ?? const {}));
+
+    List<int> newLevels = const [];
+    List<LevelUnlock> newUnlocks = const [];
+    if (_profile.level > levelBefore) {
+      newLevels = List.generate(
+        _profile.level - levelBefore,
+        (i) => levelBefore + i + 1,
+      );
+      newUnlocks =
+          kLevelUnlocks.where((u) => newLevels.contains(u.level)).toList();
+    }
+
+    if (events.isNotEmpty) await saveProfile();
+    return (xpEvents: events, newLevels: newLevels, newUnlocks: newUnlocks);
   }
 
   /// [includeLogBonus] : ne donner le bonus « Enregistrement du jour » que
@@ -379,6 +487,9 @@ class CharacterService {
     try {
       final int levelBefore = _profile.level;
 
+      // Gel de série : ponte un écart isolé d'hier avant de dériver le streak.
+      _maybeConsumeShield(dailyMap);
+
       // Le streak est DÉRIVÉ du calendrier à chaque recalcul — source unique
       // de vérité (l'ancien compteur incrémental dérivait : il survivait aux
       // jours de conso jamais évalués et sous-comptait les absences sobres)
@@ -398,6 +509,9 @@ class CharacterService {
         events.addAll(behaviorEvents);
         _profile.lastXpAwardDate = today;
       }
+
+      // Quêtes du jour — évaluées à chaque log (idempotent)
+      events.addAll(_evaluateQuests(dailyMap));
 
       // Vérifier les nouveaux niveaux et déblocages
       if (_profile.level > levelBefore) {
@@ -439,8 +553,7 @@ class CharacterService {
     // streak ≥ 1 ⟺ hier était sobre ET couvert par les données (pas un jour
     // d'avant la première utilisation)
     if (_profile.soberStreakDays > 0) {
-      _addXp(5);
-      events.add(const XpEvent(5, XpReason.soberYesterday));
+      events.add(XpEvent(_award(5), XpReason.soberYesterday));
     }
 
     // Journée verte (hier : 1-2 verres + un jour sobre dans la semaine d'avant)
@@ -453,16 +566,14 @@ class CharacterService {
         }
       }
       if (hasSoberDayInWeek) {
-        _addXp(10);
-        events.add(const XpEvent(10, XpReason.greenDay));
+        events.add(XpEvent(_award(10), XpReason.greenDay));
       }
     }
 
     // Streak de 3 jours sobres
     if (_profile.soberStreakDays > 0 && _profile.soberStreakDays % 3 == 0) {
-      _addXp(8);
       events.add(
-        XpEvent(8, XpReason.soberStreak, value: _profile.soberStreakDays),
+        XpEvent(_award(8), XpReason.soberStreak, value: _profile.soberStreakDays),
       );
     }
 
@@ -490,8 +601,11 @@ class CharacterService {
       }
       if (weekTotal <= 7 && soberDays >= 2) {
         _profile.lastPerfectWeekDate = prevWeekKey;
-        _addXp(15);
-        events.add(const XpEvent(15, XpReason.perfectWeek));
+        events.add(XpEvent(_award(15), XpReason.perfectWeek));
+        // Récompense : un bouclier « gel de série » (plafonné).
+        if (_profile.streakShields < kMaxShields) {
+          _profile.streakShields += 1;
+        }
       }
     }
 
@@ -511,11 +625,135 @@ class CharacterService {
     int streak = 0;
     for (int i = 1; i <= 365; i++) {
       final DateTime day = today.subtract(Duration(days: i));
-      if (_profile.firstUseDate.compareTo(_dateKey(day)) > 0) break;
-      if ((dailyMap[_dateKey(day)] ?? 0) > 0) break;
+      final String key = _dateKey(day);
+      if (_profile.firstUseDate.compareTo(key) > 0) break;
+      if ((dailyMap[key] ?? 0) > 0) {
+        // Jour de conso : un bouclier déjà posé le « ponte » sans casser la
+        // série (le jour gelé ne compte pas mais ne rompt pas la continuité).
+        if (_profile.frozenDays.contains(key)) continue;
+        break;
+      }
       streak++;
     }
     return streak;
+  }
+
+  /// Consomme un bouclier pour « geler » un écart **isolé** d'hier, afin que la
+  /// série ne reparte pas de zéro pour un seul jour de conso. Idempotent : le
+  /// jour gelé est enregistré, donc rappeler la méthode ne reconsomme rien.
+  void _maybeConsumeShield(Map<String, int> dailyMap) {
+    if (_profile.streakShields <= 0 || _profile.firstUseDate.isEmpty) return;
+
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final String yKey = _dateKey(today.subtract(const Duration(days: 1)));
+
+    // Hier doit être un jour de conso, couvert par les données, pas déjà gelé.
+    if (_profile.firstUseDate.compareTo(yKey) > 0) return;
+    if ((dailyMap[yKey] ?? 0) <= 0) return;
+    if (_profile.frozenDays.contains(yKey)) return;
+
+    // L'avant-veille doit être sobre : on ne ponte que vers une série réelle
+    // (sinon on gaspillerait un bouclier à « protéger » une beuverie).
+    final String bKey = _dateKey(today.subtract(const Duration(days: 2)));
+    if (_profile.firstUseDate.compareTo(bKey) > 0) return;
+    if ((dailyMap[bKey] ?? 0) > 0) return;
+
+    _profile.frozenDays.add(yKey);
+    _profile.streakShields -= 1;
+
+    // Élagage : ne conserver que les gels récents.
+    final String cutoff = _dateKey(today.subtract(const Duration(days: 120)));
+    _profile.frozenDays.removeWhere((k) => k.compareTo(cutoff) < 0);
+  }
+
+  // --- Quêtes du jour --------------------------------------------------------
+
+  /// Quêtes proposées aujourd'hui, choisies de façon déterministe (seed = jour)
+  /// → stables sur la journée, renouvelées le lendemain.
+  List<DailyQuest> _questsForDay(String dayKey) {
+    final List<DailyQuest> pool = List.of(kDailyQuests);
+    pool.shuffle(math.Random(dayKey.hashCode));
+    return pool.take(kDailyQuestCount).toList();
+  }
+
+  /// État des quêtes du jour pour l'UI (sélection + complétion).
+  List<QuestStatus> dailyQuests() {
+    final String today = _dateKey(DateTime.now());
+    final bool fresh = _profile.lastQuestDate == today;
+    final Set<String> done =
+        fresh ? _profile.completedQuestIds.toSet() : <String>{};
+    return _questsForDay(today)
+        .map((q) => QuestStatus(q, done.contains(q.id)))
+        .toList();
+  }
+
+  bool _questSatisfied(DailyQuest q, Map<String, int> dailyMap) {
+    final String today = _dateKey(DateTime.now());
+    final int todayDrinks = dailyMap[today] ?? 0;
+    final bool loggedToday = _profile.lastLogDate == today;
+    switch (q.type) {
+      case QuestType.openApp:
+        return _profile.lastAppOpenDate == today;
+      case QuestType.logToday:
+        return loggedToday;
+      case QuestType.soberToday:
+        return loggedToday && todayDrinks == 0;
+      case QuestType.underTwoToday:
+        return loggedToday && todayDrinks <= 2;
+      case QuestType.keepStreak:
+        return _profile.soberStreakDays > 0;
+    }
+  }
+
+  /// Évalue les quêtes du jour et attribue l'XP des nouvellement complétées.
+  /// Idempotent : une quête validée n'est jamais re-récompensée.
+  List<XpEvent> _evaluateQuests(Map<String, int> dailyMap) {
+    final String today = _dateKey(DateTime.now());
+    if (_profile.lastQuestDate != today) {
+      _profile.lastQuestDate = today;
+      _profile.completedQuestIds = [];
+    }
+    final List<XpEvent> events = [];
+    for (final q in _questsForDay(today)) {
+      if (_profile.completedQuestIds.contains(q.id)) continue;
+      if (_questSatisfied(q, dailyMap)) {
+        _profile.completedQuestIds.add(q.id);
+        events.add(XpEvent(_award(q.xpReward), XpReason.questComplete));
+      }
+    }
+    return events;
+  }
+
+  // --- Objectif hebdomadaire -------------------------------------------------
+
+  /// Objectif de la semaine ISO en cours (lundi → aujourd'hui) : jours sobres
+  /// vs cible. Alimente l'anneau d'en-tête. Aujourd'hui ne compte que s'il est
+  /// déjà enregistré (sinon « 0 verre » par défaut serait un faux positif).
+  ({int soberDays, int target, double progress}) weeklyGoal(
+    Map<String, int> dailyMap,
+  ) {
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final DateTime monday = today.subtract(Duration(days: today.weekday - 1));
+    int soberDays = 0;
+    for (int i = 0; i <= today.difference(monday).inDays; i++) {
+      final DateTime day = monday.add(Duration(days: i));
+      final String key = _dateKey(day);
+      if (_profile.firstUseDate.isEmpty ||
+          _profile.firstUseDate.compareTo(key) > 0) {
+        continue;
+      }
+      final bool counted = day.isBefore(today) || _profile.lastLogDate == key;
+      if (counted && (dailyMap[key] ?? 0) == 0) soberDays++;
+    }
+    final double progress =
+        (soberDays / kWeeklyGoalSoberDays).clamp(0.0, 1.0).toDouble();
+    return (
+      soberDays: soberDays,
+      target: kWeeklyGoalSoberDays,
+      progress: progress,
+    );
   }
 
   // --- Modèle de santé « santé de fond » (cf. jaune_health_model.dart) ---
