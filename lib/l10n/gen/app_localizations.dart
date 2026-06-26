@@ -158,6 +158,42 @@ abstract class AppLocalizations {
   /// **'Fermer'**
   String get calendarClose;
 
+  /// No description provided for @calendarToday.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aujourd\'hui'**
+  String get calendarToday;
+
+  /// No description provided for @calendarMonthEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rien de loggé ce mois-ci'**
+  String get calendarMonthEmpty;
+
+  /// No description provided for @calendarLegendSober.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sobre'**
+  String get calendarLegendSober;
+
+  /// No description provided for @calendarLegendModerate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modéré'**
+  String get calendarLegendModerate;
+
+  /// No description provided for @calendarLegendRising.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ça monte'**
+  String get calendarLegendRising;
+
+  /// No description provided for @calendarLegendHeavy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Grosse soirée'**
+  String get calendarLegendHeavy;
+
   /// No description provided for @dayDetailSober.
   ///
   /// In fr, this message translates to:
@@ -272,6 +308,30 @@ abstract class AppLocalizations {
   /// **'{sober} / {target} jours sobres'**
   String weeklyGoalProgress(int sober, int target);
 
+  /// No description provided for @levelStatStreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'série'**
+  String get levelStatStreak;
+
+  /// No description provided for @levelStatShields.
+  ///
+  /// In fr, this message translates to:
+  /// **'boucliers'**
+  String get levelStatShields;
+
+  /// No description provided for @levelStatBadges.
+  ///
+  /// In fr, this message translates to:
+  /// **'badges'**
+  String get levelStatBadges;
+
+  /// No description provided for @levelStatSkins.
+  ///
+  /// In fr, this message translates to:
+  /// **'tenues'**
+  String get levelStatSkins;
+
   /// No description provided for @streakShieldProtected.
   ///
   /// In fr, this message translates to:
@@ -379,6 +439,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Et ensuite…'**
   String get andThen;
+
+  /// No description provided for @levelScreenTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Progression'**
+  String get levelScreenTitle;
 
   /// No description provided for @levelJourneyTitle.
   ///

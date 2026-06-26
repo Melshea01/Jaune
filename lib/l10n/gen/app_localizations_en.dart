@@ -42,6 +42,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarClose => 'Close';
 
   @override
+  String get calendarToday => 'Today';
+
+  @override
+  String get calendarMonthEmpty => 'Nothing logged this month';
+
+  @override
+  String get calendarLegendSober => 'Sober';
+
+  @override
+  String get calendarLegendModerate => 'Moderate';
+
+  @override
+  String get calendarLegendRising => 'Heating up';
+
+  @override
+  String get calendarLegendHeavy => 'Big night';
+
+  @override
   String get dayDetailSober => 'Sober day';
 
   @override
@@ -113,6 +131,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String weeklyGoalProgress(int sober, int target) {
     return '$sober / $target sober days';
   }
+
+  @override
+  String get levelStatStreak => 'streak';
+
+  @override
+  String get levelStatShields => 'shields';
+
+  @override
+  String get levelStatBadges => 'badges';
+
+  @override
+  String get levelStatSkins => 'outfits';
 
   @override
   String get streakShieldProtected => '🛡️ Streak protected';
@@ -190,6 +220,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get andThen => 'And then…';
+
+  @override
+  String get levelScreenTitle => 'Progress';
 
   @override
   String get levelJourneyTitle => '🗺️ Your journey';

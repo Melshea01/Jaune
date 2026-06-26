@@ -705,7 +705,7 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   void _showLevelDialog() {
-    LevelSheet.show(
+    LevelScreen.open(
       context,
       _characterService,
       dailyMap: _storageService.dailyMap,

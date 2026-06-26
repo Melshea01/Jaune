@@ -3,11 +3,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:typicons_flutter/typicons_flutter.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 
 import '../l10n/gen/app_localizations.dart';
+import '../theme/jaune_design.dart';
 import '../utils/date_keys.dart';
 
 class CalendarDialog {
@@ -42,7 +42,7 @@ class CalendarDialog {
     const double bottomAnchor = 40;
     final double availableH =
         media.size.height - media.padding.top - bottomAnchor - 12;
-    final double dialogHeight = math.min(520.0, availableH);
+    final double dialogHeight = math.min(540.0, availableH);
 
     final finalRect = Rect.fromCenter(
       center: screenRect.center,
@@ -99,7 +99,25 @@ class _CalendarOverlay extends StatefulWidget {
 }
 
 class _CalendarOverlayState extends State<_CalendarOverlay> {
+  DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+
+  bool _monthHasData(DateTime month) {
+    final prefix =
+        '${month.year.toString().padLeft(4, '0')}-'
+        '${month.month.toString().padLeft(2, '0')}-';
+    return widget.dailyMap.keys.any((k) => k.startsWith(prefix));
+  }
+
+  bool get _isCurrentMonth {
+    final now = DateTime.now();
+    return _focusedDay.year == now.year && _focusedDay.month == now.month;
+  }
+
+  void _goToToday() {
+    HapticFeedback.selectionClick();
+    setState(() => _focusedDay = DateTime.now());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,16 +133,9 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
             ) ??
             widget.finalRect;
 
-        final borderRadius =
-            BorderRadius.lerp(
-              BorderRadius.circular(24),
-              BorderRadius.circular(24),
-              widget.animation.value,
-            )!;
-
         return Stack(
           children: [
-            // Blurred background
+            // Fond flouté + assombri
             GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: widget.onClose,
@@ -137,7 +148,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
               ),
             ),
 
-            // Animated dialog
+            // Dialogue animé
             Positioned(
               bottom: 40,
               left: currentRect.left,
@@ -150,12 +161,9 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        Color.fromARGB(255, 250, 225, 100),
-                        Color.fromARGB(255, 245, 200, 80),
-                      ],
+                      colors: [JauneColors.lemon, JauneColors.lemonDeep],
                     ),
-                    borderRadius: borderRadius,
+                    borderRadius: BorderRadius.circular(JauneRadii.sheet),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(
@@ -190,6 +198,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
     // Le calendrier ET le détail du jour vivent dans le MÊME scroll : ainsi le
     // détail s'affiche toujours sous la grille (jamais par-dessus) et, s'il
     // manque de place, tout l'ensemble défile au lieu de déborder.
+    final monthEmpty = !_monthHasData(_focusedDay);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -202,7 +211,14 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildCalendar(),
-                if (widget.dailyMap.isEmpty) _buildEmptyState(),
+                const SizedBox(height: 10),
+                _buildLegend(),
+                // Premier usage (aucune donnée nulle part) : accueillir.
+                // Sinon, si le mois affiché est vide : l'expliquer.
+                if (widget.dailyMap.isEmpty)
+                  _buildEmptyState()
+                else if (monthEmpty)
+                  _buildMonthEmptyHint(),
                 _buildSelectedDayDetail(),
               ],
             ),
@@ -212,40 +228,93 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
     );
   }
 
+  /// Légende compacte des couleurs de cellule — sans elle, l'utilisateur
+  /// doit deviner ce que signifie chaque teinte.
+  Widget _buildLegend() {
+    final l10n = AppLocalizations.of(context);
+    Widget chip(Color color, String label) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: JauneColors.ink,
+          ),
+        ),
+      ],
+    );
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 14,
+      runSpacing: 6,
+      children: [
+        chip(JauneColors.sober, l10n.calendarLegendSober),
+        chip(JauneColors.consumptionColor(1), l10n.calendarLegendModerate),
+        chip(JauneColors.consumptionColor(3), l10n.calendarLegendRising),
+        chip(JauneColors.consumptionColor(6), l10n.calendarLegendHeavy),
+      ],
+    );
+  }
+
   /// Premier usage : aucun verre loggé — accueillir plutôt que montrer
   /// une grille vide sans explication
   Widget _buildEmptyState() {
     final l10n = AppLocalizations.of(context);
+    return _infoCard(
+      emoji: '🍋',
+      title: l10n.calendarEmptyTitle,
+      text: l10n.calendarEmptyText,
+    );
+  }
+
+  /// Mois affiché sans donnée alors que d'autres mois en ont.
+  Widget _buildMonthEmptyHint() {
+    final l10n = AppLocalizations.of(context);
+    return _infoCard(emoji: '🗓️', title: l10n.calendarMonthEmpty);
+  }
+
+  Widget _infoCard({required String emoji, required String title, String? text}) {
     return Container(
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(JauneRadii.card),
+        color: Colors.white.withValues(alpha: 0.96),
       ),
       child: Row(
         children: [
-          const Text('🍋', style: TextStyle(fontSize: 22)),
+          Text(emoji, style: const TextStyle(fontSize: 22)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.calendarEmptyTitle,
+                  title,
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
+                    color: JauneColors.ink,
                   ),
                 ),
-                Text(
-                  l10n.calendarEmptyText,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700,
+                if (text != null)
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: JauneColors.inkSoft,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -259,7 +328,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
     final day = _selectedDay;
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
+      duration: JauneMotion.quick,
       transitionBuilder:
           (child, animation) => FadeTransition(
             opacity: animation,
@@ -276,8 +345,8 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color: Colors.white.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(JauneRadii.card),
+                  color: Colors.white.withValues(alpha: 0.96),
                 ),
                 child: _buildDayDetailContent(day),
               ),
@@ -291,13 +360,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
     final count = widget.dailyMap[dayKey] ?? 0;
     final label = DateFormat('EEEE d MMMM', locale).format(day);
     final capitalized = label[0].toUpperCase() + label.substring(1);
-
-    final (String emoji, String text) = switch (count) {
-      0 => ('💧', l10n.dayDetailSober),
-      1 || 2 => ('🍺', l10n.dayDetailModerate(count)),
-      <= 5 => ('🍻', l10n.dayDetailRising(count)),
-      _ => ('🥴', l10n.dayDetailHeavy(count)),
-    };
+    final (emoji, text) = _consumptionLabel(l10n, count);
 
     return Row(
       children: [
@@ -312,14 +375,15 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
+                  color: JauneColors.ink,
                 ),
               ),
               Text(
                 text,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
+                  color: JauneColors.inkSoft,
                 ),
               ),
             ],
@@ -329,38 +393,75 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
     );
   }
 
+  /// Barème UNIQUE (aligné sur [JauneColors.consumptionColor]) : la
+  /// frontière des couleurs et celle du texte coïncident.
+  /// 0 sobre · 1-2 modéré · 3-5 ça monte · >=6 grosse soirée.
+  (String, String) _consumptionLabel(AppLocalizations l10n, int count) {
+    return switch (count) {
+      0 => ('💧', l10n.dayDetailSober),
+      1 || 2 => ('🍺', l10n.dayDetailModerate(count)),
+      <= 5 => ('🍻', l10n.dayDetailRising(count)),
+      _ => ('🥴', l10n.dayDetailHeavy(count)),
+    };
+  }
+
   Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context);
     return Row(
       children: [
-        const Icon(CupertinoIcons.calendar, size: 22),
+        const Icon(CupertinoIcons.calendar, size: 22, color: JauneColors.ink),
         const SizedBox(width: 8),
         Text(
-          AppLocalizations.of(context).calendarTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          l10n.calendarTitle,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: JauneColors.ink,
+          ),
         ),
         const Spacer(),
-        TextButton(
-          onPressed: widget.onClose,
-          style: TextButton.styleFrom(
-            backgroundColor: Colors.black.withValues(alpha: 0.1),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(CupertinoIcons.xmark, color: Colors.white, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                AppLocalizations.of(context).calendarClose,
+        // Retour rapide au mois courant — visible seulement si on s'en
+        // est éloigné.
+        if (!_isCurrentMonth)
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: TextButton(
+              onPressed: _goToToday,
+              style: TextButton.styleFrom(
+                foregroundColor: JauneColors.ink,
+                backgroundColor: Colors.white.withValues(alpha: 0.6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(JauneRadii.pill),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                l10n.calendarToday,
                 style: const TextStyle(
-                  color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  fontSize: 13,
                 ),
               ),
-            ],
+            ),
+          ),
+        // Fermeture : un simple ✕ (le tap hors-dialogue ferme déjà).
+        Semantics(
+          button: true,
+          label: l10n.calendarClose,
+          child: IconButton(
+            onPressed: widget.onClose,
+            visualDensity: VisualDensity.compact,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.black.withValues(alpha: 0.08),
+              shape: const CircleBorder(),
+            ),
+            icon: const Icon(
+              CupertinoIcons.xmark,
+              color: JauneColors.ink,
+              size: 16,
+            ),
           ),
         ),
       ],
@@ -371,8 +472,8 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(JauneRadii.card),
+        color: Colors.white.withValues(alpha: 0.96),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -385,33 +486,39 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
         locale: Localizations.localeOf(context).toString(),
         firstDay: DateTime.utc(2000, 1, 1),
         lastDay: DateTime.utc(2100, 12, 31),
-        focusedDay: _selectedDay ?? DateTime.now(),
+        focusedDay: _focusedDay,
         startingDayOfWeek: StartingDayOfWeek.monday,
+        availableGestures: AvailableGestures.horizontalSwipe,
         selectedDayPredicate:
             (day) => _selectedDay != null && isSameDay(day, _selectedDay),
         onDaySelected: (selectedDay, focusedDay) {
           HapticFeedback.selectionClick();
           setState(() {
             _selectedDay = selectedDay;
+            _focusedDay = focusedDay;
           });
+        },
+        onPageChanged: (focusedDay) {
+          setState(() => _focusedDay = focusedDay);
         },
         daysOfWeekHeight: 28,
         headerStyle: const HeaderStyle(
           formatButtonVisible: false,
           titleCentered: true,
-          leftChevronIcon: Icon(CupertinoIcons.chevron_left),
-          rightChevronIcon: Icon(CupertinoIcons.chevron_right),
+          leftChevronIcon: Icon(CupertinoIcons.chevron_left, size: 20),
+          rightChevronIcon: Icon(CupertinoIcons.chevron_right, size: 20),
           headerPadding: EdgeInsets.symmetric(vertical: 8),
-          titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          titleTextStyle: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: JauneColors.ink,
+          ),
         ),
         calendarStyle: const CalendarStyle(
           todayDecoration: BoxDecoration(),
           defaultDecoration: BoxDecoration(),
           outsideDecoration: BoxDecoration(),
-          selectedDecoration: BoxDecoration(
-            color: Color(0xFFF7D83F),
-            shape: BoxShape.circle,
-          ),
+          selectedDecoration: BoxDecoration(),
         ),
         calendarBuilders: CalendarBuilders(
           dowBuilder: (context, day) {
@@ -422,19 +529,18 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
             return Center(
               child: Text(
                 initial,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade700,
+                style: const TextStyle(
+                  color: JauneColors.inkSoft,
                   fontWeight: FontWeight.w700,
+                  fontSize: 12,
                 ),
               ),
             );
           },
           defaultBuilder:
-              (context, day, focusedDay) =>
-                  _buildCalendarCell(day, false, false),
+              (context, day, focusedDay) => _buildCalendarCell(day, false, false),
           todayBuilder:
-              (context, day, focusedDay) =>
-                  _buildCalendarCell(day, false, true),
+              (context, day, focusedDay) => _buildCalendarCell(day, false, true),
           selectedBuilder:
               (context, day, focusedDay) =>
                   _buildCalendarCell(day, true, isSameDay(day, DateTime.now())),
@@ -442,9 +548,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
             return Center(
               child: Text(
                 '${day.day}',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade400),
+                style: TextStyle(color: Colors.grey.shade400),
               ),
             );
           },
@@ -454,33 +558,37 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
   }
 
   Widget _buildCalendarCell(DateTime day, bool isSelected, bool isToday) {
-    final dayKey = dateKey(day);
-    final count = widget.dailyMap[dayKey] ?? 0;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
+    final count = widget.dailyMap[dateKey(day)] ?? 0;
+    final dateLabel = DateFormat('EEEE d MMMM', locale).format(day);
+    final (_, detail) = _consumptionLabel(l10n, count);
 
-    if (count > 0) {
-      return CalendarConsumptionCell(
-        day: day,
-        count: count,
-        isSelected: isSelected,
-        isToday: isToday,
-      );
-    }
-
-    return CalendarEmptyCell(
-      day: day,
-      isSelected: isSelected,
-      isToday: isToday,
+    return Semantics(
+      label: '$dateLabel, $detail',
+      selected: isSelected,
+      child: ExcludeSemantics(
+        child: CalendarDayCell(
+          day: day,
+          count: count,
+          isSelected: isSelected,
+          isToday: isToday,
+        ),
+      ),
     );
   }
 }
 
-class CalendarConsumptionCell extends StatelessWidget {
+/// Cellule unique : la sobriété est valorisée, les jours de conso restent
+/// lisibles (chiffre dominant), et l'état sélectionné/aujourd'hui se lit via
+/// un anneau — sans jamais changer la sémantique du contenu.
+class CalendarDayCell extends StatelessWidget {
   final DateTime day;
   final int count;
   final bool isSelected;
   final bool isToday;
 
-  const CalendarConsumptionCell({
+  const CalendarDayCell({
     super.key,
     required this.day,
     required this.count,
@@ -490,115 +598,60 @@ class CalendarConsumptionCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Paliers alignés sur la formule PV : ≤2 modéré, 3-4 attention,
-    // 5 limite, ≥6 binge (seuil de pénalité OMS)
-    Color bg;
-    if (count <= 2) {
-      bg = Colors.green.shade600;
-    } else if (count <= 4) {
-      bg = Colors.yellow.shade700;
-    } else if (count <= 5) {
-      bg = Colors.deepOrange.shade600;
-    } else {
-      bg = Colors.redAccent.shade700;
-    }
-
-    if (isSelected) {
-      return Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: bg,
-          shape: BoxShape.circle,
-          border:
-              (isToday) ? Border.all(color: Colors.black54, width: 1.5) : null,
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          '$count',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: bg,
-        shape: BoxShape.circle,
-        border:
-            (isToday) ? Border.all(color: Colors.black54, width: 1.5) : null,
-      ),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Typicons.beer, color: Colors.white, size: 22),
-          Text(
-            '$count',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 9,
-              height: 0.9,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class CalendarEmptyCell extends StatelessWidget {
-  final DateTime day;
-  final bool isSelected;
-  final bool isToday;
-
-  const CalendarEmptyCell({
-    super.key,
-    required this.day,
-    required this.isSelected,
-    required this.isToday,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final isPast = day.isBefore(today);
+    final hasDrinks = count > 0;
 
-    BoxDecoration decoration = BoxDecoration(
-      color: (isPast && !isToday ? Colors.grey.shade200 : Colors.transparent),
-      shape: BoxShape.circle,
-      border:
-          isToday
-              ? Border.all(color: Colors.black54, width: 1.5)
-              : (!isPast && !isToday
-                  ? Border.all(color: Colors.grey.shade300, width: 1.0)
-                  : null),
-    );
+    Color fill;
+    Color textColor;
+    String text;
 
-    return Container(
-      width: 38,
-      height: 38,
-      alignment: Alignment.center,
-      decoration: decoration,
-      child: Text(
-        '${day.day}',
-        style: TextStyle(
-          color:
-              isSelected
-                  ? Colors.black
-                  : (isPast && !isToday
-                      ? Colors.grey.shade600
-                      : Colors.black87),
-          fontWeight: isSelected || isToday ? FontWeight.bold : FontWeight.w600,
+    if (hasDrinks) {
+      // Jour de conso : couleur du barème + chiffre blanc dominant.
+      fill = JauneColors.consumptionColor(count);
+      textColor = Colors.white;
+      text = '$count';
+    } else if (isPast && !isToday) {
+      // Jour sobre passé : valorisé (vert tendre), pas grisé.
+      fill = JauneColors.soberTint;
+      textColor = JauneColors.sober;
+      text = '${day.day}';
+    } else {
+      // Aujourd'hui (encore sobre) / futur : neutre.
+      fill = Colors.transparent;
+      textColor = JauneColors.ink;
+      text = '${day.day}';
+    }
+
+    // Anneau : sélection (fort) prioritaire sur aujourd'hui (doux).
+    Border? border;
+    if (isSelected) {
+      border = Border.all(color: JauneColors.ink, width: 2);
+    } else if (isToday) {
+      border = Border.all(color: JauneColors.lemonDeep, width: 2);
+    }
+
+    return Center(
+      child: Container(
+        width: 38,
+        height: 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: fill,
+          shape: BoxShape.circle,
+          border: border,
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: textColor,
+            fontSize: hasDrinks ? 16 : 14,
+            fontWeight:
+                (hasDrinks || isSelected || isToday)
+                    ? FontWeight.bold
+                    : FontWeight.w600,
+          ),
         ),
       ),
     );

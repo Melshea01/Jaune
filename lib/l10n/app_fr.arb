@@ -20,6 +20,12 @@
   "calendarTitle": "Calendrier",
   "calendarSee": "Voir",
   "calendarClose": "Fermer",
+  "calendarToday": "Aujourd'hui",
+  "calendarMonthEmpty": "Rien de loggé ce mois-ci",
+  "calendarLegendSober": "Sobre",
+  "calendarLegendModerate": "Modéré",
+  "calendarLegendRising": "Ça monte",
+  "calendarLegendHeavy": "Grosse soirée",
 
   "dayDetailSober": "Journée sobre",
   "dayDetailModerate": "{count, plural, =1{1 verre · modéré} other{{count} verres · modéré}}",
@@ -67,6 +73,10 @@
       "target": {"type": "int"}
     }
   },
+  "levelStatStreak": "série",
+  "levelStatShields": "boucliers",
+  "levelStatBadges": "badges",
+  "levelStatSkins": "tenues",
   "streakShieldProtected": "🛡️ Série protégée",
   "streakShieldsAvailable": "{count, plural, =0{Aucun bouclier} =1{1 bouclier} other{{count} boucliers}}",
   "@streakShieldsAvailable": {
@@ -116,6 +126,7 @@
     }
   },
   "andThen": "Et ensuite…",
+  "levelScreenTitle": "Progression",
   "levelJourneyTitle": "🗺️ Ton parcours",
   "levelYouAreHere": "Tu es ici",
   "chapterTitle": "Chapitre {n}",

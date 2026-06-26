@@ -10,28 +10,26 @@ import '../services/character_service.dart';
 import '../services/milestone_scheduler.dart';
 import '../theme/jaune_design.dart';
 import 'badge_gallery_sheet.dart';
-import 'draggable_sheet.dart';
 import 'pressable.dart';
 import 'share_card.dart';
 
-/// Bottom sheet de progression repensé en **parcours** : un chemin vertical de
+/// Écran de progression repensé en **parcours** : un chemin vertical de
 /// nœuds (un par niveau) que le citron grimpe. Chaque chapitre est une section
-/// colorée ; les nœuds-jalons portent un déblocable (anticipation). S'ouvre
-/// directement sur le niveau courant (auto-scroll).
-class LevelSheet {
-  static void show(
+/// colorée ; les nœuds-jalons portent un déblocable (anticipation). En-tête
+/// épinglé (niveau, stats, XP toujours visibles), corps défilant centré sur le
+/// niveau courant. Plein écran : un parcours respire mieux qu'une feuille.
+class LevelScreen {
+  static void open(
     BuildContext context,
     CharacterService service, {
     Map<String, int>? dailyMap,
   }) {
     HapticFeedback.selectionClick();
     AudioService.instance.playUiPop();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) =>
-          _LevelSheetContent(service: service, dailyMap: dailyMap),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _LevelScreen(service: service, dailyMap: dailyMap),
+      ),
     );
   }
 }
@@ -54,17 +52,17 @@ const List<_Chapter> _kChapters = [
 
 enum _NodeState { acquired, current, locked }
 
-class _LevelSheetContent extends StatefulWidget {
+class _LevelScreen extends StatefulWidget {
   final CharacterService service;
   final Map<String, int>? dailyMap;
 
-  const _LevelSheetContent({required this.service, this.dailyMap});
+  const _LevelScreen({required this.service, this.dailyMap});
 
   @override
-  State<_LevelSheetContent> createState() => _LevelSheetContentState();
+  State<_LevelScreen> createState() => _LevelScreenState();
 }
 
-class _LevelSheetContentState extends State<_LevelSheetContent> {
+class _LevelScreenState extends State<_LevelScreen> {
   final GlobalKey _currentNodeKey = GlobalKey();
 
   @override
@@ -93,63 +91,115 @@ class _LevelSheetContentState extends State<_LevelSheetContent> {
 
     final quests = service.dailyQuests();
 
-    return DraggableSheet(
-      children: [
-        _Header(service: service),
-
-        if (widget.dailyMap != null) ...[
-          const SizedBox(height: 16),
-          _WeeklyGoalCard(service: service, dailyMap: widget.dailyMap!),
-        ],
-
-        if (streak > 0) ...[
-          const SizedBox(height: 14),
-          _StreakCard(service: service),
-        ],
-
-        const SizedBox(height: 24),
-        _SectionTitle(l10n.dailyQuestsTitle),
-        const SizedBox(height: 12),
-        ...quests.map((q) => _QuestRow(status: q)),
-
-        const SizedBox(height: 26),
-        _SectionTitle(l10n.levelJourneyTitle),
-        const SizedBox(height: 14),
-        ..._buildJourney(context, level),
-
-        const SizedBox(height: 22),
-        PressableScale(
-          semanticLabel: l10n.badgeGalleryViewAll,
-          onTap: () => BadgeGallerySheet.show(context, service),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: JauneColors.lemon.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(JauneRadii.card),
-              border: Border.all(
-                color: JauneColors.lemonDeep.withValues(alpha: 0.4),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // --- Barre de titre épinglée ---
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back, color: JauneColors.ink),
+                    tooltip: MaterialLocalizations.of(context)
+                        .backButtonTooltip,
+                  ),
+                  Text(
+                    l10n.levelScreenTitle,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: JauneColors.ink,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('🏅', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.badgeGalleryViewAll,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: JauneColors.ink,
-                  ),
-                ),
-              ],
+
+            // --- En-tête épinglé : niveau, stats, XP toujours visibles ---
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 4, 24, 14),
+              child: _Header(service: service),
             ),
-          ),
+            Container(height: 1, color: Colors.grey.shade100),
+
+            // --- Corps défilant : objectif, quêtes, parcours ---
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  16,
+                  24,
+                  MediaQuery.of(context).padding.bottom + 24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.dailyMap != null) ...[
+                      _WeeklyGoalCard(
+                        service: service,
+                        dailyMap: widget.dailyMap!,
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+
+                    if (streak > 0) ...[
+                      _StreakCard(service: service),
+                      const SizedBox(height: 14),
+                    ],
+
+                    _SectionTitle(l10n.dailyQuestsTitle),
+                    const SizedBox(height: 12),
+                    ...quests.map((q) => _QuestRow(status: q)),
+
+                    const SizedBox(height: 20),
+                    _SectionTitle(l10n.levelJourneyTitle),
+                    const SizedBox(height: 14),
+                    ..._buildJourney(context, level),
+
+                    const SizedBox(height: 22),
+                    PressableScale(
+                      semanticLabel: l10n.badgeGalleryViewAll,
+                      onTap: () => BadgeGallerySheet.show(context, service),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: JauneColors.lemon.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(JauneRadii.card),
+                          border: Border.all(
+                            color: JauneColors.lemonDeep.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('🏅', style: TextStyle(fontSize: 16)),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.badgeGalleryViewAll,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: JauneColors.ink,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -161,15 +211,19 @@ class _LevelSheetContentState extends State<_LevelSheetContent> {
     final progress = service.levelProgress;
     final unlockByLevel = {for (final u in kLevelUnlocks) u.level: u};
 
-    // On rend jusqu'à un peu au-delà du niveau courant pour donner à voir.
-    final int renderMax = math.max(31, level + 4);
+    // Fenêtre autour du niveau courant (style Duolingo : on ne déroule pas les
+    // 30 niveaux d'un coup). Un peu d'historique en bas, l'horizon proche en
+    // haut — la collection complète reste accessible via la galerie.
+    final int windowFrom = math.max(1, level - 4);
+    final int windowTo = level + 6;
 
     final List<Widget> widgets = [];
 
     for (final chapter in _kChapters.reversed) {
-      final int top = chapter.to == null ? renderMax : chapter.to!;
-      if (chapter.from > renderMax) continue;
-      final int chapterTop = math.min(top, renderMax);
+      final int rawTop = chapter.to ?? windowTo;
+      final int chapterTop = math.min(rawTop, windowTo);
+      final int chapterBottom = math.max(chapter.from, windowFrom);
+      if (chapterTop < chapterBottom) continue; // hors fenêtre
 
       // Bannière du chapitre.
       widgets.add(
@@ -180,13 +234,13 @@ class _LevelSheetContentState extends State<_LevelSheetContent> {
         ),
       );
 
-      for (int lvl = chapterTop; lvl >= chapter.from; lvl--) {
+      for (int lvl = chapterTop; lvl >= chapterBottom; lvl--) {
         final _NodeState state = lvl < level
             ? _NodeState.acquired
             : (lvl == level ? _NodeState.current : _NodeState.locked);
         final unlock = unlockByLevel[lvl];
         final bool isChapterTop = lvl == chapterTop;
-        final bool isChapterBottom = lvl == chapter.from;
+        final bool isChapterBottom = lvl == chapterBottom;
 
         widgets.add(
           _LevelNode(
@@ -277,10 +331,26 @@ class _Header extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _StatPill(emoji: '🔥', value: '${service.soberStreakDays}'),
-                  _StatPill(emoji: '🛡️', value: '${service.streakShields}'),
-                  _StatPill(emoji: '🏅', value: '$badges'),
-                  _StatPill(emoji: '🎨', value: '$skins'),
+                  _StatPill(
+                    emoji: '🔥',
+                    value: '${service.soberStreakDays}',
+                    label: l10n.levelStatStreak,
+                  ),
+                  _StatPill(
+                    emoji: '🛡️',
+                    value: '${service.streakShields}',
+                    label: l10n.levelStatShields,
+                  ),
+                  _StatPill(
+                    emoji: '🏅',
+                    value: '$badges',
+                    label: l10n.levelStatBadges,
+                  ),
+                  _StatPill(
+                    emoji: '🎨',
+                    value: '$skins',
+                    label: l10n.levelStatSkins,
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -303,27 +373,41 @@ class _Header extends StatelessWidget {
 class _StatPill extends StatelessWidget {
   final String emoji;
   final String value;
-  const _StatPill({required this.emoji, required this.value});
+  final String label;
+  const _StatPill({
+    required this.emoji,
+    required this.value,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 12)),
-          const SizedBox(width: 4),
+          Text(emoji, style: const TextStyle(fontSize: 15)),
+          const SizedBox(width: 6),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
               color: JauneColors.ink,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: JauneColors.inkSoft,
             ),
           ),
         ],
@@ -733,6 +817,8 @@ class _LevelNode extends StatelessWidget {
 
   Widget _circle(BuildContext context) {
     if (state == _NodeState.current) {
+      // Le citron EST ici : posé au centre de l'anneau de progression.
+      // (Pas de numéro : il doublonnerait l'en-tête épinglé.)
       return SizedBox(
         width: 62,
         height: 62,
@@ -757,20 +843,7 @@ class _LevelNode extends StatelessWidget {
                 ],
               ),
               alignment: Alignment.center,
-              child: Text(
-                '$level',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: color,
-                ),
-              ),
-            ),
-            // Le citron grimpe : posé sur le nœud courant.
-            const Positioned(
-              top: -2,
-              right: -2,
-              child: Text('🍋', style: TextStyle(fontSize: 18)),
+              child: const Text('🍋', style: TextStyle(fontSize: 24)),
             ),
           ],
         ),

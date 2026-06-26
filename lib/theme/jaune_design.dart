@@ -40,6 +40,23 @@ abstract class JauneColors {
     return healthLow;
   }
 
+  /// Bleu « sobriété » — la journée sans alcool est l'objectif, on la
+  /// valorise (rappel de l'eau, cf. 💧) plutôt que de la rendre terne.
+  static const sober = Color(0xFF2F7CC2);
+  static const soberTint = Color(0xFFE3F1FB);
+
+  /// Couleur d'une journée selon le nombre de verres — barème UNIQUE
+  /// (aligné OMS / formule PV) partagé par les cellules du calendrier et
+  /// le texte de détail. Réservé à count >= 1 (la sobriété a son propre
+  /// traitement, cf. [sober]). Toutes ces teintes passent l'AA avec du
+  /// texte blanc.
+  /// 1-2 modéré · 3-5 ça monte · >=6 grosse soirée.
+  static Color consumptionColor(int count) {
+    if (count <= 2) return const Color(0xFF56AB2F); // modéré — vert
+    if (count <= 5) return const Color(0xFFE8821E); // ça monte — ambre
+    return const Color(0xFFE5484D); // grosse soirée — rouge
+  }
+
   /// Couleurs de phase de progression
   static Color phaseColor(String phase) => switch (phase) {
     'discovery' => const Color(0xFF34C759),

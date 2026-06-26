@@ -6,9 +6,15 @@ import 'dart:math' as math;
 
 import '../utils/date_keys.dart';
 import 'jaune_health_model.dart';
+import 'journey_data.dart';
+
+// Le « Voyage du Citron » (types d'unlock, chapitres, 100 niveaux) vit dans
+// journey_data.dart. On le ré-exporte pour que les imports existants de
+// `character_service.dart` (UnlockType, LevelUnlock, kLevelUnlocks…) marchent.
+export 'journey_data.dart';
 
 // ---------------------------------------------------------------------------
-// XP curve — coût en XP pour passer au niveau suivant
+// XP curve — coût en XP pour passer au niveau suivant (jusqu'à 100)
 // ---------------------------------------------------------------------------
 int xpRequiredForLevel(int targetLevel) {
   if (targetLevel <= 1) return 0;
@@ -17,56 +23,12 @@ int xpRequiredForLevel(int targetLevel) {
   if (targetLevel <= 15) return 180;
   if (targetLevel <= 20) return 230;
   if (targetLevel <= 30) return 300;
-  return 400;
+  if (targetLevel <= 45) return 380;
+  if (targetLevel <= 60) return 460;
+  if (targetLevel <= 80) return 560;
+  if (targetLevel <= 100) return 680;
+  return 800;
 }
-
-// ---------------------------------------------------------------------------
-// Déblocables par niveau
-// ---------------------------------------------------------------------------
-enum UnlockType {
-  citronState, // nouvel état visuel Rive
-  feature, // fonctionnalité app
-  badge, // badge partageable
-  message, // nouveaux messages du citron
-}
-
-/// Pure data : les libellés localisés sont résolus par clé dans
-/// lib/l10n/l10n_helpers.dart (unlockTitle / unlockDescription)
-class LevelUnlock {
-  final int level;
-  final UnlockType type;
-  final String key;
-
-  const LevelUnlock({
-    required this.level,
-    required this.type,
-    required this.key,
-  });
-}
-
-const List<LevelUnlock> kLevelUnlocks = [
-  // --- Phase découverte (niv. 1-5) ---
-  LevelUnlock(level: 2, type: UnlockType.message, key: 'messages_lvl2'),
-  LevelUnlock(level: 3, type: UnlockType.feature, key: 'history_7d'),
-  LevelUnlock(level: 4, type: UnlockType.citronState, key: 'skin_sunglasses'),
-  LevelUnlock(level: 5, type: UnlockType.badge, key: 'badge_first_step'),
-
-  // --- Phase engagement (niv. 6-15) ---
-  LevelUnlock(level: 6, type: UnlockType.citronState, key: 'state_happy'),
-  LevelUnlock(level: 7, type: UnlockType.citronState, key: 'skin_party_hat'),
-  LevelUnlock(level: 8, type: UnlockType.feature, key: 'weekly_insight'),
-  LevelUnlock(level: 10, type: UnlockType.citronState, key: 'state_tired'),
-  LevelUnlock(level: 12, type: UnlockType.feature, key: 'stats_advanced'),
-  LevelUnlock(level: 14, type: UnlockType.citronState, key: 'skin_crown'),
-  LevelUnlock(level: 15, type: UnlockType.badge, key: 'badge_regularity'),
-
-  // --- Phase maîtrise (niv. 16+) ---
-  LevelUnlock(level: 16, type: UnlockType.citronState, key: 'state_wise'),
-  LevelUnlock(level: 18, type: UnlockType.citronState, key: 'skin_gold'),
-  LevelUnlock(level: 20, type: UnlockType.citronState, key: 'skin_dark'),
-  LevelUnlock(level: 25, type: UnlockType.message, key: 'messages_deep'),
-  LevelUnlock(level: 30, type: UnlockType.badge, key: 'badge_master'),
-];
 
 // ---------------------------------------------------------------------------
 // XpEvent — pour notifier l'UI de ce qui a été gagné

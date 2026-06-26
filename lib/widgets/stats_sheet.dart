@@ -324,7 +324,12 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
       StatsPeriod.year => 365,
       StatsPeriod.all => 365 * 3,
     };
-    final values = StatsService.hpTrajectory(_map, _firstUse, _now, days: days);
+    // IMPORTANT : la courbe de PV doit utiliser la MÊME ancre que l'accueil
+    // (profile.firstUseDate via JauneHealthModel.currentHpFromHistory). Sinon,
+    // avec le firstUse « effectif » (plus ancien), la simulation diverge et la
+    // dernière valeur ne correspond plus aux PV affichés sur l'accueil.
+    final hpAnchor = widget.character.profile.firstUseDate;
+    final values = StatsService.hpTrajectory(_map, hpAnchor, _now, days: days);
     return StatCard(
       title: l10n.statsHealthTrend,
       subtitle: l10n.statsHealthScrubHint,

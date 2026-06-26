@@ -42,6 +42,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String get calendarClose => 'Fermer';
 
   @override
+  String get calendarToday => 'Aujourd\'hui';
+
+  @override
+  String get calendarMonthEmpty => 'Rien de loggé ce mois-ci';
+
+  @override
+  String get calendarLegendSober => 'Sobre';
+
+  @override
+  String get calendarLegendModerate => 'Modéré';
+
+  @override
+  String get calendarLegendRising => 'Ça monte';
+
+  @override
+  String get calendarLegendHeavy => 'Grosse soirée';
+
+  @override
   String get dayDetailSober => 'Journée sobre';
 
   @override
@@ -113,6 +131,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String weeklyGoalProgress(int sober, int target) {
     return '$sober / $target jours sobres';
   }
+
+  @override
+  String get levelStatStreak => 'série';
+
+  @override
+  String get levelStatShields => 'boucliers';
+
+  @override
+  String get levelStatBadges => 'badges';
+
+  @override
+  String get levelStatSkins => 'tenues';
 
   @override
   String get streakShieldProtected => '🛡️ Série protégée';
@@ -190,6 +220,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get andThen => 'Et ensuite…';
+
+  @override
+  String get levelScreenTitle => 'Progression';
 
   @override
   String get levelJourneyTitle => '🗺️ Ton parcours';
