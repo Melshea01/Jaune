@@ -28,6 +28,7 @@ import 'widgets/confirm_sheet.dart';
 import 'widgets/consumption_gauge_painter.dart';
 import 'widgets/ground_shadow_painter.dart';
 import 'widgets/health_bar.dart';
+import 'widgets/world_ambiance.dart';
 import 'widgets/settings_sheet.dart';
 import 'widgets/stats_sheet.dart';
 import 'widgets/citron_character.dart';
@@ -985,12 +986,6 @@ class _MyHomePageState extends State<MyHomePage>
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 700),
           curve: JauneMotion.smooth,
-          padding: EdgeInsets.only(
-            top: 48,
-            left: 16,
-            right: 16,
-            bottom: 2 + bottomInset,
-          ),
           decoration: BoxDecoration(
             // Fond teinté par le monde courant (Le Verger, La Côte…) qui fond
             // vers le blanc — change en douceur quand on franchit une arène.
@@ -1001,7 +996,20 @@ class _MyHomePageState extends State<MyHomePage>
               end: Alignment.bottomCenter,
             ),
           ),
-          child: Column(
+          child: Stack(
+            children: [
+              // Décor d'ambiance du monde courant, en fond
+              Positioned.fill(
+                child: WorldAmbiance(level: _characterService.level),
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                  top: 48,
+                  left: 16,
+                  right: 16,
+                  bottom: 2 + bottomInset,
+                ),
+                child: Column(
             children: [
               // Header with streak badge and info button
               Row(
@@ -1217,6 +1225,9 @@ class _MyHomePageState extends State<MyHomePage>
 
               // Bottom controls
               _buildBottomControls(),
+            ],
+                ),
+              ),
             ],
           ),
         ),

@@ -96,35 +96,52 @@ class _LevelScreenState extends State<_LevelScreen>
         bottom: false,
         child: Column(
           children: [
-            // --- Barre de titre épinglée ---
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
-              child: Row(
+            // --- En-tête épinglé, teinté par le monde courant ---
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    chapterColorOf(level).withValues(alpha: 0.16),
+                    Colors.white,
+                  ],
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_back, color: JauneColors.ink),
-                    tooltip: MaterialLocalizations.of(context)
-                        .backButtonTooltip,
-                  ),
-                  Text(
-                    l10n.levelScreenTitle,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: JauneColors.ink,
+                  // Barre de titre
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          icon: const Icon(Icons.arrow_back,
+                              color: JauneColors.ink),
+                          tooltip: MaterialLocalizations.of(context)
+                              .backButtonTooltip,
+                        ),
+                        Text(
+                          l10n.levelScreenTitle,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: JauneColors.ink,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  // Niveau, stats, XP toujours visibles
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 14),
+                    child: _Header(service: service),
                   ),
                 ],
               ),
             ),
-
-            // --- En-tête épinglé : niveau, stats, XP toujours visibles ---
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 4, 24, 14),
-              child: _Header(service: service),
-            ),
-            Container(height: 1, color: Colors.grey.shade100),
 
             // --- Corps défilant : objectif, quêtes, parcours ---
             Expanded(
