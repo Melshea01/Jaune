@@ -92,11 +92,12 @@ class _LevelScreenState extends State<_LevelScreen>
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark, // icônes sombres sur teinte claire
         child: Column(
           children: [
-            // --- En-tête épinglé, teinté par le monde courant ---
+            // --- En-tête épinglé, teinté par le monde courant. Remonte
+            //     DERRIÈRE la barre d'état (heure) pour une couleur cohérente.
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -111,6 +112,8 @@ class _LevelScreenState extends State<_LevelScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Réserve la hauteur de la barre d'état (heure/batterie)
+                  SizedBox(height: MediaQuery.of(context).padding.top),
                   // Barre de titre
                   Padding(
                     padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
