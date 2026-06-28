@@ -647,10 +647,14 @@ class _LevelClimbState extends State<_LevelClimb>
   static const double _yTop = 28;
   static const double _yBot = 126;
 
+  bool _started = false;
+
   @override
-  void initState() {
-    super.initState();
-    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    if (MediaQuery.of(context).disableAnimations) {
       _c.value = 1.0;
     } else {
       _c.forward();
@@ -827,10 +831,14 @@ class _ChestRevealState extends State<_ChestReveal>
     duration: const Duration(milliseconds: 1300),
   );
 
+  bool _started = false;
+
   @override
-  void initState() {
-    super.initState();
-    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    if (MediaQuery.of(context).disableAnimations) {
       _c.value = 1.0;
     } else {
       _c.forward();
