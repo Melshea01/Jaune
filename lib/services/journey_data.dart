@@ -82,6 +82,17 @@ JourneyChapter chapterOfLevel(int level) => kChapters.firstWhere(
 
 Color chapterColorOf(int level) => chapterOfLevel(level).color;
 
+/// Dégradé de fond de l'accueil teinté par le monde courant (façon arène).
+/// Teinte douce en haut → blanc en bas, pour rester lisible sous l'UI.
+List<Color> worldBackground(int level) {
+  final c = chapterColorOf(level);
+  return [
+    Color.lerp(c, Colors.white, 0.55)!,
+    Color.lerp(c, Colors.white, 0.80)!,
+    Colors.white,
+  ];
+}
+
 const List<LevelUnlock> kLevelUnlocks = [
   // ---------------------------------------------------------------------------
   // Chapitre 1 — Le Verger (1-20) 🌿

@@ -982,19 +982,21 @@ class _MyHomePageState extends State<MyHomePage>
       body: SafeArea(
         bottom: false,
         top: false,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 700),
+          curve: JauneMotion.smooth,
           padding: EdgeInsets.only(
             top: 48,
             left: 16,
             right: 16,
             bottom: 2 + bottomInset,
           ),
-          decoration: const BoxDecoration(
-            // Trois stops : le ciel garde de la présence jusqu'à mi-écran
-            // avant de fondre vers le blanc — plus de profondeur
+          decoration: BoxDecoration(
+            // Fond teinté par le monde courant (Le Verger, La Côte…) qui fond
+            // vers le blanc — change en douceur quand on franchit une arène.
             gradient: LinearGradient(
-              colors: [JauneColors.sky, JauneColors.skyLight, Colors.white],
-              stops: [0.0, 0.45, 1.0],
+              colors: worldBackground(_characterService.level),
+              stops: const [0.0, 0.45, 1.0],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
