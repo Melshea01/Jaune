@@ -421,10 +421,18 @@ class _MyHomePageState extends State<MyHomePage>
       // Afficher les toasts XP gagnés + saut de joie du citron
       for (final event in result.xpEvents) {
         _showXpToast(event);
-        // Palier de streak : carillon + double haptique
-        if (event.reason == XpReason.soberStreak) {
-          JauneHaptics.milestone();
-          await _audioService.playStreakChime();
+        switch (event.reason) {
+          // Palier de streak / objectif hebdo : carillon + double haptique
+          case XpReason.soberStreak:
+          case XpReason.weeklyGoal:
+            JauneHaptics.milestone();
+            await _audioService.playStreakChime();
+          // Quête validée : petit feedback léger
+          case XpReason.questComplete:
+            JauneHaptics.tick();
+            await _audioService.playUiPop();
+          default:
+            break;
         }
       }
       if (result.xpEvents.isNotEmpty && !_citronController.hasActiveEvent) {
@@ -578,6 +586,7 @@ class _MyHomePageState extends State<MyHomePage>
       LevelUpCelebration.show(
         context: ctx,
         newLevel: newLevels.last,
+        fromLevel: newLevels.first - 1,
         unlocks: unlocks,
         skin: _characterService.profile.equippedSkin,
       ).then((_) {

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="-10 -20 420 440">
+  <g id="Batman">
+    <!-- Cowl : masque noir avec oreilles pointues + creux frontal, ajouré aux yeux -->
+    <path fill="#14141C" stroke="#05050A" stroke-width="3" stroke-linejoin="round" fill-rule="evenodd"
+      d="M158 96
+         L179 150
+         Q195 167 211 172
+         Q227 167 243 150
+         L264 96
+         Q274 102 272 168
+         Q268 197 256 207
+         Q211 223 166 207
+         Q152 197 148 168
+         Q146 102 158 96
+         Z
+         M166 181 a20 15 0 1 0 40 0 a20 15 0 1 0 -40 0 Z
+         M216 181 a20 15 0 1 0 40 0 a20 15 0 1 0 -40 0 Z"/>
+    <!-- Reflet doux sur le front pour le volume -->
+    <path d="M170 120 Q188 108 206 116" stroke="#3A3A4E" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <!-- Sourcils froncés (justicier) -->
+    <path d="M170 169 Q186 162 204 168" stroke="#05050A" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M218 168 Q236 162 252 169" stroke="#05050A" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

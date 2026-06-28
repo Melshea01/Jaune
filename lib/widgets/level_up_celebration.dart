@@ -24,6 +24,7 @@ class LevelUpCelebration {
     required BuildContext context,
     required int newLevel,
     required List<LevelUnlock> unlocks,
+    int? fromLevel,
     String skin = '',
   }) {
     JauneHaptics.celebrate();
@@ -38,6 +39,7 @@ class LevelUpCelebration {
             type: MaterialType.transparency,
             child: _CelebrationView(
               newLevel: newLevel,
+              fromLevel: fromLevel ?? newLevel - 1,
               unlocks: unlocks,
               skin: skin,
             ),
@@ -48,11 +50,13 @@ class LevelUpCelebration {
 
 class _CelebrationView extends StatefulWidget {
   final int newLevel;
+  final int fromLevel;
   final List<LevelUnlock> unlocks;
   final String skin;
 
   const _CelebrationView({
     required this.newLevel,
+    required this.fromLevel,
     required this.unlocks,
     this.skin = '',
   });
@@ -155,20 +159,29 @@ class _CelebrationViewState extends State<_CelebrationView>
                     scale: scaleIn,
                     child: Column(
                       children: [
-                        const Text('🎉', style: TextStyle(fontSize: 64)),
+                        _LevelClimb(
+                          fromLevel: widget.fromLevel,
+                          toLevel: widget.newLevel,
+                          color: chapterColorOf(widget.newLevel),
+                        ),
                         const SizedBox(height: 12),
                         _buildShimmeringTitle(reduceMotion),
                         const SizedBox(height: 8),
-                        Text(
-                          l10n_helpers.rankTitle(
-                            AppLocalizations.of(context),
-                            widget.newLevel,
-                          ),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
+                        Builder(
+                          builder: (context) {
+                            final fr = Localizations.localeOf(context)
+                                    .languageCode ==
+                                'fr';
+                            final chapter = chapterOfLevel(widget.newLevel);
+                            return Text(
+                              '${chapter.emoji}  ${chapter.name(fr)}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -180,7 +193,7 @@ class _CelebrationViewState extends State<_CelebrationView>
                       child: Column(
                         children: [
                           // Coffre qui s'ouvre : motif de récompense des jalons
-                          const Text('🎁', style: TextStyle(fontSize: 40)),
+                          const _ChestReveal(),
                           const SizedBox(height: 8),
                           Text(
                             AppLocalizations.of(context).unlockedBanner,
@@ -262,13 +275,8 @@ class _CelebrationViewState extends State<_CelebrationView>
   }
 
   Widget _buildUnlockCard(LevelUnlock unlock) {
-    final l10n = AppLocalizations.of(context);
-    final icon = switch (unlock.type) {
-      UnlockType.citronState => '🎨',
-      UnlockType.feature => '⭐',
-      UnlockType.badge => '🏅',
-      UnlockType.message => '💬',
-    };
+    final bool fr = Localizations.localeOf(context).languageCode == 'fr';
+    final icon = unlock.icon;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -290,7 +298,7 @@ class _CelebrationViewState extends State<_CelebrationView>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n_helpers.unlockTitle(l10n, unlock),
+                  l10n_helpers.unlockTitle(unlock, fr),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -299,7 +307,7 @@ class _CelebrationViewState extends State<_CelebrationView>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  l10n_helpers.unlockDescription(l10n, unlock),
+                  l10n_helpers.unlockDescription(unlock, fr),
                   style: const TextStyle(fontSize: 12, color: Colors.white70),
                 ),
               ],
@@ -534,4 +542,284 @@ class _ConfettiPainter extends CustomPainter {
   @override
   bool shouldRepaint(_ConfettiPainter oldDelegate) =>
       oldDelegate.progress != progress;
+}
+
+/// Le citron grimpe physiquement du nœud précédent au nouveau niveau : il
+/// saute le long du segment qui se remplit, et atterrit avec un rebond.
+/// C'est le « moment du level-up » rendu concret.
+class _LevelClimb extends StatefulWidget {
+  final int fromLevel;
+  final int toLevel;
+  final Color color;
+
+  const _LevelClimb({
+    required this.fromLevel,
+    required this.toLevel,
+    required this.color,
+  });
+
+  @override
+  State<_LevelClimb> createState() => _LevelClimbState();
+}
+
+class _LevelClimbState extends State<_LevelClimb>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1250),
+  );
+
+  static const double _w = 120;
+  static const double _h = 150;
+  static const double _cx = 60;
+  static const double _yTop = 28;
+  static const double _yBot = 126;
+
+  @override
+  void initState() {
+    super.initState();
+    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+      _c.value = 1.0;
+    } else {
+      _c.forward();
+      Future.delayed(const Duration(milliseconds: 770), () {
+        if (mounted) JauneHaptics.tick();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: _w,
+      height: _h,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) {
+          final t = _c.value;
+          final climb = ((t - 0.12) / 0.6).clamp(0.0, 1.0);
+          final eased = Curves.easeInOutCubic.transform(climb);
+          final ly = ui.lerpDouble(_yBot, _yTop, eased)!;
+          final lx = _cx + math.sin(climb * math.pi) * 16;
+          final landT = ((t - 0.72) / 0.28).clamp(0.0, 1.0);
+          final landScale = t < 0.72
+              ? 1.0
+              : 1.0 + 0.20 * Curves.easeOut.transform(landT) * (1 - landT) * 2;
+          final landed = t > 0.74;
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _ClimbPainter(
+                    ly: ly,
+                    color: widget.color,
+                    landed: landed,
+                  ),
+                ),
+              ),
+              // Niveau de départ (acquis)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: _yBot - 9,
+                child: Center(
+                  child: Text(
+                    '${widget.fromLevel}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              // Nouveau niveau (révélé à l'atterrissage, sous le citron)
+              if (landed)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: _yTop - 9,
+                  child: Center(
+                    child: Text(
+                      '${widget.toLevel}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              // Le citron qui grimpe
+              Positioned(
+                left: lx - 16,
+                top: ly - 17,
+                child: Transform.scale(
+                  scale: landScale,
+                  child: const Text('🍋', style: TextStyle(fontSize: 32)),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ClimbPainter extends CustomPainter {
+  final double ly;
+  final Color color;
+  final bool landed;
+
+  _ClimbPainter({required this.ly, required this.color, required this.landed});
+
+  static const double _cx = 60;
+  static const double _yTop = 28;
+  static const double _yBot = 126;
+  static const double _r = 19;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Segment gris (à parcourir)
+    final grey = Paint()
+      ..color = Colors.white.withValues(alpha: 0.22)
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(const Offset(_cx, _yBot), const Offset(_cx, _yTop), grey);
+
+    // Segment rempli jusqu'au citron
+    final fill = Paint()
+      ..color = color
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(const Offset(_cx, _yBot), Offset(_cx, ly), fill);
+
+    // Nœud de départ (acquis)
+    canvas.drawCircle(
+      const Offset(_cx, _yBot),
+      _r,
+      Paint()..color = color,
+    );
+    canvas.drawCircle(
+      const Offset(_cx, _yBot),
+      _r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..color = Colors.white.withValues(alpha: 0.5),
+    );
+
+    // Nœud d'arrivée
+    canvas.drawCircle(
+      const Offset(_cx, _yTop),
+      _r,
+      Paint()..color = landed ? color : Colors.white.withValues(alpha: 0.18),
+    );
+    canvas.drawCircle(
+      const Offset(_cx, _yTop),
+      _r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..color = Colors.white.withValues(alpha: landed ? 0.6 : 0.3),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ClimbPainter old) =>
+      old.ly != ly || old.landed != landed || old.color != color;
+}
+
+/// Coffre qui tremble puis s'ouvre dans un éclat — motif de récompense des
+/// jalons. Auto-joué une fois à l'apparition.
+class _ChestReveal extends StatefulWidget {
+  const _ChestReveal();
+
+  @override
+  State<_ChestReveal> createState() => _ChestRevealState();
+}
+
+class _ChestRevealState extends State<_ChestReveal>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1300),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+      _c.value = 1.0;
+    } else {
+      _c.forward();
+      // Petit « clac » d'ouverture
+      Future.delayed(const Duration(milliseconds: 720), () {
+        if (mounted) JauneHaptics.tick();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) {
+        final t = _c.value;
+        double rot = 0;
+        double scale = 1;
+        final bool opened = t > 0.55;
+
+        if (t < 0.55) {
+          // Tremblement qui s'amplifie avant l'ouverture
+          final ramp = t / 0.55;
+          rot = math.sin(t * 22 * math.pi) * 0.16 * ramp;
+          scale = 1 + 0.06 * ramp;
+        } else {
+          // Pop d'ouverture puis retour
+          final p = ((t - 0.55) / 0.45).clamp(0.0, 1.0);
+          scale = 1 + 0.55 * Curves.easeOut.transform(p) * (1 - p);
+        }
+
+        return SizedBox(
+          height: 56,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (opened)
+                Opacity(
+                  opacity: (1 - ((t - 0.55) / 0.45)).clamp(0.0, 1.0),
+                  child: const Text('✨', style: TextStyle(fontSize: 52)),
+                ),
+              Transform.rotate(
+                angle: rot,
+                child: Transform.scale(
+                  scale: scale,
+                  child: Text(
+                    opened ? '🎉' : '🎁',
+                    style: const TextStyle(fontSize: 44),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

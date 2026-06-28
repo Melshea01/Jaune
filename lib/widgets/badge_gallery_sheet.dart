@@ -38,13 +38,6 @@ class _BadgeGalleryContent extends StatefulWidget {
 class _BadgeGalleryContentState extends State<_BadgeGalleryContent> {
   CharacterService get service => widget.service;
 
-  static String _unlockIcon(UnlockType type) => switch (type) {
-    UnlockType.citronState => '🎨',
-    UnlockType.feature => '⭐',
-    UnlockType.badge => '🏅',
-    UnlockType.message => '💬',
-  };
-
   /// Équipe le skin (ou le retire s'il est déjà porté)
   Future<void> _toggleSkin(String key) async {
     JauneHaptics.tick();
@@ -56,6 +49,7 @@ class _BadgeGalleryContentState extends State<_BadgeGalleryContent> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final bool fr = Localizations.localeOf(context).languageCode == 'fr';
     final int level = service.level;
 
     return DraggableSheet(
@@ -70,51 +64,136 @@ class _BadgeGalleryContentState extends State<_BadgeGalleryContent> {
             ),
           ),
         ),
-        const SizedBox(height: 20),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.82,
-              ),
-              itemCount: kLevelUnlocks.length,
-              itemBuilder: (context, index) {
-                final unlock = kLevelUnlocks[index];
-                final bool acquired = unlock.level <= level;
-                final bool isSkin = skinByKey(unlock.key) != null;
-                final bool equipped =
-                    isSkin && service.profile.equippedSkin == unlock.key;
-
-                final tile = _BadgeTile(
-                  icon: isSkin ? '🧢' : _unlockIcon(unlock.type),
-                  title: l10n_helpers.unlockTitle(l10n, unlock),
-                  acquired: acquired,
-                  lockedLabel: l10n.badgeLockedLevel(unlock.level),
-                  equipLabel:
-                      !isSkin || !acquired
-                          ? null
-                          : equipped
-                          ? l10n.badgeEquipped
-                          : l10n.badgeEquip,
-                  equipped: equipped,
-                );
-
-                if (!isSkin || !acquired) return tile;
-                return PressableScale(
-                  haptic: false,
-                  semanticLabel:
-                      '${l10n_helpers.unlockTitle(l10n, unlock)} — '
-                      '${equipped ? l10n.badgeEquipped : l10n.badgeEquip}',
-                  onTap: () => _toggleSkin(unlock.key),
-                  child: tile,
-                );
-              },
-            ),
+        const SizedBox(height: 16),
+        // Collection rangée par monde (façon collection d'arènes)
+        for (final chapter in kChapters) ...[
+          _ChapterHeader(
+            label: '${chapter.emoji}  ${chapter.name(fr)}',
+            sub: l10n.chapterTitle(chapter.id),
+            color: chapter.color,
+            acquired: level >= chapter.from,
+          ),
+          const SizedBox(height: 12),
+          _worldGrid(context, l10n, fr, level, chapter),
+          const SizedBox(height: 22),
+        ],
       ],
+    );
+  }
+
+  Widget _worldGrid(
+    BuildContext context,
+    AppLocalizations l10n,
+    bool fr,
+    int level,
+    JourneyChapter chapter,
+  ) {
+    final items = kLevelUnlocks
+        .where((u) => u.level >= chapter.from && u.level <= chapter.to)
+        .toList();
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.82,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final unlock = items[index];
+        final bool acquired = unlock.level <= level;
+        final bool isSkin = skinByKey(unlock.key) != null;
+        final bool equipped =
+            isSkin && service.profile.equippedSkin == unlock.key;
+
+        final tile = _BadgeTile(
+          icon: unlock.icon,
+          title: l10n_helpers.unlockTitle(unlock, fr),
+          acquired: acquired,
+          lockedLabel: l10n.badgeLockedLevel(unlock.level),
+          equipLabel: !isSkin || !acquired
+              ? null
+              : equipped
+                  ? l10n.badgeEquipped
+                  : l10n.badgeEquip,
+          equipped: equipped,
+        );
+
+        if (!isSkin || !acquired) return tile;
+        return PressableScale(
+          haptic: false,
+          semanticLabel: '${l10n_helpers.unlockTitle(unlock, fr)} — '
+              '${equipped ? l10n.badgeEquipped : l10n.badgeEquip}',
+          onTap: () => _toggleSkin(unlock.key),
+          child: tile,
+        );
+      },
+    );
+  }
+}
+
+/// En-tête de section « monde » dans la collection.
+class _ChapterHeader extends StatelessWidget {
+  final String label;
+  final String sub;
+  final Color color;
+  final bool acquired;
+
+  const _ChapterHeader({
+    required this.label,
+    required this.sub,
+    required this.color,
+    required this.acquired,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withValues(alpha: acquired ? 0.20 : 0.10),
+            color.withValues(alpha: 0.04),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(JauneRadii.card),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  sub.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: JauneColors.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!acquired)
+            Icon(Icons.lock, size: 18, color: color.withValues(alpha: 0.7)),
+        ],
+      ),
     );
   }
 }

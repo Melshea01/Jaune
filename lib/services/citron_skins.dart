@@ -71,6 +71,64 @@ const List<CitronSkin> kCitronSkins = [
       0, 0, 0, 1, 0,
     ],
   ),
+
+  // --- Variantes de couleur du Voyage (une par monde) ---
+  CitronSkin(
+    key: 'skin_verdant', // Le Verger — teinte citron vert
+    kind: SkinKind.colorVariant,
+    colorMatrix: [
+      0.82, 0.28, 0, 0, 0, //
+      0.05, 1.06, 0, 0, 8, //
+      0, 0.12, 0.68, 0, 0, //
+      0, 0, 0, 1, 0,
+    ],
+  ),
+  CitronSkin(
+    key: 'skin_tropical', // La Côte — vif et chaud
+    kind: SkinKind.colorVariant,
+    colorMatrix: [
+      1.12, 0.06, 0, 0, 14, //
+      0.02, 1.06, 0, 0, 8, //
+      0, 0, 0.85, 0, 0, //
+      0, 0, 0, 1, 0,
+    ],
+  ),
+  CitronSkin(
+    key: 'skin_frost', // Les Sommets — givre froid
+    kind: SkinKind.colorVariant,
+    colorMatrix: [
+      0.85, 0, 0.12, 0, 10, //
+      0, 0.92, 0.10, 0, 14, //
+      0.04, 0, 1.05, 0, 24, //
+      0, 0, 0, 1, 0,
+    ],
+  ),
+  CitronSkin(
+    key: 'skin_neon', // La Ville — néon magenta
+    kind: SkinKind.colorVariant,
+    colorMatrix: [
+      1.15, 0, 0.10, 0, 10, //
+      0, 0.80, 0.10, 0, 0, //
+      0.10, 0, 1.15, 0, 18, //
+      0, 0, 0, 1, 0,
+    ],
+  ),
+  CitronSkin(
+    key: 'skin_cosmic', // Les Étoiles — indigo cosmique
+    kind: SkinKind.colorVariant,
+    colorMatrix: [
+      0.70, 0, 0.20, 0, 0, //
+      0, 0.62, 0.10, 0, 4, //
+      0.10, 0, 1.10, 0, 30, //
+      0, 0, 0, 1, 0,
+    ],
+  ),
+  CitronSkin(
+    key: 'skin_batman', // Le Chevalier Noir — masque (cowl) ajouré aux yeux
+    kind: SkinKind.accessory,
+    asset: 'assets/skins/skin_batman.svg',
+    anchor: SkinAnchor.face,
+  ),
 ];
 
 CitronSkin? skinByKey(String key) {

@@ -49,10 +49,10 @@ void main() {
   group('gel de série (bouclier)', () {
     test('un écart isolé d\'hier consomme un bouclier et préserve la série',
         () async {
-      // firstUse récent (4 j) → la semaine précédente n'est pas « couverte »,
-      // donc pas de bonus « semaine parfaite » qui re-créditerait un bouclier.
+      // firstUse récent (2 j) → ni « semaine parfaite » ni « objectif hebdo »
+      // (< 3 jours sobres couverts) ne re-créditent un bouclier.
       final s = CharacterService()
-        ..updateProfile(_profile(streakShields: 1, daysSinceFirstUse: 4));
+        ..updateProfile(_profile(streakShields: 1, daysSinceFirstUse: 2));
       // hier = conso isolée ; avant-hier sobre
       final daily = {_ago(1): 2};
 
@@ -65,7 +65,7 @@ void main() {
 
     test('idempotent : recalculer ne reconsomme pas de bouclier', () async {
       final s = CharacterService()
-        ..updateProfile(_profile(streakShields: 1, daysSinceFirstUse: 4));
+        ..updateProfile(_profile(streakShields: 1, daysSinceFirstUse: 2));
       final daily = {_ago(1): 2};
 
       await s.awardDailyLogXp(daily, includeLogBonus: false);
@@ -80,7 +80,7 @@ void main() {
     test('ne gaspille pas un bouclier si l\'avant-veille n\'est pas sobre',
         () async {
       final s = CharacterService()
-        ..updateProfile(_profile(streakShields: 1, daysSinceFirstUse: 4));
+        ..updateProfile(_profile(streakShields: 1, daysSinceFirstUse: 2));
       // hier ET avant-hier = conso → pas de série réelle à protéger
       final daily = {_ago(1): 2, _ago(2): 3};
 

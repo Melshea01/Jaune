@@ -18,16 +18,16 @@ export 'journey_data.dart';
 // ---------------------------------------------------------------------------
 int xpRequiredForLevel(int targetLevel) {
   if (targetLevel <= 1) return 0;
-  if (targetLevel <= 5) return 100;
-  if (targetLevel <= 10) return 140;
-  if (targetLevel <= 15) return 180;
-  if (targetLevel <= 20) return 230;
-  if (targetLevel <= 30) return 300;
-  if (targetLevel <= 45) return 380;
-  if (targetLevel <= 60) return 460;
-  if (targetLevel <= 80) return 560;
-  if (targetLevel <= 100) return 680;
-  return 800;
+  if (targetLevel <= 5) return 50; // accroche : premiers niveaux rapides
+  if (targetLevel <= 10) return 80;
+  if (targetLevel <= 15) return 120;
+  if (targetLevel <= 20) return 160;
+  if (targetLevel <= 30) return 220;
+  if (targetLevel <= 45) return 300;
+  if (targetLevel <= 60) return 380;
+  if (targetLevel <= 80) return 470;
+  if (targetLevel <= 100) return 560; // niveau 100 = quête au long cours
+  return 700;
 }
 
 // ---------------------------------------------------------------------------
@@ -44,6 +44,7 @@ enum XpReason {
   soberStreak,
   perfectWeek,
   questComplete,
+  weeklyGoal,
 }
 
 // ---------------------------------------------------------------------------
@@ -126,6 +127,8 @@ class CharacterProfile {
   String lastQuestDate; // jour des quêtes actives (reset au changement de jour)
   List<String> completedQuestIds; // quêtes du jour déjà validées
 
+  String lastWeeklyGoalDate; // semaine ISO où l'objectif hebdo a été récompensé
+
   CharacterProfile({
     this.xp = 0,
     this.level = 1,
@@ -144,6 +147,7 @@ class CharacterProfile {
     List<String>? frozenDays,
     this.lastQuestDate = '',
     List<String>? completedQuestIds,
+    this.lastWeeklyGoalDate = '',
   })  : currentPv = currentPv ?? 100,
         frozenDays = frozenDays ?? [],
         completedQuestIds = completedQuestIds ?? [];
@@ -184,12 +188,6 @@ class CharacterProfile {
     final int needed = xpToNextLevel;
     if (needed <= 0) return 1.0;
     return (xp / needed).clamp(0.0, 1.0);
-  }
-
-  String get levelPhase {
-    if (level <= 5) return 'discovery';
-    if (level <= 15) return 'engagement';
-    return 'mastery';
   }
 
   List<LevelUnlock> get acquiredUnlocks =>
@@ -250,6 +248,7 @@ class CharacterProfile {
     'frozenDays': frozenDays,
     'lastQuestDate': lastQuestDate,
     'completedQuestIds': completedQuestIds,
+    'lastWeeklyGoalDate': lastWeeklyGoalDate,
   };
 
   static CharacterProfile fromJson(Map<String, dynamic> p) => CharacterProfile(
@@ -273,6 +272,7 @@ class CharacterProfile {
     completedQuestIds:
         (p['completedQuestIds'] as List?)?.map((e) => e.toString()).toList() ??
             [],
+    lastWeeklyGoalDate: (p['lastWeeklyGoalDate'] as String?) ?? '',
   );
 }
 
@@ -291,7 +291,6 @@ class CharacterService {
   String get currentMessage => _profile.message;
   double get levelProgress => _profile.levelProgress;
   int get xpToNextLevel => _profile.xpToNextLevel;
-  String get levelPhase => _profile.levelPhase;
   int get soberStreakDays => _profile.soberStreakDays;
   int get streakShields => _profile.streakShields;
   bool hasUnlock(String key) => _profile.hasUnlock(key);
@@ -474,6 +473,18 @@ class CharacterService {
 
       // Quêtes du jour — évaluées à chaque log (idempotent)
       events.addAll(_evaluateQuests(dailyMap));
+
+      // Objectif hebdomadaire atteint (1x/semaine) → bonus + bouclier
+      final goal = weeklyGoal(dailyMap);
+      final String weekKey = _isoWeekKey(DateTime.now());
+      if (goal.soberDays >= goal.target &&
+          _profile.lastWeeklyGoalDate != weekKey) {
+        _profile.lastWeeklyGoalDate = weekKey;
+        events.add(XpEvent(_award(12), XpReason.weeklyGoal));
+        if (_profile.streakShields < kMaxShields) {
+          _profile.streakShields += 1;
+        }
+      }
 
       // Vérifier les nouveaux niveaux et déblocages
       if (_profile.level > levelBefore) {

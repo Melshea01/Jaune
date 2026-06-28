@@ -36,20 +36,6 @@ class LevelScreen {
 
 // --- Description d'un chapitre du parcours -----------------------------------
 
-class _Chapter {
-  final int index; // 1..4
-  final int from;
-  final int? to; // null = ouvert (Légende)
-  const _Chapter(this.index, this.from, this.to);
-}
-
-const List<_Chapter> _kChapters = [
-  _Chapter(1, 1, 5),
-  _Chapter(2, 6, 15),
-  _Chapter(3, 16, 30),
-  _Chapter(4, 31, null),
-];
-
 enum _NodeState { acquired, current, locked }
 
 class _LevelScreen extends StatefulWidget {
@@ -62,12 +48,19 @@ class _LevelScreen extends StatefulWidget {
   State<_LevelScreen> createState() => _LevelScreenState();
 }
 
-class _LevelScreenState extends State<_LevelScreen> {
+class _LevelScreenState extends State<_LevelScreen>
+    with SingleTickerProviderStateMixin {
   final GlobalKey _currentNodeKey = GlobalKey();
+
+  late final AnimationController _entrance = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
 
   @override
   void initState() {
     super.initState();
+    _entrance.forward();
     // Ouvre le parcours centré sur la position actuelle.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _currentNodeKey.currentContext;
@@ -80,6 +73,12 @@ class _LevelScreenState extends State<_LevelScreen> {
         );
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _entrance.dispose();
+    super.dispose();
   }
 
   @override
@@ -206,31 +205,31 @@ class _LevelScreenState extends State<_LevelScreen> {
   /// Construit le parcours de haut (niveaux verrouillés à venir) en bas
   /// (niveau 1). Les chapitres sont rendus du plus élevé au plus bas.
   List<Widget> _buildJourney(BuildContext context, int level) {
-    final l10n = AppLocalizations.of(context);
+    final bool fr = Localizations.localeOf(context).languageCode == 'fr';
     final service = widget.service;
     final progress = service.levelProgress;
     final unlockByLevel = {for (final u in kLevelUnlocks) u.level: u};
 
     // Fenêtre autour du niveau courant (style Duolingo : on ne déroule pas les
-    // 30 niveaux d'un coup). Un peu d'historique en bas, l'horizon proche en
+    // 100 niveaux d'un coup). Un peu d'historique en bas, l'horizon proche en
     // haut — la collection complète reste accessible via la galerie.
     final int windowFrom = math.max(1, level - 4);
-    final int windowTo = level + 6;
+    final int windowTo = math.min(100, level + 6);
 
     final List<Widget> widgets = [];
 
-    for (final chapter in _kChapters.reversed) {
-      final int rawTop = chapter.to ?? windowTo;
-      final int chapterTop = math.min(rawTop, windowTo);
+    for (final chapter in kChapters.reversed) {
+      final int chapterTop = math.min(chapter.to, windowTo);
       final int chapterBottom = math.max(chapter.from, windowFrom);
       if (chapterTop < chapterBottom) continue; // hors fenêtre
 
-      // Bannière du chapitre.
+      // Bannière du chapitre / monde (arène).
       widgets.add(
         _ChapterBanner(
-          index: chapter.index,
-          name: l10n_helpers.rankTitle(l10n, chapter.from),
-          color: JauneColors.chapterColor(chapter.from),
+          index: chapter.id,
+          name: chapter.name(fr),
+          emoji: chapter.emoji,
+          color: chapter.color,
         ),
       );
 
@@ -248,7 +247,8 @@ class _LevelScreenState extends State<_LevelScreen> {
             level: lvl,
             state: state,
             unlock: unlock,
-            color: JauneColors.chapterColor(lvl),
+            color: chapter.color,
+            fr: fr,
             currentLevel: level,
             progress: progress,
             xp: service.profile.xp,
@@ -270,7 +270,11 @@ class _LevelScreenState extends State<_LevelScreen> {
       }
     }
 
-    return widgets;
+    // Entrée en cascade légère à l'ouverture.
+    return [
+      for (int i = 0; i < widgets.length; i++)
+        _Stagger(parent: _entrance, index: i, child: widgets[i]),
+    ];
   }
 }
 
@@ -283,21 +287,16 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final bool fr = Localizations.localeOf(context).languageCode == 'fr';
     final level = service.level;
-    final phase = service.levelPhase;
     final xp = service.profile.xp;
     final xpToNext = service.xpToNextLevel;
     final progress = service.levelProgress;
-    final color = JauneColors.chapterColor(level);
-    final rankTitle = l10n_helpers.rankTitle(l10n, level);
 
-    final phaseLevels = switch (phase) {
-      'discovery' => 5,
-      'engagement' => 10,
-      _ => 20,
-    };
-    final levelInPhase = (level - 1) % phaseLevels + 1;
-    final phaseLabel = l10n_helpers.phaseLabel(l10n, phase);
+    final chapter = chapterOfLevel(level);
+    final color = chapter.color;
+    final levelInChapter = level - chapter.from + 1;
+    final chapterLength = chapter.to - chapter.from + 1;
 
     final unlocks = service.acquiredUnlocks;
     final badges =
@@ -314,16 +313,17 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                rankTitle,
+                '${chapter.emoji}  ${chapter.name(fr)}',
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 21,
                   fontWeight: FontWeight.w900,
                   color: JauneColors.ink,
                 ),
               ),
               const SizedBox(height: 6),
               _PhaseChip(
-                label: '$phaseLabel  ·  $levelInPhase/$phaseLevels',
+                label:
+                    '${l10n.chapterTitle(chapter.id)}  ·  $levelInChapter/$chapterLength',
                 color: color,
               ),
               const SizedBox(height: 10),
@@ -544,9 +544,10 @@ class _WeeklyGoalCard extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                CustomPaint(
-                  size: const Size(46, 46),
-                  painter: _RingPainter(progress: goal.progress, color: color),
+                _AnimatedRing(
+                  progress: goal.progress,
+                  color: color,
+                  size: 46,
                 ),
                 Text(
                   '${goal.soberDays}',
@@ -619,11 +620,24 @@ class _QuestRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              done ? Icons.check_circle : Icons.radio_button_unchecked,
-              size: 22,
-              color: done ? JauneColors.lemonDeep : Colors.grey.shade400,
-            ),
+            done
+                ? TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0.4, end: 1.0),
+                    duration: const Duration(milliseconds: 480),
+                    curve: Curves.elasticOut,
+                    builder: (context, scale, child) =>
+                        Transform.scale(scale: scale, child: child),
+                    child: const Icon(
+                      Icons.check_circle,
+                      size: 22,
+                      color: JauneColors.lemonDeep,
+                    ),
+                  )
+                : Icon(
+                    Icons.radio_button_unchecked,
+                    size: 22,
+                    color: Colors.grey.shade400,
+                  ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -664,14 +678,18 @@ class _QuestRow extends StatelessWidget {
 
 // --- Bannière de chapitre ----------------------------------------------------
 
+/// Bannière de monde façon « arène » : carte large colorée, emoji + nom du
+/// monde + numéro de chapitre. Marque l'entrée dans une nouvelle étape.
 class _ChapterBanner extends StatelessWidget {
   final int index;
   final String name;
+  final String emoji;
   final Color color;
 
   const _ChapterBanner({
     required this.index,
     required this.name,
+    required this.emoji,
     required this.color,
   });
 
@@ -679,51 +697,49 @@ class _ChapterBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 6),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  l10n.chapterTitle(index),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    color: color,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: JauneColors.ink,
-                  ),
-                ),
-              ],
-            ),
+      padding: const EdgeInsets.only(top: 14, bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              color.withValues(alpha: 0.22),
+              color.withValues(alpha: 0.06),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Container(
-              height: 1.5,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [color.withValues(alpha: 0.35), Colors.transparent],
-                ),
+          borderRadius: BorderRadius.circular(JauneRadii.card),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 26)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.chapterTitle(index).toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: color,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: JauneColors.ink,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -736,6 +752,7 @@ class _LevelNode extends StatelessWidget {
   final _NodeState state;
   final LevelUnlock? unlock;
   final Color color;
+  final bool fr;
   final int currentLevel;
   final double progress;
   final int xp;
@@ -751,6 +768,7 @@ class _LevelNode extends StatelessWidget {
     required this.state,
     required this.unlock,
     required this.color,
+    required this.fr,
     required this.currentLevel,
     required this.progress,
     required this.xp,
@@ -817,37 +835,9 @@ class _LevelNode extends StatelessWidget {
 
   Widget _circle(BuildContext context) {
     if (state == _NodeState.current) {
-      // Le citron EST ici : posé au centre de l'anneau de progression.
-      // (Pas de numéro : il doublonnerait l'en-tête épinglé.)
-      return SizedBox(
-        width: 62,
-        height: 62,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            CustomPaint(
-              size: const Size(62, 62),
-              painter: _RingPainter(progress: progress, color: color),
-            ),
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.14),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.35),
-                    blurRadius: 12,
-                  ),
-                ],
-              ),
-              alignment: Alignment.center,
-              child: const Text('🍋', style: TextStyle(fontSize: 24)),
-            ),
-          ],
-        ),
-      );
+      // Le citron EST ici : il flotte doucement dans son anneau de progression
+      // (animé), le halo pulse — un nœud bien vivant.
+      return _CurrentNodeMarker(progress: progress, color: color);
     }
 
     final bool acquired = state == _NodeState.acquired;
@@ -869,10 +859,7 @@ class _LevelNode extends StatelessWidget {
         ),
         alignment: Alignment.center,
         child: acquired
-            ? Text(
-                _unlockIcon(unlock!.type),
-                style: const TextStyle(fontSize: 22),
-              )
+            ? Text(unlock!.icon, style: const TextStyle(fontSize: 22))
             : Icon(Icons.lock, size: 18, color: Colors.grey.shade400),
       );
     }
@@ -943,7 +930,7 @@ class _LevelNode extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          l10n_helpers.unlockTitle(l10n, unlock!),
+          l10n_helpers.unlockTitle(unlock!, fr),
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w800,
@@ -953,7 +940,7 @@ class _LevelNode extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           acquired
-              ? l10n_helpers.unlockDescription(l10n, unlock!)
+              ? l10n_helpers.unlockDescription(unlock!, fr)
               : l10n.levelLockedShort(unlock!.level),
           style: TextStyle(
             fontSize: 12,
@@ -964,13 +951,136 @@ class _LevelNode extends StatelessWidget {
       ],
     );
   }
+}
 
-  static String _unlockIcon(UnlockType type) => switch (type) {
-        UnlockType.citronState => '🎨',
-        UnlockType.feature => '⭐',
-        UnlockType.badge => '🏅',
-        UnlockType.message => '💬',
-      };
+/// Marqueur du niveau courant : citron qui flotte dans un anneau de
+/// progression animé, halo qui pulse. « Tu es ici », bien vivant.
+class _CurrentNodeMarker extends StatefulWidget {
+  final double progress;
+  final Color color;
+
+  const _CurrentNodeMarker({required this.progress, required this.color});
+
+  @override
+  State<_CurrentNodeMarker> createState() => _CurrentNodeMarkerState();
+}
+
+class _CurrentNodeMarkerState extends State<_CurrentNodeMarker>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _bob = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2400),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _bob.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    return SizedBox(
+      width: 64,
+      height: 64,
+      child: AnimatedBuilder(
+        animation: _bob,
+        builder: (context, _) {
+          final t = reduceMotion
+              ? 0.0
+              : Curves.easeInOut.transform(_bob.value);
+          final dy = -2.5 * t;
+          final glow = 8.0 + 8.0 * t;
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              _AnimatedRing(progress: widget.progress, color: widget.color),
+              Transform.translate(
+                offset: Offset(0, dy),
+                child: Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: widget.color.withValues(alpha: 0.14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.color.withValues(alpha: 0.40),
+                        blurRadius: glow,
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text('🍋', style: TextStyle(fontSize: 24)),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Entrée en cascade : fondu + léger glissement vers le haut, décalé selon
+/// l'index, piloté par le contrôleur d'entrée de l'écran.
+class _Stagger extends StatelessWidget {
+  final Animation<double> parent;
+  final int index;
+  final Widget child;
+
+  const _Stagger({
+    required this.parent,
+    required this.index,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double start = (index * 0.045).clamp(0.0, 0.6);
+    final anim = CurvedAnimation(
+      parent: parent,
+      curve: Interval(start, (start + 0.4).clamp(0.0, 1.0),
+          curve: Curves.easeOut),
+    );
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (context, _) => Opacity(
+        opacity: anim.value,
+        child: Transform.translate(
+          offset: Offset(0, 14 * (1 - anim.value)),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Anneau de progression qui s'anime de 0 à sa valeur à l'apparition.
+class _AnimatedRing extends StatelessWidget {
+  final double progress;
+  final Color color;
+  final double size;
+
+  const _AnimatedRing({
+    required this.progress,
+    required this.color,
+    this.size = 62,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: progress.clamp(0.0, 1.0)),
+      duration: const Duration(milliseconds: 900),
+      curve: JauneMotion.smooth,
+      builder: (context, value, _) => CustomPaint(
+        size: Size(size, size),
+        painter: _RingPainter(progress: value, color: color),
+      ),
+    );
+  }
 }
 
 /// Peint les deux demi-segments verticaux du chemin (au-dessus / au-dessous du

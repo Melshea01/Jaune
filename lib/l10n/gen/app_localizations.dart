@@ -260,6 +260,12 @@ abstract class AppLocalizations {
   /// **'Quête accomplie'**
   String get xpReasonQuestComplete;
 
+  /// No description provided for @xpReasonWeeklyGoal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Objectif de la semaine'**
+  String get xpReasonWeeklyGoal;
+
   /// No description provided for @dailyQuestsTitle.
   ///
   /// In fr, this message translates to:

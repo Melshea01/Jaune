@@ -107,6 +107,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get xpReasonQuestComplete => 'Quête accomplie';
 
   @override
+  String get xpReasonWeeklyGoal => 'Objectif de la semaine';
+
+  @override
   String get dailyQuestsTitle => '🎯 Quêtes du jour';
 
   @override
