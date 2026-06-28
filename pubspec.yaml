@@ -59,6 +59,7 @@ dependencies:
   # Classement entre amis — Phase 2 : backend partagé + deep linking
   supabase_flutter: ^2.8.0
   app_links: ^6.3.2
+  sensors_plus: ^6.1.1
 
 dev_dependencies:
   flutter_test:

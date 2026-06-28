@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 import '../services/journey_data.dart';
 
@@ -26,8 +28,36 @@ class _WorldAmbianceState extends State<WorldAmbiance>
     duration: const Duration(seconds: 18),
   )..repeat();
 
+  // Parallax gyroscope : inclinaison cible (depuis le capteur) + valeur lissée
+  // (suivie à chaque frame). 0 si pas de capteur (simulateur) → dégradation
+  // propre, aucun effet.
+  StreamSubscription<AccelerometerEvent>? _accelSub;
+  double _targetX = 0, _targetY = 0;
+  double _tiltX = 0, _tiltY = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      _accelSub = accelerometerEventStream(
+        samplingPeriod: SensorInterval.uiInterval,
+      ).listen(
+        (e) {
+          // Portrait quasi droit : roulis ≈ x, tangage ≈ z (≈0 au repos).
+          _targetX = (e.x / 9.8).clamp(-1.0, 1.0);
+          _targetY = (e.z / 9.8).clamp(-1.0, 1.0);
+        },
+        onError: (_) {}, // capteur indisponible → on reste à 0
+        cancelOnError: true,
+      );
+    } catch (_) {
+      // sensors_plus indisponible : pas de parallax, le reste fonctionne.
+    }
+  }
+
   @override
   void dispose() {
+    _accelSub?.cancel();
     _c.dispose();
     super.dispose();
   }
@@ -38,14 +68,25 @@ class _WorldAmbianceState extends State<WorldAmbiance>
     return IgnorePointer(
       child: AnimatedBuilder(
         animation: _c,
-        builder: (context, _) => CustomPaint(
-          size: Size.infinite,
-          painter: _WorldAmbiancePainter(
-            chapterId: chapterOfLevel(widget.level).id,
-            color: chapterColorOf(widget.level),
-            t: reduce ? 0.0 : _c.value,
-          ),
-        ),
+        builder: (context, _) {
+          // Lissage de l'inclinaison (low-pass) à chaque frame.
+          if (reduce) {
+            _tiltX = _tiltY = 0;
+          } else {
+            _tiltX += (_targetX - _tiltX) * 0.08;
+            _tiltY += (_targetY - _tiltY) * 0.08;
+          }
+          return CustomPaint(
+            size: Size.infinite,
+            painter: _WorldAmbiancePainter(
+              chapterId: chapterOfLevel(widget.level).id,
+              color: chapterColorOf(widget.level),
+              t: reduce ? 0.0 : _c.value,
+              tiltX: _tiltX,
+              tiltY: _tiltY,
+            ),
+          );
+        },
       ),
     );
   }
@@ -55,14 +96,24 @@ class _WorldAmbiancePainter extends CustomPainter {
   final int chapterId;
   final Color color;
   final double t; // phase ∈ [0,1]
+  final double tiltX; // inclinaison gyroscope ∈ [-1,1]
+  final double tiltY;
 
   _WorldAmbiancePainter({
     required this.chapterId,
     required this.color,
     required this.t,
+    this.tiltX = 0,
+    this.tiltY = 0,
   });
 
   static const double _tau = math.pi * 2;
+  static const double _shift = 24; // amplitude max du parallax (px)
+
+  /// Décalage de parallax pour une couche de profondeur donnée
+  /// (0 = lointain/immobile, 1 = premier plan/maximum).
+  Offset _par(double depth) =>
+      Offset(-tiltX * _shift * depth, -tiltY * _shift * depth);
 
   /// Fraction pseudo-aléatoire déterministe (pas de Random par frame).
   double _frac(int i, double mul) {
@@ -72,7 +123,15 @@ class _WorldAmbiancePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    _atmosphere(canvas, size); // lumière de fond (profondeur)
+    // Lumière de fond — couche lointaine (parallax faible).
+    canvas.save();
+    canvas.translate(_par(0.25).dx, _par(0.25).dy);
+    _atmosphere(canvas, size);
+    canvas.restore();
+
+    // Motifs du monde — couche médiane.
+    canvas.save();
+    canvas.translate(_par(0.6).dx, _par(0.6).dy);
     switch (chapterId) {
       case 1:
         _orchard(canvas, size);
@@ -85,7 +144,10 @@ class _WorldAmbiancePainter extends CustomPainter {
       default:
         _stars(canvas, size);
     }
-    _depthParticles(canvas, size); // poussière lumineuse au premier plan
+    canvas.restore();
+
+    // Poussière lumineuse — premier plan (parallax max, par bande).
+    _depthParticles(canvas, size);
   }
 
   // --- Lumière d'ambiance : halo radial qui dérive en haut ---
@@ -104,9 +166,12 @@ class _WorldAmbiancePainter extends CustomPainter {
 
   // --- Particules « bokeh » en 3 plans de profondeur (parallax) ---
   void _depthParticles(Canvas canvas, Size size) {
-    _band(canvas, size, count: 11, seed: 1, rMin: 1, rMax: 2, a: 0.06, sp: 0.08);
-    _band(canvas, size, count: 7, seed: 2, rMin: 2, rMax: 3.5, a: 0.09, sp: 0.16);
-    _band(canvas, size, count: 4, seed: 3, rMin: 4, rMax: 6.5, a: 0.11, sp: 0.28);
+    _band(canvas, size,
+        count: 11, seed: 1, rMin: 1, rMax: 2, a: 0.06, sp: 0.08, depth: 0.35);
+    _band(canvas, size,
+        count: 7, seed: 2, rMin: 2, rMax: 3.5, a: 0.09, sp: 0.16, depth: 0.7);
+    _band(canvas, size,
+        count: 4, seed: 3, rMin: 4, rMax: 6.5, a: 0.11, sp: 0.28, depth: 1.2);
   }
 
   void _band(
@@ -118,7 +183,9 @@ class _WorldAmbiancePainter extends CustomPainter {
     required double rMax,
     required double a,
     required double sp,
+    required double depth,
   }) {
+    final par = _par(depth);
     final p = Paint()..color = color.withValues(alpha: a);
     for (int i = 0; i < count; i++) {
       final key = i * 3 + seed * 53;
@@ -129,7 +196,7 @@ class _WorldAmbiancePainter extends CustomPainter {
       final sway = math.sin(_tau * (t + fx)) * size.width * 0.02;
       final r = rMin + (rMax - rMin) * _frac(key + 7, 0.91137);
       canvas.drawCircle(
-        Offset(fx * size.width + sway, fy * size.height),
+        Offset(fx * size.width + sway + par.dx, fy * size.height + par.dy),
         r,
         p,
       );
