@@ -106,8 +106,7 @@ class _CelebrationViewState extends State<_CelebrationView>
   /// Vrai quand ce level-up fait entrer dans un nouveau monde (arène).
   bool get _isNewWorld =>
       widget.fromLevel >= 1 &&
-      chapterOfLevel(widget.newLevel).id !=
-          chapterOfLevel(widget.fromLevel).id;
+      chapterOfLevel(widget.newLevel).id != chapterOfLevel(widget.fromLevel).id;
 
   @override
   Widget build(BuildContext context) {
@@ -182,8 +181,8 @@ class _CelebrationViewState extends State<_CelebrationView>
                         const SizedBox(height: 8),
                         Builder(
                           builder: (context) {
-                            final fr = Localizations.localeOf(context)
-                                    .languageCode ==
+                            final fr =
+                                Localizations.localeOf(context).languageCode ==
                                 'fr';
                             final chapter = chapterOfLevel(widget.newLevel);
                             return Text(
@@ -434,8 +433,11 @@ class _StaggeredReveal extends StatelessWidget {
     final double start = (0.35 + index * 0.12).clamp(0.0, 0.85);
     final animation = CurvedAnimation(
       parent: controller,
-      curve: Interval(start, (start + 0.3).clamp(0.0, 1.0),
-          curve: Curves.easeOutCubic),
+      curve: Interval(
+        start,
+        (start + 0.3).clamp(0.0, 1.0),
+        curve: Curves.easeOutCubic,
+      ),
     );
     return AnimatedBuilder(
       animation: animation,
@@ -647,21 +649,13 @@ class _LevelClimbState extends State<_LevelClimb>
   static const double _yTop = 28;
   static const double _yBot = 126;
 
-  bool _started = false;
-
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_started) return;
-    _started = true;
-    if (MediaQuery.of(context).disableAnimations) {
-      _c.value = 1.0;
-    } else {
-      _c.forward();
-      Future.delayed(const Duration(milliseconds: 770), () {
-        if (mounted) JauneHaptics.tick();
-      });
-    }
+  void initState() {
+    super.initState();
+    _c.forward();
+    Future.delayed(const Duration(milliseconds: 770), () {
+      if (mounted) JauneHaptics.tick();
+    });
   }
 
   @override
@@ -672,21 +666,25 @@ class _LevelClimbState extends State<_LevelClimb>
 
   @override
   Widget build(BuildContext context) {
+    // reduce-motion : lu ici (safe), on saute à la frame finale.
+    final reduce = MediaQuery.of(context).disableAnimations;
     return SizedBox(
       width: _w,
       height: _h,
       child: AnimatedBuilder(
         animation: _c,
         builder: (context, _) {
-          final t = _c.value;
+          final t = reduce ? 1.0 : _c.value;
           final climb = ((t - 0.12) / 0.6).clamp(0.0, 1.0);
           final eased = Curves.easeInOutCubic.transform(climb);
           final ly = ui.lerpDouble(_yBot, _yTop, eased)!;
           final lx = _cx + math.sin(climb * math.pi) * 16;
           final landT = ((t - 0.72) / 0.28).clamp(0.0, 1.0);
-          final landScale = t < 0.72
-              ? 1.0
-              : 1.0 + 0.20 * Curves.easeOut.transform(landT) * (1 - landT) * 2;
+          final landScale =
+              t < 0.72
+                  ? 1.0
+                  : 1.0 +
+                      0.20 * Curves.easeOut.transform(landT) * (1 - landT) * 2;
           final landed = t > 0.74;
 
           return Stack(
@@ -766,25 +764,23 @@ class _ClimbPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Segment gris (à parcourir)
-    final grey = Paint()
-      ..color = Colors.white.withValues(alpha: 0.22)
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round;
+    final grey =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.22)
+          ..strokeWidth = 5
+          ..strokeCap = StrokeCap.round;
     canvas.drawLine(const Offset(_cx, _yBot), const Offset(_cx, _yTop), grey);
 
     // Segment rempli jusqu'au citron
-    final fill = Paint()
-      ..color = color
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round;
+    final fill =
+        Paint()
+          ..color = color
+          ..strokeWidth = 5
+          ..strokeCap = StrokeCap.round;
     canvas.drawLine(const Offset(_cx, _yBot), Offset(_cx, ly), fill);
 
     // Nœud de départ (acquis)
-    canvas.drawCircle(
-      const Offset(_cx, _yBot),
-      _r,
-      Paint()..color = color,
-    );
+    canvas.drawCircle(const Offset(_cx, _yBot), _r, Paint()..color = color);
     canvas.drawCircle(
       const Offset(_cx, _yBot),
       _r,
@@ -831,22 +827,14 @@ class _ChestRevealState extends State<_ChestReveal>
     duration: const Duration(milliseconds: 1300),
   );
 
-  bool _started = false;
-
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_started) return;
-    _started = true;
-    if (MediaQuery.of(context).disableAnimations) {
-      _c.value = 1.0;
-    } else {
-      _c.forward();
-      // Petit « clac » d'ouverture
-      Future.delayed(const Duration(milliseconds: 720), () {
-        if (mounted) JauneHaptics.tick();
-      });
-    }
+  void initState() {
+    super.initState();
+    _c.forward();
+    // Petit « clac » d'ouverture
+    Future.delayed(const Duration(milliseconds: 720), () {
+      if (mounted) JauneHaptics.tick();
+    });
   }
 
   @override
@@ -857,10 +845,11 @@ class _ChestRevealState extends State<_ChestReveal>
 
   @override
   Widget build(BuildContext context) {
+    final reduce = MediaQuery.of(context).disableAnimations;
     return AnimatedBuilder(
       animation: _c,
       builder: (context, _) {
-        final t = _c.value;
+        final t = reduce ? 1.0 : _c.value;
         double rot = 0;
         double scale = 1;
         final bool opened = t > 0.55;
