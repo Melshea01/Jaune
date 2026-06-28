@@ -103,6 +103,12 @@ class _CelebrationViewState extends State<_CelebrationView>
     super.dispose();
   }
 
+  /// Vrai quand ce level-up fait entrer dans un nouveau monde (arène).
+  bool get _isNewWorld =>
+      widget.fromLevel >= 1 &&
+      chapterOfLevel(widget.newLevel).id !=
+          chapterOfLevel(widget.fromLevel).id;
+
   @override
   Widget build(BuildContext context) {
     final bool reduceMotion = MediaQuery.of(context).disableAnimations;
@@ -165,6 +171,13 @@ class _CelebrationViewState extends State<_CelebrationView>
                           color: chapterColorOf(widget.newLevel),
                         ),
                         const SizedBox(height: 12),
+                        if (_isNewWorld)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _NewWorldBanner(
+                              color: chapterColorOf(widget.newLevel),
+                            ),
+                          ),
                         _buildShimmeringTitle(reduceMotion),
                         const SizedBox(height: 8),
                         Builder(
@@ -175,9 +188,9 @@ class _CelebrationViewState extends State<_CelebrationView>
                             final chapter = chapterOfLevel(widget.newLevel);
                             return Text(
                               '${chapter.emoji}  ${chapter.name(fr)}',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
+                              style: TextStyle(
+                                fontSize: _isNewWorld ? 24 : 20,
+                                fontWeight: FontWeight.w800,
                                 color: Colors.white,
                               ),
                             );
@@ -542,6 +555,65 @@ class _ConfettiPainter extends CustomPainter {
   @override
   bool shouldRepaint(_ConfettiPainter oldDelegate) =>
       oldDelegate.progress != progress;
+}
+
+/// Bannière « nouveau monde » : pastille pulsante affichée quand le level-up
+/// fait franchir une frontière de chapitre (entrée dans une nouvelle arène).
+class _NewWorldBanner extends StatefulWidget {
+  final Color color;
+  const _NewWorldBanner({required this.color});
+
+  @override
+  State<_NewWorldBanner> createState() => _NewWorldBannerState();
+}
+
+class _NewWorldBannerState extends State<_NewWorldBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = MediaQuery.of(context).disableAnimations;
+    final label = AppLocalizations.of(context).newWorldBanner;
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final t = reduce ? 0.0 : Curves.easeInOut.transform(_pulse.value);
+        return Transform.scale(scale: 1 + 0.04 * t, child: child);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+          color: widget.color,
+          borderRadius: BorderRadius.circular(JauneRadii.pill),
+          boxShadow: [
+            BoxShadow(
+              color: widget.color.withValues(alpha: 0.6),
+              blurRadius: 16,
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Le citron grimpe physiquement du nœud précédent au nouveau niveau : il

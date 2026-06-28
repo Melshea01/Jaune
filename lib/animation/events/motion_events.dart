@@ -19,7 +19,7 @@ class MotionEvent {
   });
 }
 
-/// Catalogue des 14 événements one-shot
+/// Catalogue des événements one-shot
 class MotionEvents {
   // ─── Joie & accomplissements ─────────────────────────────────────────
 
@@ -260,6 +260,110 @@ class MotionEvents {
     },
   );
 
+  // ─── Joie & vie (nouvelles) ──────────────────────────────────────────
+
+  /// Salut amical : balancement type « coucou » avec une petite levée.
+  static final MotionEvent wave = MotionEvent(
+    name: 'wave',
+    duration: const Duration(milliseconds: 1100),
+    sample: (p) {
+      final env = sin(p * pi);
+      return {
+        'swayRad': sin(p * pi * 3) * 0.20 * env,
+        'hopY': -6 * env,
+      };
+    },
+  );
+
+  /// Petite danse : balancement rythmé + rebonds dans le tempo.
+  static final MotionEvent dance = MotionEvent(
+    name: 'dance',
+    duration: const Duration(milliseconds: 1800),
+    sample: (p) {
+      final env = sin(p * pi);
+      final beat = sin(p * pi * 6);
+      final hop = sin(p * pi * 6).abs();
+      return {
+        'swayRad': beat * 0.16 * env,
+        'hopY': -14 * hop * env,
+        'scaleX': 1 + 0.05 * env * beat,
+      };
+    },
+  );
+
+  /// Pirouette : un tour complet (360°) avec une petite levée.
+  static final MotionEvent pirouette = MotionEvent(
+    name: 'pirouette',
+    duration: const Duration(milliseconds: 1000),
+    sample: (p) {
+      final s = (1 - cos(p * pi)) / 2; // lissage 0→1
+      final lift = sin(p * pi);
+      return {
+        'swayRad': s * 2 * pi,
+        'hopY': -30 * lift,
+        'scaleX': 1 - 0.08 * lift,
+      };
+    },
+  );
+
+  /// Hochement « oui » : deux acquiescements.
+  static final MotionEvent nod = MotionEvent(
+    name: 'nod',
+    duration: const Duration(milliseconds: 700),
+    sample: (p) {
+      final env = sin(p * pi);
+      return {
+        'hopY': 8 * sin(p * pi * 4) * env,
+        'scaleY': 1 - 0.04 * env,
+      };
+    },
+  );
+
+  /// Gigue de gelée : tortillement latéral amorti.
+  static final MotionEvent wiggle = MotionEvent(
+    name: 'wiggle',
+    duration: const Duration(milliseconds: 750),
+    sample: (p) {
+      final decay = 1 - p;
+      final w = sin(p * pi * 8) * decay;
+      return {
+        'swayRad': w * 0.13,
+        'scaleX': 1 + 0.06 * w,
+        'scaleY': 1 - 0.06 * w,
+      };
+    },
+  );
+
+  /// Saut périlleux arrière : grand bond + rotation complète vers l'arrière.
+  static final MotionEvent backflip = MotionEvent(
+    name: 'backflip',
+    duration: const Duration(milliseconds: 1500),
+    sample: (p) {
+      final lift = 4 * p * (1 - p);
+      final s = (1 - cos(p * pi)) / 2;
+      return {
+        'hopY': -280 * lift,
+        'swayRad': -2 * pi * s, // rotation vers l'arrière
+        'scaleY': 1 + 0.1 * lift,
+      };
+    },
+  );
+
+  /// Étirement somnolent : long stretch puis retombée douce.
+  static final MotionEvent sleepy = MotionEvent(
+    name: 'sleepy',
+    duration: const Duration(milliseconds: 1900),
+    sample: (p) {
+      final s = sin(p * pi);
+      return {
+        'scaleY': 1 + 0.12 * s,
+        'scaleX': 1 - 0.06 * s,
+        'hopY': -8 * s,
+        'swayRad': 0.06 * sin(p * pi * 2) * s,
+      };
+    },
+  );
+
   static final Map<String, MotionEvent> _byName = {
     for (final e in [
       jumpJoy,
@@ -276,6 +380,13 @@ class MotionEvents {
       craving,
       coinSpin,
       drinkBeer,
+      wave,
+      dance,
+      pirouette,
+      nod,
+      wiggle,
+      backflip,
+      sleepy,
     ])
       e.name: e,
   };

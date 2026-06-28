@@ -228,6 +228,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get levelScreenTitle => 'Progression';
 
   @override
+  String get newWorldBanner => '✦ NOUVEAU MONDE ✦';
+
+  @override
+  String get weeklyGoalReached => 'Objectif atteint ! 🛡️ +1 bouclier';
+
+  @override
   String get levelJourneyTitle => '🗺️ Ton parcours';
 
   @override

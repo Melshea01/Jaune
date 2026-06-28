@@ -128,6 +128,8 @@
   },
   "andThen": "Et ensuite…",
   "levelScreenTitle": "Progression",
+  "newWorldBanner": "✦ NOUVEAU MONDE ✦",
+  "weeklyGoalReached": "Objectif atteint ! 🛡️ +1 bouclier",
   "levelJourneyTitle": "🗺️ Ton parcours",
   "levelYouAreHere": "Tu es ici",
   "chapterTitle": "Chapitre {n}",

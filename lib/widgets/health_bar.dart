@@ -9,11 +9,16 @@ class HealthBar extends StatelessWidget {
   final int level;
   final VoidCallback? onTap;
 
+  /// Pastille « à découvrir » sur la tuile niveau (tant que le parcours n'a
+  /// jamais été ouvert).
+  final bool showBadge;
+
   const HealthBar({
     super.key,
     required this.percent,
     required this.level,
     this.onTap,
+    this.showBadge = false,
   });
 
   @override
@@ -33,51 +38,72 @@ class HealthBar extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.amber.shade300,
-                  Colors.amber.shade200,
-                ], // Dégradé plus doux
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.amber.shade300,
+                      Colors.amber.shade200,
+                    ], // Dégradé plus doux
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.amber.withValues(
+                        alpha: 0.3,
+                      ), // Ombre plus subtile
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.star,
+                      color: Colors.black.withValues(
+                        alpha: 0.5,
+                      ), // Couleur de l'icône adoucie
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Niveau $level',
+                      style:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black.withValues(
+                          alpha: 0.6,
+                        ), // Couleur du texte adoucie
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.amber.withValues(
-                    alpha: 0.3,
-                  ), // Ombre plus subtile
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.star,
-                  color: Colors.black.withValues(
-                    alpha: 0.5,
-                  ), // Couleur de l'icône adoucie
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Niveau $level',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black.withValues(
-                      alpha: 0.6,
-                    ), // Couleur du texte adoucie
-                    letterSpacing: 0.5,
+              if (showBadge)
+                Positioned(
+                  top: -3,
+                  right: -3,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF3B30),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
         const SizedBox(height: 12),

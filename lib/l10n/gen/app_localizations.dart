@@ -452,6 +452,18 @@ abstract class AppLocalizations {
   /// **'Progression'**
   String get levelScreenTitle;
 
+  /// No description provided for @newWorldBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'✦ NOUVEAU MONDE ✦'**
+  String get newWorldBanner;
+
+  /// No description provided for @weeklyGoalReached.
+  ///
+  /// In fr, this message translates to:
+  /// **'Objectif atteint ! 🛡️ +1 bouclier'**
+  String get weeklyGoalReached;
+
   /// No description provided for @levelJourneyTitle.
   ///
   /// In fr, this message translates to:

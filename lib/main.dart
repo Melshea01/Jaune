@@ -356,8 +356,9 @@ class _MyHomePageState extends State<MyHomePage>
       // Mettre à jour l'état Rive basé sur la santé et les déblocables
       _updateRiveState();
 
-      // Petit salut de bienvenue du citron
+      // Petit salut de bienvenue du citron : il fait coucou
       _playCitronReaction('greeting', duration: const Duration(seconds: 3));
+      _citronController.triggerEvent('wave');
 
       // Première ouverture du jour : le citron a un mot pour toi
       _lastHealthZone = _characterService.profile.zone;
@@ -422,15 +423,20 @@ class _MyHomePageState extends State<MyHomePage>
       for (final event in result.xpEvents) {
         _showXpToast(event);
         switch (event.reason) {
-          // Palier de streak / objectif hebdo : carillon + double haptique
+          // Palier de streak : carillon + double haptique
           case XpReason.soberStreak:
+            JauneHaptics.milestone();
+            await _audioService.playStreakChime();
+          // Objectif hebdo : carillon + le citron danse
           case XpReason.weeklyGoal:
             JauneHaptics.milestone();
             await _audioService.playStreakChime();
-          // Quête validée : petit feedback léger
+            _citronController.triggerEvent('dance');
+          // Quête validée : petit feedback léger + hochement d'approbation
           case XpReason.questComplete:
             JauneHaptics.tick();
             await _audioService.playUiPop();
+            _citronController.triggerEvent('nod');
           default:
             break;
         }
@@ -666,7 +672,17 @@ class _MyHomePageState extends State<MyHomePage>
       _playCitronReaction('secretDance', duration: const Duration(seconds: 5));
     } else {
       // Variété : le citron ne réagit jamais deux fois pareil au toucher
-      const tapEvents = ['jump_joy', 'curious', 'hiccup', 'coin_spin'];
+      const tapEvents = [
+        'jump_joy',
+        'wave',
+        'curious',
+        'wiggle',
+        'hiccup',
+        'pirouette',
+        'coin_spin',
+        'dance',
+        'nod',
+      ];
       _citronController.triggerEvent(
         tapEvents[_citronTaps.length % tapEvents.length],
       );
@@ -714,6 +730,11 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   void _showLevelDialog() {
+    // Marque le parcours comme découvert (masque l'indice « à découvrir »)
+    if (!_characterService.hasOpenedJourney) {
+      _characterService.markJourneyOpened();
+      setState(() {});
+    }
     LevelScreen.open(
       context,
       _characterService,
@@ -1074,6 +1095,7 @@ class _MyHomePageState extends State<MyHomePage>
                 percent: percent,
                 level: _characterService.level,
                 onTap: _showLevelDialog,
+                showBadge: !_characterService.hasOpenedJourney,
               ),
 
               const SizedBox(height: 24),

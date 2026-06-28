@@ -527,14 +527,24 @@ class _WeeklyGoalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final goal = service.weeklyGoal(dailyMap);
-    const color = JauneColors.skyDeep;
+    final bool done = goal.progress >= 1.0;
+    // Atteint → teinte dorée festive ; sinon bleu ciel calme.
+    final Color color = done ? JauneColors.lemonDeep : JauneColors.skyDeep;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
+        color: color.withValues(alpha: done ? 0.12 : 0.07),
         borderRadius: BorderRadius.circular(JauneRadii.card),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        border: Border.all(color: color.withValues(alpha: done ? 0.5 : 0.25)),
+        boxShadow: done
+            ? [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.25),
+                  blurRadius: 14,
+                ),
+              ]
+            : null,
       ),
       child: Row(
         children: [
@@ -551,7 +561,7 @@ class _WeeklyGoalCard extends StatelessWidget {
                 ),
                 Text(
                   '${goal.soberDays}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                     color: color,
@@ -575,18 +585,19 @@ class _WeeklyGoalCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  l10n.weeklyGoalProgress(goal.soberDays, goal.target),
-                  style: const TextStyle(
+                  done
+                      ? l10n.weeklyGoalReached
+                      : l10n.weeklyGoalProgress(goal.soberDays, goal.target),
+                  style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: JauneColors.inkSoft,
+                    fontWeight: done ? FontWeight.w800 : FontWeight.w600,
+                    color: done ? color : JauneColors.inkSoft,
                   ),
                 ),
               ],
             ),
           ),
-          if (goal.progress >= 1.0)
-            const Text('✅', style: TextStyle(fontSize: 22)),
+          if (done) const Text('🏆', style: TextStyle(fontSize: 22)),
         ],
       ),
     );

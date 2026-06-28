@@ -469,18 +469,13 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
   }
 
   Widget _buildCalendar() {
+    // Carte légère, sans ombre : on évite l'empilement « boxy » et on laisse
+    // respirer la grille sur le fond jaune.
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(JauneRadii.card),
-        color: Colors.white.withValues(alpha: 0.96),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            offset: const Offset(0, 4),
-            blurRadius: 8,
-          ),
-        ],
+        color: Colors.white.withValues(alpha: 0.55),
       ),
       child: TableCalendar(
         locale: Localizations.localeOf(context).toString(),
@@ -579,9 +574,10 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
   }
 }
 
-/// Cellule unique : la sobriété est valorisée, les jours de conso restent
-/// lisibles (chiffre dominant), et l'état sélectionné/aujourd'hui se lit via
-/// un anneau — sans jamais changer la sémantique du contenu.
+/// Cellule unique : le chiffre est TOUJOURS le numéro du jour ; la
+/// consommation se lit à la couleur de fond (barème unique). Le nombre exact
+/// de verres reste accessible en tapant le jour (panneau de détail). État
+/// sélectionné/aujourd'hui = anneau, sans changer la sémantique.
 class CalendarDayCell extends StatelessWidget {
   final DateTime day;
   final int count;
@@ -605,23 +601,19 @@ class CalendarDayCell extends StatelessWidget {
 
     Color fill;
     Color textColor;
-    String text;
 
     if (hasDrinks) {
-      // Jour de conso : couleur du barème + chiffre blanc dominant.
+      // Jour de conso : couleur du barème, chiffre blanc.
       fill = JauneColors.consumptionColor(count);
       textColor = Colors.white;
-      text = '$count';
     } else if (isPast && !isToday) {
-      // Jour sobre passé : valorisé (vert tendre), pas grisé.
+      // Jour sobre passé : valorisé (bleu eau), pas grisé.
       fill = JauneColors.soberTint;
       textColor = JauneColors.sober;
-      text = '${day.day}';
     } else {
       // Aujourd'hui (encore sobre) / futur : neutre.
       fill = Colors.transparent;
       textColor = JauneColors.ink;
-      text = '${day.day}';
     }
 
     // Anneau : sélection (fort) prioritaire sur aujourd'hui (doux).
@@ -643,10 +635,10 @@ class CalendarDayCell extends StatelessWidget {
           border: border,
         ),
         child: Text(
-          text,
+          '${day.day}',
           style: TextStyle(
             color: textColor,
-            fontSize: hasDrinks ? 16 : 14,
+            fontSize: 14,
             fontWeight:
                 (hasDrinks || isSelected || isToday)
                     ? FontWeight.bold

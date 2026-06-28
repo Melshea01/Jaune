@@ -232,9 +232,20 @@ class CitronEngine {
   double _nextIdleAt = 6;
 
   static const Map<String, List<String>> _idlePools = {
-    'happy': ['curious', 'jump_joy', 'hiccup', 'coin_spin', 'encourage'],
-    'neutral': ['curious', 'encourage', 'hiccup', 'shiver'],
-    'low': ['shiver', 'curious'],
+    'happy': [
+      'curious',
+      'jump_joy',
+      'hiccup',
+      'coin_spin',
+      'encourage',
+      'wave',
+      'wiggle',
+      'dance',
+      'nod',
+      'pirouette',
+    ],
+    'neutral': ['curious', 'encourage', 'hiccup', 'shiver', 'wave', 'sleepy'],
+    'low': ['shiver', 'curious', 'sleepy'],
   };
 
   final List<_EventInstance> _events = [];

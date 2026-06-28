@@ -129,6 +129,8 @@ class CharacterProfile {
 
   String lastWeeklyGoalDate; // semaine ISO où l'objectif hebdo a été récompensé
 
+  bool hasOpenedJourney; // le parcours a-t-il déjà été ouvert (indice découverte)
+
   CharacterProfile({
     this.xp = 0,
     this.level = 1,
@@ -148,6 +150,7 @@ class CharacterProfile {
     this.lastQuestDate = '',
     List<String>? completedQuestIds,
     this.lastWeeklyGoalDate = '',
+    this.hasOpenedJourney = false,
   })  : currentPv = currentPv ?? 100,
         frozenDays = frozenDays ?? [],
         completedQuestIds = completedQuestIds ?? [];
@@ -249,6 +252,7 @@ class CharacterProfile {
     'lastQuestDate': lastQuestDate,
     'completedQuestIds': completedQuestIds,
     'lastWeeklyGoalDate': lastWeeklyGoalDate,
+    'hasOpenedJourney': hasOpenedJourney,
   };
 
   static CharacterProfile fromJson(Map<String, dynamic> p) => CharacterProfile(
@@ -273,6 +277,7 @@ class CharacterProfile {
         (p['completedQuestIds'] as List?)?.map((e) => e.toString()).toList() ??
             [],
     lastWeeklyGoalDate: (p['lastWeeklyGoalDate'] as String?) ?? '',
+    hasOpenedJourney: (p['hasOpenedJourney'] as bool?) ?? false,
   );
 }
 
@@ -293,7 +298,15 @@ class CharacterService {
   int get xpToNextLevel => _profile.xpToNextLevel;
   int get soberStreakDays => _profile.soberStreakDays;
   int get streakShields => _profile.streakShields;
+  bool get hasOpenedJourney => _profile.hasOpenedJourney;
   bool hasUnlock(String key) => _profile.hasUnlock(key);
+
+  /// Marque le parcours comme découvert (masque l'indice « à découvrir »).
+  Future<void> markJourneyOpened() async {
+    if (_profile.hasOpenedJourney) return;
+    _profile.hasOpenedJourney = true;
+    await saveProfile();
+  }
   List<LevelUnlock> get acquiredUnlocks => _profile.acquiredUnlocks;
 
   /// Plafond de boucliers « gel de série » accumulables.
