@@ -796,21 +796,50 @@ class _LevelNode extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     if (state == _NodeState.current) {
-      // Pas de texte XP ici : déjà affiché dans l'en-tête épinglé.
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          l10n.levelYouAreHere,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
+      // Badge « Tu es ici » + l'info du déblocable du niveau courant (titre +
+      // description), comme les autres jalons : le niveau atteint est acquis,
+      // on ne masque pas ce qu'il débloque. Pas de texte XP (déjà dans l'en-tête
+      // épinglé).
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              l10n.levelYouAreHere,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
           ),
-        ),
+          if (unlock != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              l10n_helpers.unlockTitle(unlock!, fr),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: JauneColors.ink,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              l10n_helpers.unlockDescription(unlock!, fr),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: JauneColors.inkSoft,
+              ),
+            ),
+          ],
+        ],
       );
     }
 
