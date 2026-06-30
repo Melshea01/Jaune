@@ -7,6 +7,7 @@ import 'package:timezone/timezone.dart' as tz;
 const int kAperoNotifId = 1;
 const int kStreakNotifId = 2;
 const int kLevelTeaserNotifId = 3;
+const int kStreakRiskNotifId = 4;
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =

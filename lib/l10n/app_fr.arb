@@ -325,6 +325,13 @@
       "xp": {"type": "int"}
     }
   },
+  "notifStreakRiskTitle": "🔥 Ta série de {days} jours est en jeu",
+  "@notifStreakRiskTitle": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "notifStreakRiskBody": "La journée est encore sobre — tiens bon ce soir et garde ta flamme. 💪",
 
   "badgeGalleryTitle": "Collection",
   "badgeGalleryViewAll": "Voir toute la collection",

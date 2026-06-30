@@ -206,6 +206,13 @@
   "notifStreakBody": "Your lemon is glowing. Come see it shine!",
   "notifLevelTeaserTitle": "⚡ Level {level} in sight!",
   "notifLevelTeaserBody": "Only {xp} XP left, one sober day and it's yours.",
+  "notifStreakRiskTitle": "🔥 Your {days}-day streak is on the line",
+  "@notifStreakRiskTitle": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "notifStreakRiskBody": "The day is still sober — hold on tonight and keep your flame. 💪",
 
   "badgeGalleryTitle": "Collection",
   "badgeGalleryViewAll": "View the whole collection",

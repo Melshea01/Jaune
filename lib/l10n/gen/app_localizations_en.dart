@@ -654,6 +654,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String notifStreakRiskTitle(int days) {
+    return '🔥 Your $days-day streak is on the line';
+  }
+
+  @override
+  String get notifStreakRiskBody =>
+      'The day is still sober — hold on tonight and keep your flame. 💪';
+
+  @override
   String get badgeGalleryTitle => 'Collection';
 
   @override

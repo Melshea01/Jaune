@@ -30,6 +30,29 @@ abstract class MilestoneScheduler {
   @visibleForTesting
   static bool shouldTeaseLevelUp(double levelProgress) => levelProgress >= 0.8;
 
+  /// Série « en jeu » : à partir de 2 jours, une série méritée vaut la peine
+  /// d'un rappel doux le soir tant que la journée est encore sobre. Levier de
+  /// rétention #1 (peur de perdre sa série) — ton encourageant, jamais culpa-
+  /// bilisant. Ne se déclenche que si l'on est avant l'heure du rappel.
+  static const int kStreakRiskThreshold = 2;
+
+  /// Heure du rappel « série en jeu » : ce soir 21h.
+  @visibleForTesting
+  static DateTime streakRiskNotificationTime(DateTime now) =>
+      DateTime(now.year, now.month, now.day, 21);
+
+  @visibleForTesting
+  static bool shouldRemindStreakRisk({
+    required int currentStreak,
+    required int todayDrinks,
+    required DateTime now,
+  }) {
+    if (todayDrinks > 0) return false;
+    if (currentStreak < kStreakRiskThreshold) return false;
+    // Avant 21h seulement : sinon le rappel du soir serait déjà passé.
+    return now.isBefore(streakRiskNotificationTime(now));
+  }
+
   /// Heure de la notification de palier : demain 10h (le streak est alors
   /// acquis — il se calcule sur les journées closes)
   @visibleForTesting
@@ -50,6 +73,7 @@ abstract class MilestoneScheduler {
       // Idempotence : on repart toujours d'une ardoise vide
       await NotificationService.cancelNotification(kStreakNotifId);
       await NotificationService.cancelNotification(kLevelTeaserNotifId);
+      await NotificationService.cancelNotification(kStreakRiskNotifId);
 
       if (!SettingsService.instance.notificationsEnabled.value) return;
 
@@ -68,6 +92,21 @@ abstract class MilestoneScheduler {
           scheduledTime: streakNotificationTime(now),
           title: l10n.notifStreakTitle(milestone),
           body: l10n.notifStreakBody,
+        );
+      }
+
+      // Rappel « série en jeu » ce soir (n'entre pas en conflit avec le palier
+      // de demain matin : c'est le même streak vu sous deux angles temporels).
+      if (shouldRemindStreakRisk(
+        currentStreak: character.soberStreakDays,
+        todayDrinks: todayDrinks,
+        now: now,
+      )) {
+        await NotificationService.scheduleNotification(
+          id: kStreakRiskNotifId,
+          scheduledTime: streakRiskNotificationTime(now),
+          title: l10n.notifStreakRiskTitle(character.soberStreakDays),
+          body: l10n.notifStreakRiskBody,
         );
       }
 

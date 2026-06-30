@@ -1202,6 +1202,18 @@ abstract class AppLocalizations {
   /// **'Plus que {xp} XP, une journée sobre et c\'est dans la poche.'**
   String notifLevelTeaserBody(int xp);
 
+  /// No description provided for @notifStreakRiskTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'🔥 Ta série de {days} jours est en jeu'**
+  String notifStreakRiskTitle(int days);
+
+  /// No description provided for @notifStreakRiskBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'La journée est encore sobre — tiens bon ce soir et garde ta flamme. 💪'**
+  String get notifStreakRiskBody;
+
   /// No description provided for @badgeGalleryTitle.
   ///
   /// In fr, this message translates to:
