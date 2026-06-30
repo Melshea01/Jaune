@@ -228,6 +228,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get levelScreenTitle => 'Progression';
 
   @override
+  String get streakScreenTitle => 'Série';
+
+  @override
+  String get streakMilestonesTitle => 'Paliers';
+
+  @override
   String get newWorldBanner => '✦ NOUVEAU MONDE ✦';
 
   @override

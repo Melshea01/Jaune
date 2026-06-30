@@ -7,7 +7,6 @@ import '../l10n/gen/app_localizations.dart';
 import '../l10n/l10n_helpers.dart' as l10n_helpers;
 import '../services/audio_service.dart';
 import '../services/character_service.dart';
-import '../services/milestone_scheduler.dart';
 import '../theme/jaune_design.dart';
 import 'badge_gallery_sheet.dart';
 import 'pressable.dart';
@@ -86,7 +85,6 @@ class _LevelScreenState extends State<_LevelScreen>
     final l10n = AppLocalizations.of(context);
     final service = widget.service;
     final level = service.level;
-    final streak = service.soberStreakDays;
 
     final quests = service.dailyQuests();
 
@@ -163,11 +161,6 @@ class _LevelScreenState extends State<_LevelScreen>
                         service: service,
                         dailyMap: widget.dailyMap!,
                       ),
-                      const SizedBox(height: 14),
-                    ],
-
-                    if (streak > 0) ...[
-                      _StreakCard(service: service),
                       const SizedBox(height: 14),
                     ],
 
@@ -271,9 +264,6 @@ class _LevelScreenState extends State<_LevelScreen>
             fr: fr,
             currentLevel: level,
             progress: progress,
-            xp: service.profile.xp,
-            xpToNext: service.xpToNextLevel,
-            equippedSkin: service.profile.equippedSkin,
             hasLineAbove: !isChapterTop,
             hasLineBelow: !isChapterBottom,
             onTapBadge: (state == _NodeState.acquired &&
@@ -352,16 +342,6 @@ class _Header extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   _StatPill(
-                    emoji: '🔥',
-                    value: '${service.soberStreakDays}',
-                    label: l10n.levelStatStreak,
-                  ),
-                  _StatPill(
-                    emoji: '🛡️',
-                    value: '${service.streakShields}',
-                    label: l10n.levelStatShields,
-                  ),
-                  _StatPill(
                     emoji: '🏅',
                     value: '$badges',
                     label: l10n.levelStatBadges,
@@ -430,105 +410,6 @@ class _StatPill extends StatelessWidget {
               color: JauneColors.inkSoft,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// --- Carte streak (loss aversion) --------------------------------------------
-
-class _StreakCard extends StatelessWidget {
-  final CharacterService service;
-  const _StreakCard({required this.service});
-
-  static String _streakSubtitle(AppLocalizations l10n, int streak) {
-    for (final target in MilestoneScheduler.streakMilestones) {
-      if (streak < target) {
-        return l10n.streakCountdown(target - streak, target);
-      }
-    }
-    return l10n.streakKeepGoing;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final streak = service.soberStreakDays;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            JauneColors.flameLight.withValues(alpha: 0.15),
-            JauneColors.flame.withValues(alpha: 0.10),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(JauneRadii.card),
-        border: Border.all(color: JauneColors.flame.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          const Text('🔥', style: TextStyle(fontSize: 26)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.soberStreakInARow(streak),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: JauneColors.ink,
-                  ),
-                ),
-                Text(
-                  _streakSubtitle(l10n, streak),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: JauneColors.inkSoft,
-                  ),
-                ),
-                if (service.streakShields > 0) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    l10n.streakShieldProtected,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: JauneColors.skyDeep,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (MilestoneScheduler.streakMilestones.contains(streak)) ...[
-            const SizedBox(width: 8),
-            PressableScale(
-              semanticLabel: l10n.shareAction,
-              onTap: () => ShareCard.shareStreak(
-                context,
-                days: streak,
-                skin: service.profile.equippedSkin,
-              ),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: JauneColors.flame.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.ios_share,
-                  size: 18,
-                  color: JauneColors.flame,
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -786,9 +667,6 @@ class _LevelNode extends StatelessWidget {
   final bool fr;
   final int currentLevel;
   final double progress;
-  final int xp;
-  final int xpToNext;
-  final String equippedSkin;
   final bool hasLineAbove;
   final bool hasLineBelow;
   final VoidCallback? onTapBadge;
@@ -802,9 +680,6 @@ class _LevelNode extends StatelessWidget {
     required this.fr,
     required this.currentLevel,
     required this.progress,
-    required this.xp,
-    required this.xpToNext,
-    required this.equippedSkin,
     required this.hasLineAbove,
     required this.hasLineBelow,
     this.onTapBadge,
@@ -921,35 +796,21 @@ class _LevelNode extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     if (state == _NodeState.current) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              l10n.levelYouAreHere,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-              ),
-            ),
+      // Pas de texte XP ici : déjà affiché dans l'en-tête épinglé.
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          l10n.levelYouAreHere,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
           ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.xpProgress(xp, xpToNext),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: JauneColors.inkSoft,
-            ),
-          ),
-        ],
+        ),
       );
     }
 

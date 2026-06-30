@@ -36,6 +36,7 @@ import 'widgets/citron_debug_panel.dart';
 import 'widgets/xp_toast.dart';
 import 'widgets/level_up_celebration.dart';
 import 'widgets/streak_badge.dart';
+import 'widgets/streak_screen.dart';
 import 'widgets/level_sheet.dart';
 import 'widgets/info_sheet.dart';
 import 'widgets/leaderboard_sheet.dart';
@@ -730,6 +731,10 @@ class _MyHomePageState extends State<MyHomePage>
     );
   }
 
+  void _showStreakScreen() {
+    StreakScreen.open(context, _characterService);
+  }
+
   void _showLevelDialog() {
     // Marque le parcours comme découvert (masque l'indice « à découvrir »)
     if (!_characterService.hasOpenedJourney) {
@@ -1017,7 +1022,7 @@ class _MyHomePageState extends State<MyHomePage>
                 children: [
                   StreakBadge(
                     streakDays: _characterService.soberStreakDays,
-                    onTap: _showLevelDialog,
+                    onTap: _showStreakScreen,
                   ),
                   const Spacer(),
                   // Outil de debug : uniquement en build debug, jamais en prod

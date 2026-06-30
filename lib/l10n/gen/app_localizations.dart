@@ -452,6 +452,18 @@ abstract class AppLocalizations {
   /// **'Progression'**
   String get levelScreenTitle;
 
+  /// No description provided for @streakScreenTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Série'**
+  String get streakScreenTitle;
+
+  /// No description provided for @streakMilestonesTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paliers'**
+  String get streakMilestonesTitle;
+
   /// No description provided for @newWorldBanner.
   ///
   /// In fr, this message translates to:

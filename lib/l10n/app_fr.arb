@@ -128,6 +128,8 @@
   },
   "andThen": "Et ensuite…",
   "levelScreenTitle": "Progression",
+  "streakScreenTitle": "Série",
+  "streakMilestonesTitle": "Paliers",
   "newWorldBanner": "✦ NOUVEAU MONDE ✦",
   "weeklyGoalReached": "Objectif atteint ! 🛡️ +1 bouclier",
   "levelJourneyTitle": "🗺️ Ton parcours",
