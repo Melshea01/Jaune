@@ -195,11 +195,44 @@ class _WorldAmbiancePainter extends CustomPainter {
       if (fy < 0) fy += 1;
       final sway = math.sin(_tau * (t + fx)) * size.width * 0.02;
       final r = rMin + (rMax - rMin) * _frac(key + 7, 0.91137);
-      canvas.drawCircle(
-        Offset(fx * size.width + sway + par.dx, fy * size.height + par.dy),
-        r,
-        p,
-      );
+      final center =
+          Offset(fx * size.width + sway + par.dx, fy * size.height + par.dy);
+      final rot = _tau * (t + fx) + key; // rotation lente, variée
+      _drawParticle(canvas, center, r, p, rot);
+    }
+  }
+
+  /// Dessine une particule flottante à la forme du monde courant : feuille
+  /// (Verger), petite lumière carrée (Ville), sinon point lumineux (bulle /
+  /// flocon / étincelle / étoile selon le monde).
+  void _drawParticle(Canvas canvas, Offset c, double r, Paint p, double rot) {
+    switch (chapterId) {
+      case 1: // feuille
+        canvas.save();
+        canvas.translate(c.dx, c.dy);
+        canvas.rotate(rot);
+        final path = Path()
+          ..moveTo(0, -r * 1.4)
+          ..quadraticBezierTo(r, -r * 0.1, 0, r * 1.4)
+          ..quadraticBezierTo(-r, -r * 0.1, 0, -r * 1.4)
+          ..close();
+        canvas.drawPath(path, p);
+        // nervure centrale
+        canvas.drawLine(
+          Offset(0, -r * 1.2),
+          Offset(0, r * 1.2),
+          Paint()
+            ..color = p.color.withValues(alpha: p.color.a * 0.6)
+            ..strokeWidth = math.max(0.6, r * 0.12),
+        );
+        canvas.restore();
+      case 4: // petite lumière de ville
+        canvas.drawRect(
+          Rect.fromCenter(center: c, width: r * 1.5, height: r * 1.5),
+          p,
+        );
+      default: // bulle / flocon / étincelle
+        canvas.drawCircle(c, r, p);
     }
   }
 
