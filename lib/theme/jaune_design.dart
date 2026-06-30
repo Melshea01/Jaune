@@ -108,3 +108,103 @@ abstract class JauneRadii {
   static const sheet = 28.0;
   static const pill = 24.0;
 }
+
+/// Échelle typographique Jaune — un seul rythme de tailles/graisses pour
+/// toute l'app. On reste sur la police système (SF Pro sur iOS, Roboto sur
+/// Android), mais on cadre les tailles, graisses, interlignes et tracking
+/// pour un rendu cohérent et premium. Toute nouvelle UI doit piocher ici
+/// plutôt que de recoder des `fontSize:` à la main.
+///
+/// Convention de graisse : titres en `w900` (ton joyeux/affirmé de la marque),
+/// corps en `w500/w600`, libellés de bouton en `w800`.
+abstract class JauneType {
+  /// Très gros chiffres/héros (célébrations, gros compteurs).
+  static const display = TextStyle(
+    fontSize: 56,
+    fontWeight: FontWeight.w900,
+    color: JauneColors.ink,
+    height: 1.05,
+    letterSpacing: -0.5,
+  );
+
+  /// Titre d'écran plein page / onboarding.
+  static const title = TextStyle(
+    fontSize: 28,
+    fontWeight: FontWeight.w900,
+    color: JauneColors.ink,
+    height: 1.15,
+    letterSpacing: -0.3,
+  );
+
+  /// Titre de section (en-tête de carte, titre de sheet).
+  static const heading = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w800,
+    color: JauneColors.ink,
+    height: 1.2,
+    letterSpacing: -0.2,
+  );
+
+  /// Sous-titre / titre de ligne mis en avant.
+  static const subhead = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    color: JauneColors.ink,
+    height: 1.25,
+  );
+
+  /// Corps de texte courant.
+  static const body = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w500,
+    color: JauneColors.inkSoft,
+    height: 1.45,
+  );
+
+  /// Libellé de bouton principal.
+  static const button = TextStyle(
+    fontSize: 17,
+    fontWeight: FontWeight.w800,
+    height: 1.0,
+    letterSpacing: 0.2,
+  );
+
+  /// Petit libellé / légende / métadonnée.
+  static const caption = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    color: JauneColors.inkSoft,
+    height: 1.35,
+  );
+}
+
+/// Espacements standard (multiples de 4) — un seul rythme vertical/horizontal.
+abstract class JauneSpacing {
+  static const xs = 4.0;
+  static const sm = 8.0;
+  static const md = 12.0;
+  static const lg = 16.0;
+  static const xl = 24.0;
+  static const xxl = 32.0;
+}
+
+/// Ombres standard — au lieu de recoder des `BoxShadow` à la main partout.
+abstract class JauneShadows {
+  /// Ombre douce pour cartes/pastilles posées sur fond clair.
+  static List<BoxShadow> get card => [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.08),
+      offset: const Offset(0, 3),
+      blurRadius: 8,
+    ),
+  ];
+
+  /// Ombre teintée pour un élément coloré qui « flotte » (CTA citron/ciel).
+  static List<BoxShadow> tinted(Color color) => [
+    BoxShadow(
+      color: color.withValues(alpha: 0.45),
+      offset: const Offset(0, 6),
+      blurRadius: 16,
+    ),
+  ];
+}
