@@ -94,9 +94,13 @@ class JauneHealthModel {
   static const double _eqInertia = 0.5;
 
   /// Réparation du creux aigu : deficit_jour = max(0, deficit*_repMul - _repAdd).
-  /// Demi-vie ~1 jour + plancher → la cuite se répare vite.
-  static const double _repMul = 0.45;
-  static const double _repAdd = 3.0;
+  /// Volontairement plus lente que le corps ne « dégrise » : le lendemain
+  /// d'une grosse soirée ne doit PAS rendre un gros paquet de PV (sinon la
+  /// récupération est ressentie comme trop facile). Réglé pour que le jour
+  /// d'après un binge ne remonte que de ~2 PV, tout en laissant une glissade
+  /// isolée revenir >90 en ~5 jours (non punitif, ancrage OMS préservé).
+  static const double _repMul = 0.62;
+  static const double _repAdd = 1.0;
 
   // ----------------------------------------------------------------------
   //  Briques de calcul
