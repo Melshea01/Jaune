@@ -69,9 +69,8 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
   String _version = '';
   late String _username;
 
-  /// Identifiant de la fiche App Store. ⚠️ À REMPLACER par l'ID réel (visible
-  /// dans App Store Connect / l'URL de la fiche) avant publication.
-  static const String _appStoreId = '000000000';
+  /// Identifiant de la fiche App Store (App Store Connect).
+  static const String _appStoreId = '6752824926';
 
   /// Ouvre la fiche App Store directement sur le formulaire de note.
   Future<void> _rateApp() async {
