@@ -195,6 +195,14 @@ void main() {
       final avgs = StatsService.weekdayAverages(map, '2026-06-01', today);
       expect(avgs[1], closeTo(3.0, 0.001)); // mardi
     });
+
+    test('exclut les jours sobres du calcul de la moyenne', () {
+      // Deux lundis dans la fenêtre : 1er juin (6 verres) et 8 juin (sobre, 0).
+      // Le lundi sobre ne doit pas peser → moyenne = 6, pas 6 / 2 = 3.
+      final map = mapOf({DateTime(2026, 6, 1): 6});
+      final avgs = StatsService.weekdayAverages(map, '2026-06-01', today);
+      expect(avgs[0], closeTo(6.0, 0.001)); // lundi
+    });
   });
 
   group('totalSoberDays', () {

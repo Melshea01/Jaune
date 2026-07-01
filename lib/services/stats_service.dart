@@ -381,6 +381,10 @@ abstract class StatsService {
 
   /// Moyenne de verres par jour de la semaine (0 = lundi … 6 = dimanche), sur
   /// toutes les journées closes depuis la première utilisation.
+  ///
+  /// On somme les verres consommés par jour de la semaine puis on fait la
+  /// moyenne **sans compter les jours sobres** : le dénominateur ne retient que
+  /// les jours où au moins un verre a été loggé.
   static List<double> weekdayAverages(
     Map<String, int> dailyMap,
     String firstUseDate,
@@ -394,8 +398,11 @@ abstract class StatsService {
     DateTime d = DateTime(first.year, first.month, first.day);
     while (d.isBefore(d0)) {
       final wd = d.weekday - 1; // 0 = lundi
-      sums[wd] += dailyMap[dateKey(d)] ?? 0;
-      counts[wd]++;
+      final drinks = dailyMap[dateKey(d)] ?? 0;
+      if (drinks > 0) {
+        sums[wd] += drinks;
+        counts[wd]++;
+      }
       d = d.add(const Duration(days: 1));
     }
     return List<double>.generate(7, (i) => counts[i] == 0 ? 0 : sums[i] / counts[i]);

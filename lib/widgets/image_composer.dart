@@ -33,9 +33,9 @@ class ImageComposer {
 
     try {
       if (previewBytes != null) {
-        final previewImg = await _decodeImageFromList(previewBytes);
-        final int width = previewImg.width;
-        final int height = previewImg.height;
+        // Les dimensions se lisent dans l'entête PNG : inutile de décoder
+        // toute l'image (~2 Mpx) juste pour connaître width/height.
+        final (int width, int height) = _pngDimensions(previewBytes);
 
         final tempDir = await getTemporaryDirectory();
         final outPath =
@@ -113,6 +113,23 @@ class ImageComposer {
       debugPrint('Compose error: $e\n$st');
       return null;
     }
+  }
+
+  /// Lit (width, height) dans l'entête IHDR d'un PNG sans le décoder.
+  /// Structure : signature (8 o.) + longueur de chunk (4) + « IHDR » (4),
+  /// puis width (4) et height (4) en big-endian.
+  (int, int) _pngDimensions(Uint8List bytes) {
+    if (bytes.length >= 24 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47) {
+      final w = bytes[16] << 24 | bytes[17] << 16 | bytes[18] << 8 | bytes[19];
+      final h = bytes[20] << 24 | bytes[21] << 16 | bytes[22] << 8 | bytes[23];
+      if (w > 0 && h > 0) return (w, h);
+    }
+    // Repli : dimensions story par défaut si l'entête est inattendu.
+    return (1080, 1920);
   }
 
   Future<ui.Image> _decodeImageFromList(Uint8List bytes) async {

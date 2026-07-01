@@ -523,6 +523,24 @@ class _MyHomePageState extends State<MyHomePage>
     _playCitronReaction(_consos >= 6 ? 'drunk' : 'tipsy');
   }
 
+  /// Corrige la conso d'un jour passé éligible (J-1 / J-2) — verres oubliés
+  /// ajoutés (ou surplus retiré) depuis le calendrier. Écrit la valeur, puis
+  /// relance le recalcul idempotent (PV, série, quêtes) SANS le bonus
+  /// « enregistrement du jour » (réservé au log d'aujourd'hui).
+  Future<void> _setConsosForPastDate(DateTime date, int consos) async {
+    await _storageService.setConsosForDate(date, consos);
+    // Les verres ajoutés rétroactivement n'ont pas d'horodatage (best-effort) :
+    // on ne fabrique pas de faux drinkTimes. Si le jour repasse à 0, on purge
+    // ses éventuels horodatages pour rester cohérent.
+    if (consos <= 0) {
+      await _storageService.removeDrinkTimesForDate(date);
+    }
+    // isUserLog: false → pas de bonus log-du-jour, mais PV/série/quêtes
+    // reconvergent (idempotent) ; _consos d'aujourd'hui reste inchangé.
+    await _recomputeHealth(isUserLog: false);
+    if (mounted) setState(() {});
+  }
+
   Future<void> _resetTodayConsos() async {
     try {
       setState(() {
@@ -728,6 +746,7 @@ class _MyHomePageState extends State<MyHomePage>
       buttonKey: _calendarButtonKey,
       animationController: _calendarAnimationController,
       dailyMap: _storageService.dailyMap,
+      onEditDay: _setConsosForPastDate,
     );
   }
 

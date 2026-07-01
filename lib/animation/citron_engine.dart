@@ -620,13 +620,20 @@ class CitronEngine {
     final squashD = 1 + math.max(0.0, legRaw) * _legSquashAmp.value;
     final squashG = 1 + math.max(0.0, -legRaw) * _legSquashAmp.value;
 
-    final rootRot = _lean.value * math.pi / 180.0 + swayRad + evSway;
-    final legGravRot = -rootRot * (1 - _legGrav.value);
+    // Posture : inclinaison lente + balancement idle. C'est la SEULE source de
+    // la contre-rotation « gravité » des membres (les bras/jambes pendent quand
+    // le corps penche). `evSway` (rotations d'événement : pirouette, backflip…)
+    // fait tourner tout le corps de façon rigide — les membres doivent tourner
+    // AVEC lui, pas lutter contre, sinon la contre-rotation atteint plusieurs
+    // radians et détache les bras de leur ancre.
+    final postureRot = _lean.value * math.pi / 180.0 + swayRad;
+    final rootRot = postureRot + evSway;
+    final legGravRot = -postureRot * (1 - _legGrav.value);
 
     final armDAngle =
-        _armDBase.value + _armD.sine - rootRot * (1 - _armDGrav.value);
+        _armDBase.value + _armD.sine - postureRot * (1 - _armDGrav.value);
     final armGAngle =
-        _armGBase.value - _armG.sine - rootRot * (1 - _armGGrav.value);
+        _armGBase.value - _armG.sine - postureRot * (1 - _armGGrav.value);
 
     // Garde-fou : au-delà de ±0.55 rad la branche sortirait du creux du
     // corps quel que soit le pivot — aucune recette ne peut la détacher

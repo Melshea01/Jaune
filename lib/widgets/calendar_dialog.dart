@@ -9,6 +9,11 @@ import 'dart:math' as math;
 import '../l10n/gen/app_localizations.dart';
 import '../theme/jaune_design.dart';
 import '../utils/date_keys.dart';
+import 'pressable.dart';
+
+/// Plafond de sécurité pour la correction rétroactive d'un jour (garde-fou
+/// contre les taps répétés accidentels ; largement au-dessus d'une vraie soirée).
+const int _kMaxDayConsos = 30;
 
 class CalendarDialog {
   static void show({
@@ -16,6 +21,7 @@ class CalendarDialog {
     required GlobalKey buttonKey,
     required AnimationController animationController,
     required Map<String, int> dailyMap,
+    Future<void> Function(DateTime date, int newCount)? onEditDay,
   }) {
     final RenderBox buttonBox =
         buttonKey.currentContext!.findRenderObject() as RenderBox;
@@ -67,6 +73,7 @@ class CalendarDialog {
             beginRect: beginRect,
             finalRect: finalRect,
             dailyMap: dailyMap,
+            onEditDay: onEditDay,
             onClose: () async {
               await animationController.reverse();
               entry.remove();
@@ -84,6 +91,7 @@ class _CalendarOverlay extends StatefulWidget {
   final Rect beginRect;
   final Rect finalRect;
   final Map<String, int> dailyMap;
+  final Future<void> Function(DateTime date, int newCount)? onEditDay;
   final VoidCallback onClose;
 
   const _CalendarOverlay({
@@ -91,6 +99,7 @@ class _CalendarOverlay extends StatefulWidget {
     required this.beginRect,
     required this.finalRect,
     required this.dailyMap,
+    required this.onEditDay,
     required this.onClose,
   });
 
@@ -102,11 +111,40 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
+  // Copie mutable locale : le widget reçoit une map immuable, mais on doit
+  // refléter immédiatement une édition de jour passé (retour visuel) pendant
+  // que le parent persiste et recalcule en arrière-plan.
+  late final Map<String, int> _map = Map<String, int>.from(widget.dailyMap);
+
   bool _monthHasData(DateTime month) {
     final prefix =
         '${month.year.toString().padLeft(4, '0')}-'
         '${month.month.toString().padLeft(2, '0')}-';
-    return widget.dailyMap.keys.any((k) => k.startsWith(prefix));
+    return _map.keys.any((k) => k.startsWith(prefix));
+  }
+
+  /// Jours éditables (verres oubliés) : hier (J-1) et avant-hier (J-2)
+  /// uniquement. Aujourd'hui garde son bouton +1 sur l'accueil ; au-delà de
+  /// J-2 on n'autorise pas la correction rétroactive.
+  bool _isEditable(DateTime day) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final diff = today.difference(DateTime(day.year, day.month, day.day)).inDays;
+    return diff == 1 || diff == 2;
+  }
+
+  /// Applique un nouveau nombre de verres à un jour éligible : maj optimiste
+  /// locale + délégation au parent (persistance + recalcul santé/série/XP).
+  Future<void> _edit(DateTime day, int newCount) async {
+    final key = dateKey(day);
+    setState(() {
+      if (newCount <= 0) {
+        _map.remove(key);
+      } else {
+        _map[key] = newCount;
+      }
+    });
+    await widget.onEditDay?.call(day, newCount);
   }
 
   bool get _isCurrentMonth {
@@ -215,7 +253,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
                 _buildLegend(),
                 // Premier usage (aucune donnée nulle part) : accueillir.
                 // Sinon, si le mois affiché est vide : l'expliquer.
-                if (widget.dailyMap.isEmpty)
+                if (_map.isEmpty)
                   _buildEmptyState()
                 else if (monthEmpty)
                   _buildMonthEmptyHint(),
@@ -357,39 +395,155 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
     final dayKey = dateKey(day);
-    final count = widget.dailyMap[dayKey] ?? 0;
+    final count = _map[dayKey] ?? 0;
     final label = DateFormat('EEEE d MMMM', locale).format(day);
     final capitalized = label[0].toUpperCase() + label.substring(1);
     final (emoji, text) = _consumptionLabel(l10n, count);
+    final editable = _isEditable(day);
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 22)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                capitalized,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: JauneColors.ink,
-                ),
+        Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 22)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    capitalized,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: JauneColors.ink,
+                    ),
+                  ),
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: JauneColors.inkSoft,
+                    ),
+                  ),
+                ],
               ),
+            ),
+            // Jour éditable (J-1 / J-2) : stepper compact aligné à droite.
+            if (editable) _buildStepper(l10n, day, count),
+          ],
+        ),
+        if (editable) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                CupertinoIcons.pencil,
+                size: 12,
+                color: JauneColors.inkSoft.withValues(alpha: 0.8),
+              ),
+              const SizedBox(width: 5),
               Text(
-                text,
+                l10n.calendarEditHint,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: JauneColors.inkSoft,
                 ),
               ),
             ],
           ),
-        ),
+        ],
       ],
+    );
+  }
+
+  /// Stepper +/- pour ajouter (ou corriger) les verres oubliés d'un jour passé.
+  /// Contrôle segmenté unique (pastilles − · N · +) : le chiffre reprend la
+  /// couleur du barème de conso et rebondit à chaque changement. Borné à
+  /// [0, _kMaxDayConsos] ; les extrémités neutralisent le bouton concerné.
+  Widget _buildStepper(AppLocalizations l10n, DateTime day, int count) {
+    // Le chiffre « vit » à la couleur du jour (vert/ambre/rouge), gris si sobre.
+    final Color accent =
+        count > 0 ? JauneColors.consumptionColor(count) : JauneColors.inkSoft;
+
+    Widget button({
+      required IconData icon,
+      required bool enabled,
+      required String label,
+      required VoidCallback onTap,
+    }) {
+      return PressableScale(
+        onTap: enabled ? onTap : null,
+        pressedScale: 0.86,
+        semanticLabel: label,
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: enabled ? Colors.white : Colors.transparent,
+            shape: BoxShape.circle,
+            boxShadow: enabled ? JauneShadows.card : null,
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: enabled
+                ? JauneColors.ink
+                : JauneColors.inkSoft.withValues(alpha: 0.35),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: JauneColors.ink.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(JauneRadii.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          button(
+            icon: CupertinoIcons.minus,
+            enabled: count > 0,
+            label: l10n.calendarEditRemove,
+            onTap: () => _edit(day, count - 1),
+          ),
+          SizedBox(
+            width: 34,
+            child: AnimatedSwitcher(
+              duration: JauneMotion.quick,
+              switchInCurve: JauneMotion.springy,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, anim) => ScaleTransition(
+                scale: anim,
+                child: FadeTransition(opacity: anim, child: child),
+              ),
+              child: Text(
+                '$count',
+                key: ValueKey(count),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: accent,
+                ),
+              ),
+            ),
+          ),
+          button(
+            icon: CupertinoIcons.plus,
+            enabled: count < _kMaxDayConsos,
+            label: l10n.calendarEditAdd,
+            onTap: () => _edit(day, count + 1),
+          ),
+        ],
+      ),
     );
   }
 
@@ -555,7 +709,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
   Widget _buildCalendarCell(DateTime day, bool isSelected, bool isToday) {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
-    final count = widget.dailyMap[dateKey(day)] ?? 0;
+    final count = _map[dateKey(day)] ?? 0;
     final dateLabel = DateFormat('EEEE d MMMM', locale).format(day);
     final (_, detail) = _consumptionLabel(l10n, count);
 

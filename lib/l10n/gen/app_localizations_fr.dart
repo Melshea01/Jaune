@@ -48,6 +48,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get calendarMonthEmpty => 'Rien de loggé ce mois-ci';
 
   @override
+  String get calendarEditHint => 'Ajuste tes verres oubliés';
+
+  @override
+  String get calendarEditAdd => 'Ajouter un verre';
+
+  @override
+  String get calendarEditRemove => 'Retirer un verre';
+
+  @override
   String get calendarLegendSober => 'Sobre';
 
   @override

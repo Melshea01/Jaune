@@ -208,22 +208,25 @@ class _WorldAmbiancePainter extends CustomPainter {
   void _drawParticle(Canvas canvas, Offset c, double r, Paint p, double rot) {
     switch (chapterId) {
       case 1: // feuille
+        // Grossie + minimum lisible : même les particules lointaines doivent
+        // se lire comme des feuilles, pas comme des points.
+        final lr = r * 1.7 + 2.2;
         canvas.save();
         canvas.translate(c.dx, c.dy);
         canvas.rotate(rot);
         final path = Path()
-          ..moveTo(0, -r * 1.4)
-          ..quadraticBezierTo(r, -r * 0.1, 0, r * 1.4)
-          ..quadraticBezierTo(-r, -r * 0.1, 0, -r * 1.4)
+          ..moveTo(0, -lr * 1.4)
+          ..quadraticBezierTo(lr, -lr * 0.1, 0, lr * 1.4)
+          ..quadraticBezierTo(-lr, -lr * 0.1, 0, -lr * 1.4)
           ..close();
         canvas.drawPath(path, p);
         // nervure centrale
         canvas.drawLine(
-          Offset(0, -r * 1.2),
-          Offset(0, r * 1.2),
+          Offset(0, -lr * 1.2),
+          Offset(0, lr * 1.2),
           Paint()
             ..color = p.color.withValues(alpha: p.color.a * 0.6)
-            ..strokeWidth = math.max(0.6, r * 0.12),
+            ..strokeWidth = math.max(0.7, lr * 0.12),
         );
         canvas.restore();
       case 4: // petite lumière de ville

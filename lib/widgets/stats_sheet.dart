@@ -9,7 +9,6 @@ import '../controllers/citron_animation_controller.dart';
 import '../l10n/gen/app_localizations.dart';
 import '../services/audio_service.dart';
 import '../services/character_service.dart';
-import '../services/milestone_scheduler.dart';
 import '../services/stats_service.dart';
 import '../theme/jaune_design.dart';
 import '../utils/date_keys.dart';
@@ -143,14 +142,11 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
     final sections = <Widget>[
       _titleRow(l10n),
       StatHeroHeader(
-        streakDays: streak,
         healthPercent: widget.character.healthPercent,
-        streakLabel: l10n.statsHeroStreak,
         hpLabel: l10n.statsHpUnit,
         citron: _citron,
         skin: widget.character.profile.equippedSkin,
       ),
-      _milestoneCard(l10n, streak),
       StatPeriodSelector(
         selected: _period,
         onChanged: _setPeriod,
@@ -489,26 +485,6 @@ class _StatsSheetContentState extends State<_StatsSheetContent> {
       if (i + 2 < tiles.length) rows.add(const SizedBox(height: 12));
     }
     return Column(children: rows);
-  }
-
-  Widget _milestoneCard(AppLocalizations l10n, int streak) {
-    final milestones = MilestoneScheduler.streakMilestones;
-    int target = milestones.last;
-    for (final m in milestones) {
-      if (streak < m) {
-        target = m;
-        break;
-      }
-    }
-    final reached = streak >= milestones.last;
-    final remaining = math.max(0, target - streak);
-    return StatCard(
-      title: l10n.statsMilestoneTitle,
-      subtitle: reached
-          ? l10n.statsMilestoneReached
-          : l10n.statsMilestoneCaption(remaining, target),
-      child: MilestoneTrack(currentStreak: streak, milestones: milestones),
-    );
   }
 
   Widget _weekdayCard(AppLocalizations l10n, String locale) {

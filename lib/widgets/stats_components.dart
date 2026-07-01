@@ -181,18 +181,14 @@ class StatCard extends StatelessWidget {
 // =====================================================================
 
 class StatHeroHeader extends StatelessWidget {
-  final int streakDays;
   final double healthPercent;
-  final String streakLabel;
   final String hpLabel;
   final CitronAnimationController citron;
   final String skin;
 
   const StatHeroHeader({
     super.key,
-    required this.streakDays,
     required this.healthPercent,
-    required this.streakLabel,
     required this.hpLabel,
     required this.citron,
     this.skin = '',
@@ -226,17 +222,23 @@ class StatHeroHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
                   children: [
-                    const Text('🔥', style: TextStyle(fontSize: 34)),
-                    const SizedBox(width: 6),
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: hpColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     CountUpInt(
-                      streakDays,
-                      style: const TextStyle(
+                      (healthPercent * 100).round(),
+                      suffix: '%',
+                      style: TextStyle(
                         fontSize: 52,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: hpColor,
                         height: 1,
                       ),
                     ),
@@ -244,43 +246,11 @@ class StatHeroHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  streakLabel,
+                  hpLabel,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: Colors.white.withValues(alpha: 0.75),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                // PV : pastille colorée + valeur
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: hpColor.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(JauneRadii.pill),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: hpColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      CountUpInt(
-                        (healthPercent * 100).round(),
-                        suffix: ' $hpLabel',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: hpColor,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],

@@ -48,6 +48,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarMonthEmpty => 'Nothing logged this month';
 
   @override
+  String get calendarEditHint => 'Adjust your forgotten drinks';
+
+  @override
+  String get calendarEditAdd => 'Add a drink';
+
+  @override
+  String get calendarEditRemove => 'Remove a drink';
+
+  @override
   String get calendarLegendSober => 'Sober';
 
   @override

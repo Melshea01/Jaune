@@ -170,6 +170,24 @@ abstract class AppLocalizations {
   /// **'Rien de loggé ce mois-ci'**
   String get calendarMonthEmpty;
 
+  /// No description provided for @calendarEditHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajuste tes verres oubliés'**
+  String get calendarEditHint;
+
+  /// No description provided for @calendarEditAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un verre'**
+  String get calendarEditAdd;
+
+  /// No description provided for @calendarEditRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer un verre'**
+  String get calendarEditRemove;
+
   /// No description provided for @calendarLegendSober.
   ///
   /// In fr, this message translates to:
