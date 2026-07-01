@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../l10n/l10n_helpers.dart' as l10n_helpers;
@@ -15,7 +14,7 @@ import 'pressable.dart';
 /// en gris avec leur niveau — la collection donne envie de continuer.
 class BadgeGallerySheet {
   static void show(BuildContext context, CharacterService service) {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     AudioService.instance.playUiPop();
     showModalBottomSheet(
       context: context,

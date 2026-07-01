@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../utils/jaune_haptics.dart';
 
 import '../theme/jaune_design.dart';
 import 'pressable.dart';
@@ -15,7 +15,7 @@ class ConfirmSheet {
     required String confirmLabel,
     required String cancelLabel,
   }) async {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     final result = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -120,7 +120,7 @@ class _ConfirmSheetContent extends StatelessWidget {
               Expanded(
                 child: PressableScale(
                   onTap: () {
-                    HapticFeedback.mediumImpact();
+                    JauneHaptics.medium();
                     Navigator.of(context).pop(true);
                   },
                   haptic: false,

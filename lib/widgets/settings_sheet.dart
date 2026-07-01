@@ -2,8 +2,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../utils/jaune_haptics.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../services/audio_service.dart';
@@ -25,7 +26,7 @@ class SettingsSheet {
     required Future<void> Function() onDeleteData,
     required Future<void> Function() onRedoTutorial,
   }) {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     AudioService.instance.playUiPop();
     showModalBottomSheet(
       context: context,
@@ -67,6 +68,23 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
   bool _privacyExpanded = false;
   String _version = '';
   late String _username;
+
+  /// Identifiant de la fiche App Store. ⚠️ À REMPLACER par l'ID réel (visible
+  /// dans App Store Connect / l'URL de la fiche) avant publication.
+  static const String _appStoreId = '000000000';
+
+  /// Ouvre la fiche App Store directement sur le formulaire de note.
+  Future<void> _rateApp() async {
+    JauneHaptics.selection();
+    final uri = Uri.parse(
+      'https://apps.apple.com/app/id$_appStoreId?action=write-review',
+    );
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Rate app launch failed: $e');
+    }
+  }
 
   @override
   void initState() {
@@ -135,7 +153,7 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                             value: enabled,
                             activeTrackColor: JauneColors.lemonDeep,
                             onChanged: (value) async {
-                              HapticFeedback.selectionClick();
+                              JauneHaptics.selection();
                               await _settings.setNotificationsEnabled(value);
                               await widget.onNotificationsChanged(value);
                             },
@@ -156,8 +174,29 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                             value: enabled,
                             activeTrackColor: JauneColors.lemonDeep,
                             onChanged: (value) async {
-                              HapticFeedback.selectionClick();
+                              JauneHaptics.selection();
                               await _settings.setSoundEnabled(value);
+                            },
+                          ),
+                        ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // --- Vibrations ---
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _settings.hapticsEnabled,
+                    builder:
+                        (context, enabled, _) => _SettingsRow(
+                          emoji: '📳',
+                          title: l10n.settingsHaptics,
+                          subtitle: l10n.settingsHapticsSubtitle,
+                          trailing: CupertinoSwitch(
+                            value: enabled,
+                            activeTrackColor: JauneColors.lemonDeep,
+                            onChanged: (value) async {
+                              await _settings.setHapticsEnabled(value);
+                              // Retour tactile immédiat quand on (ré)active
+                              if (value) JauneHaptics.selection();
                             },
                           ),
                         ),
@@ -269,6 +308,22 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                       emoji: '🎓',
                       title: l10n.settingsRedoTutorial,
                       subtitle: l10n.settingsRedoTutorialSubtitle,
+                      trailing: const Icon(
+                        CupertinoIcons.chevron_right,
+                        size: 18,
+                        color: JauneColors.inkSoft,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // --- Noter Jaune (App Store) ---
+                  PressableScale(
+                    onTap: _rateApp,
+                    child: _SettingsRow(
+                      emoji: '⭐',
+                      title: l10n.settingsRate,
+                      subtitle: l10n.settingsRateSubtitle,
                       trailing: const Icon(
                         CupertinoIcons.chevron_right,
                         size: 18,

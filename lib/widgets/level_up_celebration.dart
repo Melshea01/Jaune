@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../l10n/l10n_helpers.dart' as l10n_helpers;
@@ -372,7 +371,7 @@ class _CelebrationViewState extends State<_CelebrationView>
     return PressableScale(
       semanticLabel: AppLocalizations.of(context).continueLabel,
       onTap: () {
-        HapticFeedback.selectionClick();
+        JauneHaptics.selection();
         Navigator.of(context).pop();
       },
       haptic: false,

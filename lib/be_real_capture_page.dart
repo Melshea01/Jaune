@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'utils/jaune_haptics.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -137,7 +138,7 @@ class _BeRealCapturePageState extends State<BeRealCapturePage> {
 
   Future<void> _takePicture() async {
     if (_busy) return;
-    HapticFeedback.heavyImpact();
+    JauneHaptics.heavy();
     setState(() => _busy = true);
 
     try {

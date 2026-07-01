@@ -734,6 +734,30 @@ abstract class AppLocalizations {
   /// **'Effets sonores de l\'app'**
   String get settingsSoundSubtitle;
 
+  /// No description provided for @settingsHaptics.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vibrations'**
+  String get settingsHaptics;
+
+  /// No description provided for @settingsHapticsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour tactile lors des interactions'**
+  String get settingsHapticsSubtitle;
+
+  /// No description provided for @settingsRate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Noter Jaune'**
+  String get settingsRate;
+
+  /// No description provided for @settingsRateSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un avis 5 étoiles aide beaucoup 🍋'**
+  String get settingsRateSubtitle;
+
   /// No description provided for @settingsLanguage.
   ///
   /// In fr, this message translates to:

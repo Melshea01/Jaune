@@ -397,6 +397,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSoundSubtitle => 'In-app sound effects';
 
   @override
+  String get settingsHaptics => 'Vibrations';
+
+  @override
+  String get settingsHapticsSubtitle => 'Haptic feedback on interactions';
+
+  @override
+  String get settingsRate => 'Rate Jaune';
+
+  @override
+  String get settingsRateSubtitle => 'A 5-star review helps a lot 🍋';
+
+  @override
   String get settingsLanguage => 'Language';
 
   @override

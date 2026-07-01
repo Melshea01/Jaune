@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../utils/jaune_haptics.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
@@ -15,7 +15,7 @@ class XpToastManager {
 
   /// Affiche un toast "+X XP — raison". Les toasts simultanés s'empilent.
   static void show(OverlayState overlay, XpEvent event) {
-    HapticFeedback.lightImpact();
+    JauneHaptics.light();
 
     final int slot = _stackIndex++;
     late final _XpToastEntry toastEntry;

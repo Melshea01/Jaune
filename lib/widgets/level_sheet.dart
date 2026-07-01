@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../utils/jaune_haptics.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/gen/app_localizations.dart';
@@ -23,7 +24,7 @@ class LevelScreen {
     CharacterService service, {
     Map<String, int>? dailyMap,
   }) {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     AudioService.instance.playUiPop();
     Navigator.of(context).push(
       MaterialPageRoute(

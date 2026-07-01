@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../utils/jaune_haptics.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'dart:ui' as ui;
@@ -115,7 +115,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
   }
 
   void _goToToday() {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     setState(() => _focusedDay = DateTime.now());
   }
 
@@ -487,7 +487,7 @@ class _CalendarOverlayState extends State<_CalendarOverlay> {
         selectedDayPredicate:
             (day) => _selectedDay != null && isSameDay(day, _selectedDay),
         onDaySelected: (selectedDay, focusedDay) {
-          HapticFeedback.selectionClick();
+          JauneHaptics.selection();
           setState(() {
             _selectedDay = selectedDay;
             _focusedDay = focusedDay;

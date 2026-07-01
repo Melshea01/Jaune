@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../utils/jaune_haptics.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../services/audio_service.dart';
@@ -9,7 +9,7 @@ import '../theme/jaune_design.dart';
 /// par une présentation illustrée en trois étapes.
 class InfoSheet {
   static void show(BuildContext context) {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     AudioService.instance.playUiPop();
     showModalBottomSheet(
       context: context,

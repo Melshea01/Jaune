@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../utils/jaune_haptics.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../models/friend.dart';
@@ -22,7 +22,7 @@ class LeaderboardSheet {
     BuildContext context, {
     required LeaderboardEntry me,
   }) {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     AudioService.instance.playUiPop();
     return showModalBottomSheet<void>(
       context: context,
@@ -75,20 +75,20 @@ class _LeaderboardSheetContentState extends State<_LeaderboardSheetContent> {
   }
 
   void _navigate(_View view) {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     AudioService.instance.playUiPop();
     setState(() => _view = view);
   }
 
   Future<void> _accept(FriendRequest r) async {
-    HapticFeedback.mediumImpact();
+    JauneHaptics.medium();
     AudioService.instance.playUiPop();
     await friendsService.acceptRequest(r.userId);
     await _load();
   }
 
   Future<void> _ignore(FriendRequest r) async {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     await friendsService.ignoreRequest(r.userId);
     await _load();
   }
@@ -103,7 +103,7 @@ class _LeaderboardSheetContentState extends State<_LeaderboardSheetContent> {
       cancelLabel: l10n.cancel,
     );
     if (!confirmed) return;
-    HapticFeedback.mediumImpact();
+    JauneHaptics.medium();
     await friendsService.removeFriend(friend.userId);
     await _load();
   }
@@ -807,7 +807,7 @@ class UsernamePrompt {
                   onTap: () {
                     final t = controller.text.trim();
                     if (t.isEmpty) return;
-                    HapticFeedback.selectionClick();
+                    JauneHaptics.selection();
                     Navigator.of(ctx).pop(t);
                   },
                   child: Container(

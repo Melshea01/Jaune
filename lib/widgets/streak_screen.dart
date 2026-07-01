@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/jaune_haptics.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/gen/app_localizations.dart';
@@ -14,7 +15,7 @@ import 'share_card.dart';
 /// (3/7/30/100) et partage.
 class StreakScreen {
   static void open(BuildContext context, CharacterService service) {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     AudioService.instance.playUiPop();
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => _StreakScreen(service: service)),

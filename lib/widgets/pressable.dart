@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../theme/jaune_design.dart';
+import '../utils/jaune_haptics.dart';
 
 /// Feedback de pression unifié : réduit légèrement l'échelle au toucher
 /// avec un retour haptique. À utiliser pour tout élément tappable.
@@ -45,7 +45,7 @@ class _PressableScaleState extends State<PressableScale> {
           widget.onTap == null
               ? null
               : () {
-                if (widget.haptic) HapticFeedback.selectionClick();
+                if (widget.haptic) JauneHaptics.selection();
                 widget.onTap!();
               },
       onLongPress: widget.onLongPress,

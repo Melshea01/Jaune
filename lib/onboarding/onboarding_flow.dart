@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../utils/jaune_haptics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/citron_animation_controller.dart';
@@ -53,7 +53,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 
   void _next() {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     _pageController.nextPage(
       duration: JauneMotion.standard,
       curve: JauneMotion.smooth,
@@ -61,7 +61,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 
   Future<void> _enableReminders() async {
-    HapticFeedback.mediumImpact();
+    JauneHaptics.medium();
     final granted = await NotificationService.requestPermissions();
     await SettingsService.instance.setNotificationsEnabled(granted);
     if (granted && mounted) {

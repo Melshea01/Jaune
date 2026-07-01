@@ -12,6 +12,7 @@ class SettingsService {
   static const String _kLocaleKey = 'locale_override';
   static const String _kNotificationsKey = 'notifications_enabled';
   static const String _kSoundKey = 'sound_enabled';
+  static const String _kHapticsKey = 'haptics_enabled';
 
   /// null = suivre la langue du système
   final ValueNotifier<ui.Locale?> localeOverride = ValueNotifier<ui.Locale?>(
@@ -19,6 +20,7 @@ class SettingsService {
   );
   final ValueNotifier<bool> notificationsEnabled = ValueNotifier<bool>(true);
   final ValueNotifier<bool> soundEnabled = ValueNotifier<bool>(true);
+  final ValueNotifier<bool> hapticsEnabled = ValueNotifier<bool>(true);
 
   Future<void> load() async {
     try {
@@ -27,6 +29,7 @@ class SettingsService {
       localeOverride.value = code == null ? null : ui.Locale(code);
       notificationsEnabled.value = prefs.getBool(_kNotificationsKey) ?? true;
       soundEnabled.value = prefs.getBool(_kSoundKey) ?? true;
+      hapticsEnabled.value = prefs.getBool(_kHapticsKey) ?? true;
     } catch (e) {
       debugPrint('Error loading settings: $e');
     }
@@ -63,6 +66,16 @@ class SettingsService {
       await prefs.setBool(_kSoundKey, enabled);
     } catch (e) {
       debugPrint('Error saving sound setting: $e');
+    }
+  }
+
+  Future<void> setHapticsEnabled(bool enabled) async {
+    hapticsEnabled.value = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_kHapticsKey, enabled);
+    } catch (e) {
+      debugPrint('Error saving haptics setting: $e');
     }
   }
 

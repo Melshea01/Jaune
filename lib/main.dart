@@ -481,7 +481,7 @@ class _MyHomePageState extends State<MyHomePage>
     // Minuit passé pendant que l'app était ouverte ? Nouveau jour d'abord.
     await _ensureCurrentDay();
 
-    HapticFeedback.mediumImpact();
+    JauneHaptics.medium();
     // Feedback immédiat : le citron penche la tête en arrière et "boit"
     _citronController.triggerEvent('drink_beer');
     // Horodatage du verre (analyse par heure dans les stats).
@@ -498,7 +498,7 @@ class _MyHomePageState extends State<MyHomePage>
     bool playedJaune = false;
     if (_consos == 8) {
       playedJaune = true;
-      HapticFeedback.heavyImpact();
+      JauneHaptics.heavy();
       await _audioService.playJauneSound();
     } else {
       await _audioService.playConsumptionSound();
@@ -661,7 +661,7 @@ class _MyHomePageState extends State<MyHomePage>
 
   /// Tap sur le citron : salut + easter egg danse secrète (10 taps rapides)
   void _onCitronTap() {
-    HapticFeedback.lightImpact();
+    JauneHaptics.light();
     final now = DateTime.now();
     _citronTaps.add(now);
     _citronTaps.removeWhere(
@@ -670,7 +670,7 @@ class _MyHomePageState extends State<MyHomePage>
 
     if (_citronTaps.length >= 10) {
       _citronTaps.clear();
-      HapticFeedback.heavyImpact();
+      JauneHaptics.heavy();
       _playCitronReaction('secretDance', duration: const Duration(seconds: 5));
     } else {
       // Variété : le citron ne réagit jamais deux fois pareil au toucher
@@ -722,7 +722,7 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   void _showCalendarDialog() {
-    HapticFeedback.selectionClick();
+    JauneHaptics.selection();
     CalendarDialog.show(
       context: context,
       buttonKey: _calendarButtonKey,
@@ -1467,7 +1467,7 @@ class _MyHomePageState extends State<MyHomePage>
           haptic: false,
           semanticLabel: AppLocalizations.of(context).a11yResetButton,
           onTap: () async {
-            HapticFeedback.lightImpact();
+            JauneHaptics.light();
             final l10n = AppLocalizations.of(context);
             final confirmed = await ConfirmSheet.show(
               context,
