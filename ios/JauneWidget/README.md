@@ -21,6 +21,14 @@ du widget. Sans extension installée, ces appels sont silencieux.
    (containerBackground). Build sur device ou simulateur, ajouter le
    widget depuis l'écran d'accueil.
 
+## Familles supportées
+
+- **Écran d'accueil** : `systemSmall`, `systemMedium` (fond ciel + emoji + barre de PV).
+- **Écran verrouillé (iOS 16+)** : `accessoryCircular` (jauge de PV + emoji),
+  `accessoryRectangular` (emoji + streak + jauge linéaire),
+  `accessoryInline` (emoji + % PV au-dessus de l'heure). Rendu monochrome/vibrant
+  imposé par le système, aucune donnée Flutter supplémentaire à pousser.
+
 ## Visuels
 
 Le widget rend l'humeur en emoji pour l'instant. Pour la v2 : exporter

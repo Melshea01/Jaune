@@ -97,6 +97,9 @@ struct JauneWidgetView: View {
     private var content: some View {
         switch family {
         case .systemMedium: medium
+        case .accessoryCircular: accessoryCircular
+        case .accessoryRectangular: accessoryRectangular
+        case .accessoryInline: accessoryInline
         default: small
         }
     }
@@ -135,6 +138,42 @@ struct JauneWidgetView: View {
         }
     }
 
+    // MARK: Écran verrouillé (iOS 16+)
+    // Rendu monochrome/vibrant imposé par le système : on mise sur la
+    // jauge et l'emoji, pas sur la couleur de santé.
+
+    private var accessoryCircular: some View {
+        Gauge(value: Double(entry.health), in: 0...100) {
+            Text("PV")
+        } currentValueLabel: {
+            Text(entry.moodEmoji)
+        }
+        .gaugeStyle(.accessoryCircularCapacity)
+    }
+
+    private var accessoryRectangular: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Text(entry.moodEmoji)
+                Text("Citron").font(.headline)
+                if entry.streak > 0 {
+                    Text("🔥\(entry.streak)").font(.caption2)
+                }
+            }
+            Gauge(value: Double(entry.health), in: 0...100) {
+                EmptyView()
+            } currentValueLabel: {
+                Text("\(entry.health)% PV")
+            }
+            .gaugeStyle(.accessoryLinearCapacity)
+        }
+    }
+
+    private var accessoryInline: some View {
+        // La barre de statut au-dessus de l'heure : une seule ligne.
+        Text("\(entry.moodEmoji) \(entry.health)% PV")
+    }
+
     private var healthBar: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
@@ -157,7 +196,11 @@ struct JauneWidget: Widget {
         }
         .configurationDisplayName("Jaune")
         .description("Ton citron, ta série sobre et l'heure de l'apéro.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([
+            .systemSmall, .systemMedium,
+            // Écran verrouillé (iOS 16+)
+            .accessoryCircular, .accessoryRectangular, .accessoryInline,
+        ])
     }
 }
 
